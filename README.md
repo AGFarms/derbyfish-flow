@@ -1,67 +1,98 @@
-## derbyfish-flow Tokenomics & Architecture
+## DerbyFish Flow Tokenomics & Architecture
 
-### 1. Token Roles & Mechanics
+### Overview
 
-**Bait (Stablecoin)**
+DerbyFish uses a dual‑token model on Flow:
 
-* **Pegging model**: Strict 1:1 backing with USDC reserves.
-* **Minting/Burning**: Any user can mint by depositing USDC; burning via redeeming on‑chain or off‑chain KYC process through DerbyFish or partnered DEX.
-* **Redemption**: KYC-enabled in-app redemption or through integrated DEX.
-
-**SpeciesCoin**
-
-* **Mining rule**: 1 SpeciesCoin awarded per verified Fish NFT mint event.
-* **Supply cap**: Uncapped, but minted only via fish verification—natural issuance control.
-* **Initial distribution**: Private in‑app sale at predefined price, then opened to market via AMM liquidity pool.
-
-### 2. Economic Flows & Marketplace
-
-**FishCards ↔ Bait**
-
-* **Exchange mechanics**: Dynamic rate—FishCards sell for Bait at market-driven value (pegged via liquidity pool price) minus transaction fee.
-* **Anti‑abuse**: Standard Flow transaction fees and optional cooldowns to deter wash‑trading.
-
-**SpeciesCoin ↔ Bait Market**
-
-* **DEX model**: Automated Market Maker (AMM).
-* **Initial liquidity**: App buys minted SpeciesCoin from anglers, then seeds SpeciesCoin–Bait pool on chain.
-* **Ongoing liquidity**: Part of each private sale and transaction fees reinvested into pool.
-
-**In‑App & In‑Store Use Cases**
-
-* **Spend Bait on**: Derby tickets, memberships, merchandise, FishCards, Fish Packs.
-* **Merchant integration**: Target bait & tackle shops to accept Bait on‑chain or via custodial abstraction.
-
-### 3. Technical & Flow Integration
-
-**Cadence Contracts**
-
-* Implement FungibleToken standards for both Bait and SpeciesCoin.
-* Use contract upgradeability patterns for emergency fixes.
-
-**Bridging & Liquidity**
-
-* Bridge USDC into Flow via LayerZero/Stargate for reserve backing.
-* KYC flow embedded in the app for large redemptions; small redemptions on‑chain.
-
-### 4. Governance, Compliance & Security
-
-* **Governance**: Centralized—no DAO initially. DerbyFish retains mint/burn control.
-* **KYC/AML**: Mandatory in‑app KYC for USD redemptions and merchant partnerships; legal/accounting processes under development.
-* **Audits**: Schedule independent smart‑contract audits post‑MVP.
-
-### 5. User Onboarding & Experience
-
-* **Wallet integration**: Custodial, abstracted Flow accounts via Dapper/Modd® SDK—users remain unaware of Web3 complexity.
-* **Fiat on‑ramp**: Seamless credit card purchase of Bait through integrated payment processor.
-* **Fish mint & earn flow**: Single transaction: verify fish → mint NFT + 1 SpeciesCoin to user’s custodial account.
+* **Bait**: A 1:1 USDC‑backed stablecoin for in‑app purchases, marketplace transactions, and merchant integrations.
+* **SpeciesCoins**: One fungible token contract per fish species (e.g., WalleyeCoin, BassCoin), minted by anglers when they verify a catch and mint a FishNFT.
+* **FishNFTs**: Non‑fungible tokens representing the actual catch, storing full metadata (species, GPS, time, gear). Users can optionally mint **Trading‑Card NFTs** derived from their FishNFT.
+* **Badges**: On‑chain, soulbound Badge NFTs granted on first‑catch per species (extendable to location or gear achievements).
 
 ---
 
-**Next Steps**
+### 1. Token Roles & Mechanics
 
-1. Draft Cadence contract templates for Bait & SpeciesCoin.
-2. Design private‑sale UI for initial SpeciesCoin distribution.
-3. Integrate LayerZero bridge for USDC inflows.
-4. Build KYC & redemption backend workflows.
-5. Plan first smart‑contract audit.
+#### Bait (Stablecoin)
+
+* **Pegging & Reserves**: Strictly 1:1 backed by USDC. Reserves held in a multi‑sig vault with time‑locks and proof‑of‑reserves snapshots available in‑app.
+* **Mint/Burn**: Users mint Bait by depositing USDC via in‑app custodial flows; burn by redeeming USDC on‑chain or through a KYC‑gate in the app.
+* **Gas Sponsorship**: DerbyFish pays all Flow gas; users never see transaction fees.
+
+#### SpeciesCoins (Per Species)
+
+* **Deployment**: A `SpeciesCoinFactory` contract allows on‑chain registration of new species IDs and dynamic creation of fungible token contracts (e.g., `WalleyeCoin`).
+* **Minting**: `mintSpeciesCoin(speciesID, 1)` is called automatically in the Fish‑mint transaction, crediting the angler with 1 token.
+* **Supply**: Capped to the total number of FishNFTs ever minted for that species; future caps enforced via upgradeable contract governance.
+
+---
+
+### 2. NFT Architecture
+
+#### FishNFT
+
+* Implements `NonFungibleToken`, stores catch metadata (GPS, timestamp, gear, photos).
+* Serves as the canonical proof of catch and key to minting SpeciesCoin.
+
+#### Trading‑Card NFTs
+
+* Users may mint up to an upgradeable limit of “card edition” NFTs from an existing FishNFT.
+* Cards reference the FishNFT ID and optionally include or omit personal metadata for privacy.
+* Card metadata and artwork templates managed via a central registry contract.
+
+#### Badge NFTs
+
+* On first‐catch per species, a soulbound Badge NFT is minted to the user’s account.
+* Badges include speciesID and timestamp metadata; non‑transferable.
+* Extendable to other badge categories (locations, gear, leaderboards).
+
+---
+
+### 3. Fishdex & Badging System
+
+* **On‑Chain Events**: `FishMinted` and `BadgeAwarded` events trigger off‑chain amplification to update the Fishdex UI.
+* **Fishdex UI**: Displays species sightings, badge collections, gear logs, and geographic heatmaps.
+* **Rewards**: First‑catch badges unlock UI achievements; can integrate bonus SpeciesCoin airdrops in future.
+
+---
+
+### 4. Marketplace & Economic Flows
+
+#### FishCards ↔ Bait
+
+* Fish trading‑card NFTs can be listed in the in‑app marketplace for Bait at dynamic, market‑driven prices.
+
+#### SpeciesCoin ↔ Bait
+
+* Initial private sale per species at a fixed price in Bait, handled by a `PrivateSale` contract.
+* Post‑sale, DerbyFish seeds an AMM pool (`SpeciesCoin–Bait`) and reinvests a portion of fees to maintain liquidity.
+
+#### Merchant & In‑Store Use Cases
+
+* DerbyFish SDK for Web POS: Merchants accept Bait via custodial API; DerbyFish settles USDC off‑chain.
+
+---
+
+### 5. Security & Compliance
+
+* **Multi‑Sig Vaults**: USDC reserves in 2‑of‑3 multi‑sig with 48‑hour timelock.
+* **Audits**: Engage CertiK/Consensys for Cadence contracts; SOC 2 for backend.
+* **KYC/AML**: All fiat on‑ramps/redemptions require in‑app KYC; small spot trades gas‑only.
+
+---
+
+### 6. UX & Onboarding
+
+* **Custodial Accounts**: Email‑OTP flow via Dapper SDK abstracts Flow accounts.
+* **Gasless**: All gas sponsored; users only see Bait balances.
+* **Fiat On‑Ramp**: Single “Buy Bait” button routes through ACH, card, or crypto on‑ramp based on cost/latency.
+* **Recovery**: Email‑based key recovery; optional social‑recovery through guardians.
+
+---
+
+### Next Steps
+
+1. **Cadence Templates**: Generate `SpeciesCoinFactory`, `FishNFT`, `TradingCard`, `BadgeNFT`, and `PrivateSale` contract skeletons.
+2. **Private Sale UI**: Design flow & smart contract for fixed‑price species launches.
+3. **SDK Integration**: Build SDK wrappers for minting, badge claiming, and marketplace listing.
+4. **Audit & Launch**: Schedule security audits and prepare mainnet rollout plan.
