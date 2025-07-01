@@ -147,7 +147,7 @@ access(all) contract BaitCoin: FungibleToken {
     }
 
     init() {
-        self.totalSupply = 1000.0
+        self.totalSupply = 0.0
 
         self.VaultStoragePath = /storage/BaitCoinVault
         self.VaultPublicPath = /public/BaitCoinVault
