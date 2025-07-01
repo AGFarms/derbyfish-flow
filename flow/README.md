@@ -16,7 +16,17 @@ Here are some essential resources to help you hit the ground running:
 
 Your project has been set up with the following structure:
 
-- `flow.json` - This is the configuration file for your project (analogous to a `package.json` file for NPM).  It has been initialized with a basic configuration to get started.
+- `flow.json` - This is the configuration file for your project (analogous to a `package.json` file for NPM).  It has been initialized with a basic configuration and your selected Core Contract dependencies to get started.
+
+  Your project has also been configured with the following dependencies.  You can add more dependencies using the `flow deps add` command:
+    - `FlowToken`
+    - `FungibleToken`
+    - `ViewResolver`
+    - `Burner`
+    - `MetadataViews`
+    - `NonFungibleToken`
+    - `FungibleTokenMetadataViews`
+
 - `/cadence` - This is where your Cadence smart contracts code lives
 
 Inside the `cadence` folder you will find:
