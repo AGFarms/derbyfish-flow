@@ -11,7 +11,8 @@
 			"aliases": {
 				"testing": "0000000000000007"
 			}
-		}
+		},
+		"Fish": "cadence/contracts/Fish.cdc"
 	},
 	"dependencies": {
 		"Burner": {
@@ -104,7 +105,8 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
-				"BaitCoin"
+				"BaitCoin",
+				"Fish"
 			]
 		}
 	}
