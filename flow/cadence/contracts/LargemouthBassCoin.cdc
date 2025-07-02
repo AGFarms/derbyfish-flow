@@ -2,7 +2,7 @@ import "FungibleToken"
 import "MetadataViews"
 import "FungibleTokenMetadataViews"
 
-access(all) contract ExampleFishCoin: FungibleToken {
+access(all) contract LargemouthBassCoin: FungibleToken {
 
     // Regional data structures for location-specific information
     access(all) struct RegionalRegulations {
@@ -60,6 +60,28 @@ access(all) contract ExampleFishCoin: FungibleToken {
     access(all) let VaultPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
     access(all) let MetadataAdminStoragePath: StoragePath
+
+    // BAITCOIN EXCHANGE INTEGRATION - Dual-token economy
+    access(all) var baitExchangeRate: UFix64?  // Species coin → BaitCoin conversion rate
+    
+    // COMMUNITY DATA CURATION - Simplified for future growth
+    access(all) struct DataUpdate {
+        access(all) let field: String
+        access(all) let newValue: String
+        access(all) let contributor: Address
+        access(all) let source: String
+        access(all) let timestamp: UFix64
+        
+        init(field: String, newValue: String, contributor: Address, source: String) {
+            self.field = field
+            self.newValue = newValue
+            self.contributor = contributor
+            self.source = source
+            self.timestamp = getCurrentBlock().timestamp
+        }
+    }
+    
+    access(all) var pendingUpdates: [DataUpdate]
 
     // Species metadata - HYBRID: Core fields immutable, descriptive fields mutable + REGIONAL + TEMPORAL
     access(all) struct SpeciesMetadata {
@@ -480,45 +502,45 @@ access(all) contract ExampleFishCoin: FungibleToken {
 
         access(contract) fun burnCallback() {
             if self.balance > 0.0 {
-                ExampleFishCoin.totalSupply = ExampleFishCoin.totalSupply - self.balance
+                LargemouthBassCoin.totalSupply = LargemouthBassCoin.totalSupply - self.balance
                 emit TokensBurned(amount: self.balance, from: self.owner?.address)
             }
             self.balance = 0.0
         }
 
         access(all) view fun getViews(): [Type] {
-            return ExampleFishCoin.getContractViews(resourceType: nil)
+            return LargemouthBassCoin.getContractViews(resourceType: nil)
         }
 
         access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return ExampleFishCoin.resolveContractView(resourceType: nil, viewType: view)
+            return LargemouthBassCoin.resolveContractView(resourceType: nil, viewType: view)
         }
 
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            return {Type<@ExampleFishCoin.Vault>(): true}
+            return {Type<@LargemouthBassCoin.Vault>(): true}
         }
 
         access(all) view fun isSupportedVaultType(type: Type): Bool {
-            return type == Type<@ExampleFishCoin.Vault>()
+            return type == Type<@LargemouthBassCoin.Vault>()
         }
 
         access(all) view fun isAvailableToWithdraw(amount: UFix64): Bool {
             return amount <= self.balance
         }
 
-        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @ExampleFishCoin.Vault {
+        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @LargemouthBassCoin.Vault {
             self.balance = self.balance - amount
             return <-create Vault(balance: amount)
         }
 
         access(all) fun deposit(from: @{FungibleToken.Vault}) {
-            let vault <- from as! @ExampleFishCoin.Vault
+            let vault <- from as! @LargemouthBassCoin.Vault
             self.balance = self.balance + vault.balance
             vault.balance = 0.0
             destroy vault
         }
 
-        access(all) fun createEmptyVault(): @ExampleFishCoin.Vault {
+        access(all) fun createEmptyVault(): @LargemouthBassCoin.Vault {
             return <-create Vault(balance: 0.0)
         }
     }
@@ -526,18 +548,18 @@ access(all) contract ExampleFishCoin: FungibleToken {
     // Minter Resource - Admin only
     access(all) resource Minter {
         
-        access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @ExampleFishCoin.Vault {
+        access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @LargemouthBassCoin.Vault {
             pre {
                 amount == 1.0: "Only 1 coin per verified catch"
             }
             
             // Auto-record first catch if this is the very first mint
-            if ExampleFishCoin.totalSupply == 0.0 && ExampleFishCoin.speciesMetadata.firstCatchDate == nil {
-                ExampleFishCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+            if LargemouthBassCoin.totalSupply == 0.0 && LargemouthBassCoin.speciesMetadata.firstCatchDate == nil {
+                LargemouthBassCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
             }
             
-            ExampleFishCoin.totalSupply = ExampleFishCoin.totalSupply + amount
+            LargemouthBassCoin.totalSupply = LargemouthBassCoin.totalSupply + amount
             
             emit TokensMinted(amount: amount, to: angler)
             emit CatchVerified(fishId: fishId, angler: angler, amount: amount)
@@ -545,12 +567,12 @@ access(all) contract ExampleFishCoin: FungibleToken {
             return <-create Vault(balance: amount)
         }
 
-        access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: ExampleFishCoin.Vault} {
-            let vaults: @{Address: ExampleFishCoin.Vault} <- {}
+        access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: LargemouthBassCoin.Vault} {
+            let vaults: @{Address: LargemouthBassCoin.Vault} <- {}
             
             for recipient in recipients.keys {
                 let amount = recipients[recipient]!
-                ExampleFishCoin.totalSupply = ExampleFishCoin.totalSupply + amount
+                LargemouthBassCoin.totalSupply = LargemouthBassCoin.totalSupply + amount
                 
                 let vault <- create Vault(balance: amount)
                 let oldVault <- vaults[recipient] <- vault
@@ -567,38 +589,38 @@ access(all) contract ExampleFishCoin: FungibleToken {
     access(all) resource MetadataAdmin {
         
         access(all) fun updateImageURL(newURL: String) {
-            let oldURL = ExampleFishCoin.speciesMetadata.imageURL ?? ""
-            ExampleFishCoin.speciesMetadata.setImageURL(newURL)
+            let oldURL = LargemouthBassCoin.speciesMetadata.imageURL ?? ""
+            LargemouthBassCoin.speciesMetadata.setImageURL(newURL)
             emit MetadataUpdated(field: "imageURL", oldValue: oldURL, newValue: newURL)
         }
         
         access(all) fun updateDescription(newDescription: String) {
-            let oldDescription = ExampleFishCoin.speciesMetadata.description
-            ExampleFishCoin.speciesMetadata.setDescription(newDescription)
+            let oldDescription = LargemouthBassCoin.speciesMetadata.description
+            LargemouthBassCoin.speciesMetadata.setDescription(newDescription)
             emit MetadataUpdated(field: "description", oldValue: oldDescription, newValue: newDescription)
         }
         
         access(all) fun updateCommonName(newName: String) {
-            let oldName = ExampleFishCoin.speciesMetadata.commonName
-            ExampleFishCoin.speciesMetadata.setCommonName(newName)
+            let oldName = LargemouthBassCoin.speciesMetadata.commonName
+            LargemouthBassCoin.speciesMetadata.setCommonName(newName)
             emit MetadataUpdated(field: "commonName", oldValue: oldName, newValue: newName)
         }
         
         access(all) fun updateHabitat(newHabitat: String) {
-            let oldHabitat = ExampleFishCoin.speciesMetadata.habitat ?? ""
-            ExampleFishCoin.speciesMetadata.setHabitat(newHabitat)
+            let oldHabitat = LargemouthBassCoin.speciesMetadata.habitat ?? ""
+            LargemouthBassCoin.speciesMetadata.setHabitat(newHabitat)
             emit MetadataUpdated(field: "habitat", oldValue: oldHabitat, newValue: newHabitat)
         }
         
         access(all) fun updateAverageWeight(newWeight: UFix64) {
-            let oldWeight = ExampleFishCoin.speciesMetadata.averageWeight?.toString() ?? "0.0"
-            ExampleFishCoin.speciesMetadata.setAverageWeight(newWeight)
+            let oldWeight = LargemouthBassCoin.speciesMetadata.averageWeight?.toString() ?? "0.0"
+            LargemouthBassCoin.speciesMetadata.setAverageWeight(newWeight)
             emit MetadataUpdated(field: "averageWeight", oldValue: oldWeight, newValue: newWeight.toString())
         }
         
         access(all) fun updateAverageLength(newLength: UFix64) {
-            let oldLength = ExampleFishCoin.speciesMetadata.averageLength?.toString() ?? "0.0"
-            ExampleFishCoin.speciesMetadata.setAverageLength(newLength)
+            let oldLength = LargemouthBassCoin.speciesMetadata.averageLength?.toString() ?? "0.0"
+            LargemouthBassCoin.speciesMetadata.setAverageLength(newLength)
             emit MetadataUpdated(field: "averageLength", oldValue: oldLength, newValue: newLength.toString())
         }
         
@@ -606,36 +628,36 @@ access(all) contract ExampleFishCoin: FungibleToken {
             pre {
                 newTier >= 1 && newTier <= 5: "Invalid rarity tier (must be 1-5)"
             }
-            let oldTier = ExampleFishCoin.speciesMetadata.rarityTier?.toString() ?? "0"
-            ExampleFishCoin.speciesMetadata.setRarityTier(newTier)
+            let oldTier = LargemouthBassCoin.speciesMetadata.rarityTier?.toString() ?? "0"
+            LargemouthBassCoin.speciesMetadata.setRarityTier(newTier)
             emit MetadataUpdated(field: "rarityTier", oldValue: oldTier, newValue: newTier.toString())
         }
         
         access(all) fun manuallySetFirstCatch(timestamp: UInt64, angler: Address) {
             pre {
-                ExampleFishCoin.speciesMetadata.firstCatchDate == nil: "First catch already recorded"
+                LargemouthBassCoin.speciesMetadata.firstCatchDate == nil: "First catch already recorded"
             }
-            ExampleFishCoin.speciesMetadata.setFirstCatchDate(timestamp)
+            LargemouthBassCoin.speciesMetadata.setFirstCatchDate(timestamp)
             emit FirstCatchRecorded(timestamp: timestamp, angler: angler)
             emit MetadataUpdated(field: "firstCatchDate", oldValue: "", newValue: timestamp.toString())
         }
         
         // FishDEX-specific metadata updates
         access(all) fun updateConservationStatus(newStatus: String) {
-            let oldStatus = ExampleFishCoin.speciesMetadata.globalConservationStatus ?? ""
-            ExampleFishCoin.speciesMetadata.setConservationStatus(newStatus)
+            let oldStatus = LargemouthBassCoin.speciesMetadata.globalConservationStatus ?? ""
+            LargemouthBassCoin.speciesMetadata.setConservationStatus(newStatus)
             emit MetadataUpdated(field: "globalConservationStatus", oldValue: oldStatus, newValue: newStatus)
         }
         
         access(all) fun updateNativeRegions(newRegions: [String]) {
             var oldRegionsStr = "["
-            for i, region in ExampleFishCoin.speciesMetadata.nativeRegions {
+            for i, region in LargemouthBassCoin.speciesMetadata.nativeRegions {
                 if i > 0 { oldRegionsStr = oldRegionsStr.concat(",") }
                 oldRegionsStr = oldRegionsStr.concat(region)
             }
             oldRegionsStr = oldRegionsStr.concat("]")
             
-            ExampleFishCoin.speciesMetadata.setNativeRegions(newRegions)
+            LargemouthBassCoin.speciesMetadata.setNativeRegions(newRegions)
             
             var newRegionsStr = "["
             for i, region in newRegions {
@@ -648,45 +670,45 @@ access(all) contract ExampleFishCoin: FungibleToken {
         }
         
         access(all) fun updateSeasonalPatterns(newPatterns: String) {
-            let oldPatterns = ExampleFishCoin.speciesMetadata.seasonalPatterns ?? ""
-            ExampleFishCoin.speciesMetadata.setSeasonalPatterns(newPatterns)
+            let oldPatterns = LargemouthBassCoin.speciesMetadata.seasonalPatterns ?? ""
+            LargemouthBassCoin.speciesMetadata.setSeasonalPatterns(newPatterns)
             emit MetadataUpdated(field: "seasonalPatterns", oldValue: oldPatterns, newValue: newPatterns)
         }
         
         access(all) fun updateRecordWeight(newRecord: UFix64) {
-            let oldRecord = ExampleFishCoin.speciesMetadata.recordWeight?.toString() ?? "0.0"
-            ExampleFishCoin.speciesMetadata.setRecordWeight(newRecord)
+            let oldRecord = LargemouthBassCoin.speciesMetadata.recordWeight?.toString() ?? "0.0"
+            LargemouthBassCoin.speciesMetadata.setRecordWeight(newRecord)
             emit MetadataUpdated(field: "recordWeight", oldValue: oldRecord, newValue: newRecord.toString())
         }
         
         access(all) fun updateRecordLength(newRecord: UFix64) {
-            let oldRecord = ExampleFishCoin.speciesMetadata.recordLength?.toString() ?? "0.0"
-            ExampleFishCoin.speciesMetadata.setRecordLength(newRecord)
+            let oldRecord = LargemouthBassCoin.speciesMetadata.recordLength?.toString() ?? "0.0"
+            LargemouthBassCoin.speciesMetadata.setRecordLength(newRecord)
             emit MetadataUpdated(field: "recordLength", oldValue: oldRecord, newValue: newRecord.toString())
         }
         
         // MISSING: Record location and date admin functions
         access(all) fun updateRecordWeightLocation(newLocation: String?) {
-            let oldLocation = ExampleFishCoin.speciesMetadata.recordWeightLocation ?? ""
-            ExampleFishCoin.speciesMetadata.setRecordWeightLocation(newLocation)
+            let oldLocation = LargemouthBassCoin.speciesMetadata.recordWeightLocation ?? ""
+            LargemouthBassCoin.speciesMetadata.setRecordWeightLocation(newLocation)
             emit MetadataUpdated(field: "recordWeightLocation", oldValue: oldLocation, newValue: newLocation ?? "")
         }
         
         access(all) fun updateRecordWeightDate(newDate: String?) {
-            let oldDate = ExampleFishCoin.speciesMetadata.recordWeightDate ?? ""
-            ExampleFishCoin.speciesMetadata.setRecordWeightDate(newDate)
+            let oldDate = LargemouthBassCoin.speciesMetadata.recordWeightDate ?? ""
+            LargemouthBassCoin.speciesMetadata.setRecordWeightDate(newDate)
             emit MetadataUpdated(field: "recordWeightDate", oldValue: oldDate, newValue: newDate ?? "")
         }
         
         access(all) fun updateRecordLengthLocation(newLocation: String?) {
-            let oldLocation = ExampleFishCoin.speciesMetadata.recordLengthLocation ?? ""
-            ExampleFishCoin.speciesMetadata.setRecordLengthLocation(newLocation)
+            let oldLocation = LargemouthBassCoin.speciesMetadata.recordLengthLocation ?? ""
+            LargemouthBassCoin.speciesMetadata.setRecordLengthLocation(newLocation)
             emit MetadataUpdated(field: "recordLengthLocation", oldValue: oldLocation, newValue: newLocation ?? "")
         }
         
         access(all) fun updateRecordLengthDate(newDate: String?) {
-            let oldDate = ExampleFishCoin.speciesMetadata.recordLengthDate ?? ""
-            ExampleFishCoin.speciesMetadata.setRecordLengthDate(newDate)
+            let oldDate = LargemouthBassCoin.speciesMetadata.recordLengthDate ?? ""
+            LargemouthBassCoin.speciesMetadata.setRecordLengthDate(newDate)
             emit MetadataUpdated(field: "recordLengthDate", oldValue: oldDate, newValue: newDate ?? "")
         }
         
@@ -706,76 +728,76 @@ access(all) contract ExampleFishCoin: FungibleToken {
         // MISSING: Community data curation approval
         access(all) fun approvePendingUpdate(index: Int) {
             pre {
-                index >= 0 && index < ExampleFishCoin.pendingUpdates.length: "Invalid update index"
+                index >= 0 && index < LargemouthBassCoin.pendingUpdates.length: "Invalid update index"
             }
-            let update = ExampleFishCoin.pendingUpdates.remove(at: index)
+            let update = LargemouthBassCoin.pendingUpdates.remove(at: index)
             // Apply the update based on field type
             emit MetadataUpdated(field: update.field, oldValue: "pending", newValue: update.newValue)
         }
         
         access(all) fun rejectPendingUpdate(index: Int) {
             pre {
-                index >= 0 && index < ExampleFishCoin.pendingUpdates.length: "Invalid update index"
+                index >= 0 && index < LargemouthBassCoin.pendingUpdates.length: "Invalid update index"
             }
-            ExampleFishCoin.pendingUpdates.remove(at: index)
+            LargemouthBassCoin.pendingUpdates.remove(at: index)
         }
-        
+
         access(all) fun clearAllPendingUpdates() {
-            ExampleFishCoin.pendingUpdates = []
+            LargemouthBassCoin.pendingUpdates = []
         }
         
         // ENHANCED ADMIN FUNCTIONS WITH VALIDATION
         access(all) fun updateRarityTierValidated(newTier: UInt8) {
             pre {
-                ExampleFishCoin.validateRating(newTier): "Invalid rarity tier (must be 1-10)"
+                LargemouthBassCoin.validateRating(newTier): "Invalid rarity tier (must be 1-10)"
             }
-            let oldTier = ExampleFishCoin.speciesMetadata.rarityTier?.toString() ?? "0"
-            ExampleFishCoin.speciesMetadata.setRarityTier(newTier)
+            let oldTier = LargemouthBassCoin.speciesMetadata.rarityTier?.toString() ?? "0"
+            LargemouthBassCoin.speciesMetadata.setRarityTier(newTier)
             emit MetadataUpdated(field: "rarityTier", oldValue: oldTier, newValue: newTier.toString())
         }
         
         access(all) fun updateConservationStatusValidated(newStatus: String) {
             pre {
-                ExampleFishCoin.validateConservationStatus(newStatus): "Invalid conservation status"
+                LargemouthBassCoin.validateConservationStatus(newStatus): "Invalid conservation status"
             }
-            let oldStatus = ExampleFishCoin.speciesMetadata.globalConservationStatus ?? ""
-            ExampleFishCoin.speciesMetadata.setConservationStatus(newStatus)
+            let oldStatus = LargemouthBassCoin.speciesMetadata.globalConservationStatus ?? ""
+            LargemouthBassCoin.speciesMetadata.setConservationStatus(newStatus)
             emit MetadataUpdated(field: "globalConservationStatus", oldValue: oldStatus, newValue: newStatus)
         }
         
         access(all) fun updateFightRatingValidated(newRating: UInt8) {
             pre {
-                ExampleFishCoin.validateRating(newRating): "Fight rating must be 1-10"
+                LargemouthBassCoin.validateRating(newRating): "Fight rating must be 1-10"
             }
-            let oldRating = ExampleFishCoin.speciesMetadata.fightRating?.toString() ?? "0"
-            ExampleFishCoin.speciesMetadata.setFightRating(newRating)
+            let oldRating = LargemouthBassCoin.speciesMetadata.fightRating?.toString() ?? "0"
+            LargemouthBassCoin.speciesMetadata.setFightRating(newRating)
             emit MetadataUpdated(field: "fightRating", oldValue: oldRating, newValue: newRating.toString())
         }
         
         // TEMPORAL ADMIN FUNCTIONS
         access(all) fun archiveCurrentYear() {
-            let currentYear = ExampleFishCoin.currentMetadataYear
-            ExampleFishCoin.metadataHistory[currentYear] = ExampleFishCoin.speciesMetadata
+            let currentYear = LargemouthBassCoin.currentMetadataYear
+            LargemouthBassCoin.metadataHistory[currentYear] = LargemouthBassCoin.speciesMetadata
             emit YearlyMetadataCreated(year: currentYear)
         }
         
         access(all) fun updateToNewYear(_ newYear: UInt64) {
             pre {
-                newYear > ExampleFishCoin.currentMetadataYear: "New year must be greater than current year"
+                newYear > LargemouthBassCoin.currentMetadataYear: "New year must be greater than current year"
             }
             // Archive current year data
             self.archiveCurrentYear()
             
-            let oldYear = ExampleFishCoin.currentMetadataYear
-            ExampleFishCoin.currentMetadataYear = newYear
+            let oldYear = LargemouthBassCoin.currentMetadataYear
+            LargemouthBassCoin.currentMetadataYear = newYear
             emit MetadataYearUpdated(oldYear: oldYear, newYear: newYear)
         }
     }
 
     // Public functions
-    access(all) fun createEmptyVault(vaultType: Type): @ExampleFishCoin.Vault {
+    access(all) fun createEmptyVault(vaultType: Type): @LargemouthBassCoin.Vault {
         pre {
-            vaultType == Type<@ExampleFishCoin.Vault>(): "Vault type mismatch"
+            vaultType == Type<@LargemouthBassCoin.Vault>(): "Vault type mismatch"
         }
         return <-create Vault(balance: 0.0)
     }
@@ -864,9 +886,6 @@ access(all) contract ExampleFishCoin: FungibleToken {
         return UInt64(self.totalSupply)
     }
 
-    // BAITCOIN EXCHANGE INTEGRATION - Dual-token economy
-    access(all) var baitExchangeRate: UFix64?  // Species coin → BaitCoin conversion rate
-    
     access(all) view fun getBaitExchangeRate(): UFix64? {
         return self.baitExchangeRate
     }
@@ -888,25 +907,6 @@ access(all) contract ExampleFishCoin: FungibleToken {
         return validStatuses.contains(status)
     }
 
-    // COMMUNITY DATA CURATION - Simplified for future growth
-    access(all) struct DataUpdate {
-        access(all) let field: String
-        access(all) let newValue: String
-        access(all) let contributor: Address
-        access(all) let source: String
-        access(all) let timestamp: UFix64
-        
-        init(field: String, newValue: String, contributor: Address, source: String) {
-            self.field = field
-            self.newValue = newValue
-            self.contributor = contributor
-            self.source = source
-            self.timestamp = getCurrentBlock().timestamp
-        }
-    }
-    
-    access(all) var pendingUpdates: [DataUpdate]
-    
     access(all) fun submitDataUpdate(field: String, value: String, source: String) {
         let update = DataUpdate(
             field: field,
@@ -1078,7 +1078,7 @@ access(all) contract ExampleFishCoin: FungibleToken {
         return self.totalSupply
     }
     
-    access(all) fun burnTokens(from: @ExampleFishCoin.Vault) {
+    access(all) fun burnTokens(from: @LargemouthBassCoin.Vault) {
         // Public burn function for token holders
         let vault <- from
         let amount = vault.balance
@@ -1091,11 +1091,11 @@ access(all) contract ExampleFishCoin: FungibleToken {
     }
     
     // MISSING: Token utility functions
-    access(all) view fun getVaultBalance(vaultRef: &ExampleFishCoin.Vault): UFix64 {
+    access(all) view fun getVaultBalance(vaultRef: &LargemouthBassCoin.Vault): UFix64 {
         return vaultRef.balance
     }
     
-    access(all) view fun canWithdraw(vaultRef: &ExampleFishCoin.Vault, amount: UFix64): Bool {
+    access(all) view fun canWithdraw(vaultRef: &LargemouthBassCoin.Vault, amount: UFix64): Bool {
         return vaultRef.isAvailableToWithdraw(amount: amount)
     }
     
@@ -1110,7 +1110,7 @@ access(all) contract ExampleFishCoin: FungibleToken {
     
     // MISSING: Token validation
     access(all) view fun isValidVaultType(vaultType: Type): Bool {
-        return vaultType == Type<@ExampleFishCoin.Vault>()
+        return vaultType == Type<@LargemouthBassCoin.Vault>()
     }
 
     // Contract initialization
@@ -1128,111 +1128,114 @@ access(all) contract ExampleFishCoin: FungibleToken {
         // Initialize community curation system
         self.pendingUpdates = []
         
-        // Set comprehensive species metadata for Example Fish
+        // Set comprehensive species metadata for Largemouth Bass
         self.speciesMetadata = SpeciesMetadata(
             // IMMUTABLE CORE FIELDS
-            speciesCode: "EXAMPLE_FISH",
-            ticker: "EXFISH",
-            scientificName: "Exampleus fishicus",
-            family: "Exampleidae",
+            speciesCode: "MICROPTERUS_SALMOIDES",
+            ticker: "LMBASS",
+            scientificName: "Micropterus salmoides",
+            family: "Centrarchidae",
             dataYear: 2024,
             
             // BASIC DESCRIPTIVE FIELDS
-            commonName: "Example Fish",
-            habitat: "Freshwater lakes and rivers",
-            averageWeight: 3.5,
-            averageLength: 15.0,
-            imageURL: "https://derby.fish/images/species/example-fish.jpg",
-            description: "The example fish is a sample freshwater gamefish used for demonstration purposes in the DerbyFish ecosystem.",
+            commonName: "Largemouth Bass",
+            habitat: "Freshwater lakes, rivers, and reservoirs with vegetation",
+            averageWeight: 2.5,
+            averageLength: 14.0,
+            imageURL: "https://derby.fish/images/species/largemouth-bass.jpg",
+            description: "The largemouth bass is one of North America's most popular gamefish, known for its aggressive strikes and powerful fights. A member of the black bass family, it's distinguished by its large mouth extending past the eye.",
             firstCatchDate: nil,
-            rarityTier: 2,
+            rarityTier: 1, // Common
             
             // CONSERVATION & POPULATION
-            globalConservationStatus: "Stable",
+            globalConservationStatus: "Least Concern",
             regionalPopulations: {
-                "Example Waters": RegionalPopulation(
+                "North America": RegionalPopulation(
                     populationTrend: "Stable",
-                    threats: ["Habitat Loss", "Water Pollution"],
-                    protectedAreas: ["Example National Park", "Demo Wildlife Refuge"],
+                    threats: ["Habitat Loss", "Water Pollution", "Invasive Species"],
+                    protectedAreas: ["National Wildlife Refuges", "State Parks"],
                     estimatedPopulation: nil
                 )
             },
             
             // BIOLOGICAL INTELLIGENCE
-            lifespan: 8.0,
-            diet: "Insects, small fish, aquatic invertebrates",
-            predators: ["Larger Fish", "Birds", "Humans"],
-            temperatureRange: "65-75°F",
-            depthRange: "0-30 feet",
-            spawningAge: 2.0,
-            spawningBehavior: "Builds nests in shallow water during spring",
-            migrationPattern: "Seasonal movement to deeper waters in winter",
-            waterQualityNeeds: "pH 6.5-7.5, dissolved oxygen >5mg/L",
+            lifespan: 16.0,
+            diet: "Fish, crayfish, frogs, insects, and small birds",
+            predators: ["Larger Fish", "Birds", "Turtles", "Otters"],
+            temperatureRange: "68-78°F",
+            depthRange: "0-60 feet",
+            spawningAge: 3.0,
+            spawningBehavior: "Males build circular nests in shallow water during spring spawning",
+            migrationPattern: "Seasonal movement between shallow and deep water",
+            waterQualityNeeds: "pH 6.5-8.5, dissolved oxygen >5mg/L",
             
             // GEOGRAPHIC & HABITAT
-            nativeRegions: ["North America", "Example Waters"],
-            currentRange: ["North America", "Example Waters", "Introduced Waters"],
-            waterTypes: ["River", "Lake", "Stream"],
-            invasiveStatus: "Native",
+            nativeRegions: ["Eastern North America"],
+            currentRange: ["North America", "Europe", "Asia", "Africa", "South America"],
+            waterTypes: ["Lake", "River", "Reservoir", "Pond"],
+            invasiveStatus: "Native to Eastern US, Introduced elsewhere",
             
             // ECONOMIC & COMMERCIAL
             regionalCommercialValue: {
-                "Example Waters": 4.50
+                "United States": 8.50,
+                "Canada": 9.00
             },
-            tourismValue: 7,
-            ecosystemRole: "Secondary Consumer",
-            culturalSignificance: "Traditional gamefish in local communities",
+            tourismValue: 10, // Extremely high
+            ecosystemRole: "Apex Predator",
+            culturalSignificance: "America's most popular gamefish, featured in countless tournaments",
             
             // ANGLING & RECREATIONAL
-            bestBaits: ["Worms", "Minnows", "Spinners", "Jigs"],
-            fightRating: 6,
+            bestBaits: ["Plastic Worms", "Spinnerbaits", "Crankbaits", "Jigs", "Topwater Lures"],
+            fightRating: 9,
             culinaryRating: 7,
-            catchDifficulty: 4,
-            seasonalAvailability: "Best in spring and fall",
-            bestTechniques: ["Casting", "Trolling", "Still fishing"],
+            catchDifficulty: 5,
+            seasonalAvailability: "Best in spring and fall, active year-round in warmer climates",
+            bestTechniques: ["Casting", "Flipping", "Trolling", "Topwater"],
             
             // REGULATORY
             regionalRegulations: {
-                "Example Waters": RegionalRegulations(
-                    sizeLimit: 12.0,
-                    bagLimit: 5,
-                    closedSeasons: ["March 15 - April 30"],
-                    specialRegulations: "Barbless hooks required in some waters",
+                "United States": RegionalRegulations(
+                    sizeLimit: 12.0, // Varies by state
+                    bagLimit: 5, // Typical limit
+                    closedSeasons: [], // Usually open year-round
+                    specialRegulations: "Varies by state and water body",
                     licenseRequired: true
                 )
             },
             
             // PHYSICAL & BEHAVIORAL
-            physicalDescription: "Silver-green body with dark vertical bars, forked tail",
-            behaviorTraits: "Schooling fish, active feeders, moderate aggression",
-            seasonalPatterns: "Active spring-fall, dormant in winter, spawns in late spring",
+            physicalDescription: "Dark green back fading to light green sides and white belly, dark lateral line, jaw extends past eye",
+            behaviorTraits: "Ambush predator, structure-oriented, aggressive feeder",
+            seasonalPatterns: "Spawn in spring, move to deeper water in summer, feed heavily in fall",
             
             // RECORDS & ACHIEVEMENTS
-            recordWeight: 25.0,
-            recordWeightLocation: "Example Lake, Demo State",
-            recordWeightDate: "June 15, 2019",
-            recordLength: 30.0,
-            recordLengthLocation: "Different Lake, Demo State",
-            recordLengthDate: "August 3, 2021",
+            recordWeight: 22.5, // George Perry's 1932 record
+            recordWeightLocation: "Montgomery Lake, Georgia",
+            recordWeightDate: "June 2, 1932",
+            recordLength: 29.5, // Separate length record
+            recordLengthLocation: "Lake Biwa, Japan",
+            recordLengthDate: "July 2, 2009",
             
             // RESEARCH & SCIENTIFIC
-            researchPriority: 5,
-            geneticMarkers: "Mitochondrial DNA sequences available",
-            studyPrograms: ["Demo University Fish Study", "Example Conservation Project"],
+            researchPriority: 8,
+            geneticMarkers: "Microsatellite DNA markers available for population studies",
+            studyPrograms: ["BASS Research Foundation", "FWS Sport Fish Restoration"],
             
             // FLEXIBLE METADATA
             additionalMetadata: {
                 "last_updated": "2024-01-01",
-                "data_quality": "High",
-                "contributor": "DerbyFish Research Team"
+                "data_quality": "Excellent",
+                "contributor": "DerbyFish Research Team",
+                "tournament_species": "true",
+                "state_fish": "Alabama, Florida, Georgia, Mississippi, Tennessee"
             }
         )
 
-        // Set storage paths using common name format
-        self.VaultStoragePath = StoragePath(identifier: "ExampleFishCoinVault")!
-        self.VaultPublicPath = PublicPath(identifier: "ExampleFishCoinReceiver")!
-        self.MinterStoragePath = StoragePath(identifier: "ExampleFishCoinMinter")!
-        self.MetadataAdminStoragePath = StoragePath(identifier: "ExampleFishCoinMetadataAdmin")!
+        // Set storage paths using species name format
+        self.VaultStoragePath = StoragePath(identifier: "LargemouthBassCoinVault")!
+        self.VaultPublicPath = PublicPath(identifier: "LargemouthBassCoinReceiver")!
+        self.MinterStoragePath = StoragePath(identifier: "LargemouthBassCoinMinter")!
+        self.MetadataAdminStoragePath = StoragePath(identifier: "LargemouthBassCoinMetadataAdmin")!
 
         // Create and store admin resources
         let minter <- create Minter()

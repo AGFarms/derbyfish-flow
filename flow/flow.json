@@ -12,13 +12,9 @@
 				"testing": "0000000000000007"
 			}
 		},
-		"ExampleFishCoin": {
-			"source": "cadence/contracts/ExampleFishCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"Fish": "cadence/contracts/Fish.cdc"
+		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
+		"Fish": "cadence/contracts/Fish.cdc",
+		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc"
 	},
 	"dependencies": {
 		"Burner": {
@@ -118,7 +114,9 @@
 			"emulator-account": [
 				"BaitCoin",
 				"Fish",
-				"FUSD"
+				"FUSD",
+				"LargemouthBassCoin",
+				"ExampleFishCoin"
 			]
 		}
 	}
