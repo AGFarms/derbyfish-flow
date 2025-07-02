@@ -25,6 +25,15 @@
 				"testnet": "9a0766d93b6608b7"
 			}
 		},
+		"FUSD": {
+			"source": "mainnet://3c5959b568896393.FUSD",
+			"hash": "d248c7cc68e1b452d0069e80741fba47b401a585c1b65ec6d421d530f745ebbb",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "3c5959b568896393",
+				"testnet": "e223d8a629e49c68"
+			}
+		},
 		"FlowToken": {
 			"source": "mainnet://1654653399040a61.FlowToken",
 			"hash": "cefb25fd19d9fc80ce02896267eb6157a6b0df7b1935caa8641421fe34c0e67a",
@@ -109,6 +118,7 @@
 			"emulator-account": [
 				"BaitCoin",
 				"Fish",
+				"FUSD",
 				"FishNFT"
 			]
 		}

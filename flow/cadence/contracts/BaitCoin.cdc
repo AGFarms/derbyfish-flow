@@ -1,11 +1,18 @@
 import "FungibleToken"
 import "MetadataViews"
 import "FungibleTokenMetadataViews"
+import "FUSD"
 
 access(all) contract BaitCoin: FungibleToken {
 
     /// The event that is emitted when new tokens are minted
     access(all) event TokensMinted(amount: UFix64, type: String)
+
+    /// The event that is emitted when FUSD is swapped for BaitCoin
+    access(all) event FUSDSwappedForBaitCoin(fusdAmount: UFix64, baitCoinAmount: UFix64, account: Address)
+
+    /// The event that is emitted when BaitCoin is swapped for FUSD
+    access(all) event BaitCoinSwappedForFUSD(baitCoinAmount: UFix64, fusdAmount: UFix64, account: Address)
 
     /// Total supply of BaitCoins in existence
     access(all) var totalSupply: UFix64
@@ -140,14 +147,121 @@ access(all) contract BaitCoin: FungibleToken {
             emit TokensMinted(amount: amount, type: vault.getType().identifier)
             return <-vault
         }
+
+        /// swapFUSDForBaitCoin
+        ///
+        /// User sends FUSD, receives equivalent BaitCoin
+        ///
+        access(all) fun swapFUSDForBaitCoin(from: @FUSD.Vault, recipient: Address) {
+            let fusdAmount = from.balance
+            
+            // Get reference to contract's FUSD vault and deposit received FUSD
+            let contractFUSDVault = BaitCoin.account.storage.borrow<&FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
+                ?? panic("Could not borrow reference to contract's FUSD vault")
+            contractFUSDVault.deposit(from: <-from)
+
+            // Mint equivalent BaitCoin
+            let newBaitCoin <- self.mintTokens(amount: fusdAmount)
+            
+            // Get recipient's BaitCoin receiver
+            let recipientReceiver = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(BaitCoin.VaultPublicPath)
+                ?? panic("Could not borrow receiver capability for recipient")
+            
+            // Deposit BaitCoin to recipient
+            recipientReceiver.deposit(from: <-newBaitCoin)
+            
+            emit FUSDSwappedForBaitCoin(fusdAmount: fusdAmount, baitCoinAmount: fusdAmount, account: recipient)
+        }
+
+        /// swapBaitCoinForFUSD  
+        ///
+        /// User sends BaitCoin, receives equivalent FUSD
+        ///
+        access(all) fun swapBaitCoinForFUSD(from: @BaitCoin.Vault, recipient: Address) {
+            let baitCoinAmount = from.balance
+            
+            // Burn the received BaitCoin
+            BaitCoin.totalSupply = BaitCoin.totalSupply - baitCoinAmount
+            destroy from
+            
+            // Get reference to contract's FUSD vault and withdraw equivalent FUSD
+            let contractFUSDVault = BaitCoin.account.storage.borrow<auth(FungibleToken.Withdraw) &FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
+                ?? panic("Could not borrow reference to contract's FUSD vault")
+            
+            let fusdToSend <- contractFUSDVault.withdraw(amount: baitCoinAmount)
+            
+            // Get recipient's FUSD receiver
+            let recipientReceiver = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(/public/fusdReceiver)
+                ?? panic("Could not borrow FUSD receiver capability for recipient")
+            
+            // Deposit FUSD to recipient
+            recipientReceiver.deposit(from: <-fusdToSend)
+            
+            emit BaitCoinSwappedForFUSD(baitCoinAmount: baitCoinAmount, fusdAmount: baitCoinAmount, account: recipient)
+        }
     }
 
     access(all) fun createEmptyVault(vaultType: Type): @BaitCoin.Vault {
         return <- create Vault(balance: 0.0)
     }
 
+    /// Get the FUSD balance stored in the contract
+    access(all) fun getContractFUSDBalance(): UFix64 {
+        let fusdVault = self.account.storage.borrow<&FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
+            ?? panic("Could not borrow contract FUSD vault")
+        return fusdVault.balance
+    }
+
+    /// Public swap function: FUSD for BaitCoin
+    access(all) fun swapFUSDForBaitCoin(from: @FUSD.Vault, recipient: Address) {
+        let fusdAmount = from.balance
+        
+        // Get reference to contract's FUSD vault and deposit received FUSD
+        let contractFUSDVault = self.account.storage.borrow<&FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
+            ?? panic("Could not borrow reference to contract's FUSD vault")
+        contractFUSDVault.deposit(from: <-from)
+
+        // Mint equivalent BaitCoin internally
+        self.totalSupply = self.totalSupply + fusdAmount
+        let newBaitCoin <- create Vault(balance: fusdAmount)
+        emit TokensMinted(amount: fusdAmount, type: newBaitCoin.getType().identifier)
+        
+        // Get recipient's BaitCoin receiver
+        let recipientReceiver = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(self.VaultPublicPath)
+            ?? panic("Could not borrow receiver capability for recipient")
+        
+        // Deposit BaitCoin to recipient
+        recipientReceiver.deposit(from: <-newBaitCoin)
+        
+        emit FUSDSwappedForBaitCoin(fusdAmount: fusdAmount, baitCoinAmount: fusdAmount, account: recipient)
+    }
+
+    /// Public swap function: BaitCoin for FUSD
+    access(all) fun swapBaitCoinForFUSD(from: @BaitCoin.Vault, recipient: Address) {
+        let baitCoinAmount = from.balance
+        
+        // Burn the received BaitCoin
+        self.totalSupply = self.totalSupply - baitCoinAmount
+        destroy from
+        
+        // Get reference to contract's FUSD vault and withdraw equivalent FUSD
+        let contractFUSDVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
+            ?? panic("Could not borrow reference to contract's FUSD vault")
+        
+        let fusdToSend <- contractFUSDVault.withdraw(amount: baitCoinAmount)
+        
+        // Get recipient's FUSD receiver
+        let recipientReceiver = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(/public/fusdReceiver)
+            ?? panic("Could not borrow FUSD receiver capability for recipient")
+        
+        // Deposit FUSD to recipient
+        recipientReceiver.deposit(from: <-fusdToSend)
+        
+        emit BaitCoinSwappedForFUSD(baitCoinAmount: baitCoinAmount, fusdAmount: baitCoinAmount, account: recipient)
+    }
+
     init() {
-        self.totalSupply = 1000.0
+        self.totalSupply = 0.0
 
         self.VaultStoragePath = /storage/BaitCoinVault
         self.VaultPublicPath = /public/BaitCoinVault
@@ -166,6 +280,10 @@ access(all) contract BaitCoin: FungibleToken {
         //
         let BaitCoinCap = self.account.capabilities.storage.issue<&BaitCoin.Vault>(self.VaultStoragePath)
         self.account.capabilities.publish(BaitCoinCap, at: self.VaultPublicPath)
+
+        // Create a FUSD vault for the contract to store received FUSD
+        let fusdVault <- FUSD.createEmptyVault(vaultType: Type<@FUSD.Vault>())
+        self.account.storage.save(<-fusdVault, to: /storage/BaitCoinFUSDVault)
 
         let minter <- create Minter()
         self.account.storage.save(<-minter, to: self.MinterStoragePath)
