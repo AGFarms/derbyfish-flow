@@ -14,8 +14,14 @@
 		},
 		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
 		"Fish": "cadence/contracts/Fish.cdc",
+		"FishNFT": "cadence/contracts/FishNFT.cdc",
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
-		"FishNFT": "cadence/contracts/FishNFT.cdc"
+		"WalleyeCoin": {
+			"source": "cadence/contracts/WalleyeCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		}
 	},
 	"dependencies": {
 		"Burner": {
