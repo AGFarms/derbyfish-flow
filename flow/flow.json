@@ -14,7 +14,8 @@
 		},
 		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
 		"Fish": "cadence/contracts/Fish.cdc",
-		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc"
+		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
+		"FishNFT": "cadence/contracts/FishNFT.cdc"
 	},
 	"dependencies": {
 		"Burner": {
@@ -99,14 +100,19 @@
 	"accounts": {
 		"emulator-account": {
 			"address": "f8d6e0586b0a20c7",
-			"key": {
-				"type": "file",
-				"location": "emulator-account.pkey"
-			}
+			"key": "59d2f5c528cb4f690003b38f50363fe5488615a8969bd11869bac7f16877fc57"
 		},
 		"test-acct": {
 			"address": "179b6b1cb6755e31",
-			"key": "335d7f8d64c239d0aed84ee3a1b0df34dabfd4021359473cd69c5224dc9a86a6"
+			"key": "da8fd376620403e6b8f6d0e60169b7b34977c56438e7a14ee648bbf5021901e5"
+		},
+		"test-acct-2": {
+			"address": "f3fcd2c1a78f5eee",
+			"key": "c6438039828b0d815122e211660845f467e9860a9b2b170edf8f6d67477f71ae"
+		},
+		"test_angler": {
+			"address": "179b6b1cb6755e31",
+			"key": "1841fd2ef296445e182ac6fd2a524e2da180653eadf7ba6013f9b7a1d350b3c5"
 		}
 	},
 	"deployments": {
@@ -116,7 +122,8 @@
 				"Fish",
 				"FUSD",
 				"LargemouthBassCoin",
-				"ExampleFishCoin"
+				"ExampleFishCoin",
+				"FishNFT"
 			]
 		}
 	}
