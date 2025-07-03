@@ -57,7 +57,11 @@ flow transactions send cadence/transactions/setup_bc_account.cdc --network testn
 ```
 
 **Check Setup Success:**
-
+```bash
+# Verify account has empty vaults/collections
+flow scripts execute cadence/scripts/get_walleye_coin_info.cdc <USER_ADDRESS> --network testnet
+flow scripts execute cadence/scripts/get_fish_nft_ids.cdc <USER_ADDRESS> --network testnet
+```
 
 ---
 
