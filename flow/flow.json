@@ -8,7 +8,13 @@
 			}
 		},
 		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
-		"FishNFT": "cadence/contracts/FishNFT.cdc",
+		"FishNFT": {
+			"source": "cadence/contracts/FishNFT.cdc",
+			"aliases": {
+				"testing": "0000000000000007",
+				"testnet": "0xfdd7b15179ce5eb8"
+			}
+		},
 		"Fishdex": {
 			"source": "cadence/contracts/Fishdex.cdc",
 			"aliases": {
