@@ -18,8 +18,7 @@
 		"Fishdex": {
 			"source": "cadence/contracts/Fishdex.cdc",
 			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "0xfdd7b15179ce5eb8"
+				"testing": "0000000000000007"
 			}
 		},
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
