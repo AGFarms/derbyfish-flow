@@ -125,12 +125,7 @@
 			]
 		},
 		"testnet": {
-			"testnet-account": [
-				"WalleyeCoin",
-				"FishNFT",
-				"Fishdex",
-				"BaitCoin"
-			]
+			
 		}
 	}
 }
