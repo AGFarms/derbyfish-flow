@@ -4,6 +4,22 @@ import "FungibleTokenMetadataViews"
 
 access(all) contract ExampleFishCoin: FungibleToken {
 
+    // FISHDEX INTEGRATION - Cross-contract coordination interface
+    access(all) resource interface SpeciesCoinPublic {
+        access(all) view fun getSpeciesCode(): String
+        access(all) view fun getTicker(): String
+        access(all) view fun getCommonName(): String
+        access(all) view fun getScientificName(): String
+        access(all) view fun getFamily(): String
+        access(all) view fun getTotalSupply(): UFix64
+        access(all) view fun getBasicRegistryInfo(): {String: AnyStruct}
+        access(all) fun processCatchFromNFT(fishData: {String: AnyStruct}, angler: Address): @ExampleFishCoin.Vault
+    }
+
+    // FISHDEX COORDINATION - Registry management
+    access(all) var fishDEXAddress: Address?
+    access(all) var isRegisteredWithFishDEX: Bool
+
     // Regional data structures for location-specific information
     access(all) struct RegionalRegulations {
         access(all) var sizeLimit: UFix64?         // Minimum legal size in inches
@@ -43,6 +59,12 @@ access(all) contract ExampleFishCoin: FungibleToken {
     access(all) event FirstCatchRecorded(timestamp: UInt64, angler: Address)
     access(all) event YearlyMetadataCreated(year: UInt64)
     access(all) event MetadataYearUpdated(oldYear: UInt64, newYear: UInt64)
+    
+    // FISHDEX INTEGRATION EVENTS
+    access(all) event FishDEXRegistrationAttempted(fishDEXAddress: Address, speciesCode: String)
+    access(all) event FishDEXRegistrationCompleted(fishDEXAddress: Address, speciesCode: String)
+    access(all) event FishDEXAddressUpdated(oldAddress: Address?, newAddress: Address)
+    access(all) event CatchProcessedFromNFT(fishNFTId: UInt64?, angler: Address, amount: UFix64)
 
     // Total supply
     access(all) var totalSupply: UFix64
@@ -60,10 +82,13 @@ access(all) contract ExampleFishCoin: FungibleToken {
     access(all) let VaultPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
     access(all) let MetadataAdminStoragePath: StoragePath
+    access(all) let FishDEXCoordinatorStoragePath: StoragePath
+    access(all) let FishDEXCoordinatorPublicPath: PublicPath
 
     // Species metadata - HYBRID: Core fields immutable, descriptive fields mutable + REGIONAL + TEMPORAL
     access(all) struct SpeciesMetadata {
         // IMMUTABLE - Core identity fields that should never change
+        access(all) let commonName: String         // e.g., "Example Fish"
         access(all) let speciesCode: String        // e.g., "EXAMPLE_FISH"
         access(all) let ticker: String             // e.g., "EXFISH"
         access(all) let scientificName: String     // e.g., "Example fish"
@@ -71,7 +96,7 @@ access(all) contract ExampleFishCoin: FungibleToken {
         access(all) let dataYear: UInt64           // Year this metadata represents
         
         // MUTABLE - Descriptive fields that can be updated (NULLABLE WHERE APPROPRIATE)
-        access(all) var commonName: String         // e.g., "Example Fish"
+       
         access(all) var habitat: String?           // e.g., "Freshwater" - nullable if unknown
         access(all) var averageWeight: UFix64?     // in pounds - nullable if unknown
         access(all) var averageLength: UFix64?     // in inches - nullable if unknown
@@ -140,7 +165,6 @@ access(all) contract ExampleFishCoin: FungibleToken {
         access(all) var additionalMetadata: {String: String} // Custom key-value pairs for future expansion
 
         // BASIC FIELD SETTERS
-        access(all) fun setCommonName(_ newName: String) { self.commonName = newName }
         access(all) fun setHabitat(_ newHabitat: String) { self.habitat = newHabitat }
         access(all) fun setAverageWeight(_ newWeight: UFix64) { self.averageWeight = newWeight }
         access(all) fun setAverageLength(_ newLength: UFix64) { self.averageLength = newLength }
@@ -283,6 +307,7 @@ access(all) contract ExampleFishCoin: FungibleToken {
 
         init(
             // IMMUTABLE CORE FIELDS
+            commonName: String,
             speciesCode: String,
             ticker: String,
             scientificName: String,
@@ -290,7 +315,6 @@ access(all) contract ExampleFishCoin: FungibleToken {
             dataYear: UInt64,
             
             // BASIC DESCRIPTIVE FIELDS
-            commonName: String,
             habitat: String?,
             averageWeight: UFix64?,
             averageLength: UFix64?,
@@ -464,10 +488,131 @@ access(all) contract ExampleFishCoin: FungibleToken {
                         "twitter": MetadataViews.ExternalURL("https://twitter.com/derbyfish")
                     }
                 )
+            case Type<FungibleTokenMetadataViews.FTVaultData>():
+                return FungibleTokenMetadataViews.FTVaultData(
+                    storagePath: self.VaultStoragePath,
+                    receiverPath: self.VaultPublicPath,
+                    metadataPath: self.VaultPublicPath,
+                    receiverLinkedType: Type<&ExampleFishCoin.Vault>(),
+                    metadataLinkedType: Type<&ExampleFishCoin.Vault>(),
+                    createEmptyVaultFunction: (fun(): @{FungibleToken.Vault} {
+                        return <-ExampleFishCoin.createEmptyVault(vaultType: Type<@ExampleFishCoin.Vault>())
+                    })
+                )
             case Type<FungibleTokenMetadataViews.TotalSupply>():
                 return FungibleTokenMetadataViews.TotalSupply(totalSupply: self.totalSupply)
         }
         return nil
+    }
+
+    // FISHDEX COORDINATOR RESOURCE - Handles cross-contract integration
+    access(all) resource FishDEXCoordinator: SpeciesCoinPublic {
+        
+        // Interface implementation for FishDEX registry
+        access(all) view fun getSpeciesCode(): String {
+            return ExampleFishCoin.speciesMetadata.speciesCode
+        }
+        
+        access(all) view fun getTicker(): String {
+            return ExampleFishCoin.speciesMetadata.ticker
+        }
+        
+        access(all) view fun getCommonName(): String {
+            return ExampleFishCoin.speciesMetadata.commonName
+        }
+        
+        access(all) view fun getScientificName(): String {
+            return ExampleFishCoin.speciesMetadata.scientificName
+        }
+        
+        access(all) view fun getFamily(): String {
+            return ExampleFishCoin.speciesMetadata.family
+        }
+        
+        access(all) view fun getTotalSupply(): UFix64 {
+            return ExampleFishCoin.totalSupply
+        }
+        
+        access(all) view fun getBasicRegistryInfo(): {String: AnyStruct} {
+            return {
+                "speciesCode": self.getSpeciesCode(),
+                "ticker": self.getTicker(),
+                "commonName": self.getCommonName(),
+                "scientificName": self.getScientificName(),
+                "family": self.getFamily(),
+                "totalSupply": self.getTotalSupply(),
+                "contractAddress": ExampleFishCoin.account.address,
+                "dataYear": ExampleFishCoin.speciesMetadata.dataYear,
+                "conservationStatus": ExampleFishCoin.speciesMetadata.globalConservationStatus,
+                "rarityTier": ExampleFishCoin.speciesMetadata.rarityTier,
+                "isRegistered": ExampleFishCoin.isRegisteredWithFishDEX
+            }
+        }
+        
+        // Process catch verification from Fish NFT contracts
+        access(all) fun processCatchFromNFT(fishData: {String: AnyStruct}, angler: Address): @ExampleFishCoin.Vault {
+            // Validate fish data matches this species
+            if let fishSpeciesCode = fishData["speciesCode"] as? String {
+                assert(
+                    fishSpeciesCode == self.getSpeciesCode(),
+                    message: "Fish species code does not match this species coin"
+                )
+            }
+            
+            // Extract fish NFT ID if available
+            let fishNFTId = fishData["nftId"] as? UInt64
+            
+            // Auto-record first catch if this is the very first mint
+            if ExampleFishCoin.totalSupply == 0.0 && ExampleFishCoin.speciesMetadata.firstCatchDate == nil {
+                ExampleFishCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+                emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
+            }
+            
+            // Mint 1 coin for verified catch
+            let amount: UFix64 = 1.0
+            ExampleFishCoin.totalSupply = ExampleFishCoin.totalSupply + amount
+            
+            // Create vault with the minted amount (not empty!)
+            let vault <- create Vault(balance: amount)
+            
+            // Emit events
+            emit TokensMinted(amount: amount, to: angler)
+            emit CatchProcessedFromNFT(fishNFTId: fishNFTId, angler: angler, amount: amount)
+            
+            if let nftId = fishNFTId {
+                emit CatchVerified(fishId: nftId, angler: angler, amount: amount)
+            }
+            
+            return <- vault
+        }
+        
+        // Register this species with FishDEX
+        access(all) fun registerWithFishDEX(fishDEXAddress: Address) {
+            pre {
+                !ExampleFishCoin.isRegisteredWithFishDEX: "Already registered with FishDEX"
+            }
+            
+            emit FishDEXRegistrationAttempted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
+            
+            // Get reference to FishDEX contract
+            let fishDEXAccount = getAccount(fishDEXAddress)
+            
+            // Call FishDEX registration function
+            // Note: This will be completed when FishDEX contract is implemented
+            // For now, just update our state
+            ExampleFishCoin.fishDEXAddress = fishDEXAddress
+            ExampleFishCoin.isRegisteredWithFishDEX = true
+            
+            emit FishDEXRegistrationCompleted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
+        }
+        
+        // Update FishDEX address (admin only via proper access)
+        access(all) fun updateFishDEXAddress(newAddress: Address) {
+            let oldAddress = ExampleFishCoin.fishDEXAddress
+            ExampleFishCoin.fishDEXAddress = newAddress
+            ExampleFishCoin.isRegisteredWithFishDEX = false // Reset registration status
+            emit FishDEXAddressUpdated(oldAddress: oldAddress, newAddress: newAddress)
+        }
     }
 
     // Vault Resource
@@ -535,6 +680,9 @@ access(all) contract ExampleFishCoin: FungibleToken {
             if ExampleFishCoin.totalSupply == 0.0 && ExampleFishCoin.speciesMetadata.firstCatchDate == nil {
                 ExampleFishCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
+                
+                // Auto-register with FishDEX after first mint if FishDEX address is set
+                self.autoRegisterWithFishDEX()
             }
             
             ExampleFishCoin.totalSupply = ExampleFishCoin.totalSupply + amount
@@ -543,6 +691,26 @@ access(all) contract ExampleFishCoin: FungibleToken {
             emit CatchVerified(fishId: fishId, angler: angler, amount: amount)
             
             return <-create Vault(balance: amount)
+        }
+        
+        // Auto-registration helper function
+        access(all) fun autoRegisterWithFishDEX() {
+            if let fishDEXAddr = ExampleFishCoin.fishDEXAddress {
+                if !ExampleFishCoin.isRegisteredWithFishDEX {
+                    // Get reference to FishDEX coordinator
+                    if let coordinatorRef = ExampleFishCoin.account.capabilities.borrow<&FishDEXCoordinator>(
+                        ExampleFishCoin.FishDEXCoordinatorPublicPath
+                    ) {
+                        coordinatorRef.registerWithFishDEX(fishDEXAddress: fishDEXAddr)
+                    }
+                }
+            }
+        }
+        
+        // Manual FishDEX registration (admin function)
+        access(all) fun registerWithFishDEXManually(fishDEXAddress: Address) {
+            ExampleFishCoin.fishDEXAddress = fishDEXAddress
+            self.autoRegisterWithFishDEX()
         }
 
         access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: ExampleFishCoin.Vault} {
@@ -576,12 +744,6 @@ access(all) contract ExampleFishCoin: FungibleToken {
             let oldDescription = ExampleFishCoin.speciesMetadata.description
             ExampleFishCoin.speciesMetadata.setDescription(newDescription)
             emit MetadataUpdated(field: "description", oldValue: oldDescription, newValue: newDescription)
-        }
-        
-        access(all) fun updateCommonName(newName: String) {
-            let oldName = ExampleFishCoin.speciesMetadata.commonName
-            ExampleFishCoin.speciesMetadata.setCommonName(newName)
-            emit MetadataUpdated(field: "commonName", oldValue: oldName, newValue: newName)
         }
         
         access(all) fun updateHabitat(newHabitat: String) {
@@ -719,7 +881,7 @@ access(all) contract ExampleFishCoin: FungibleToken {
             }
             ExampleFishCoin.pendingUpdates.remove(at: index)
         }
-        
+
         access(all) fun clearAllPendingUpdates() {
             ExampleFishCoin.pendingUpdates = []
         }
@@ -782,6 +944,35 @@ access(all) contract ExampleFishCoin: FungibleToken {
 
     access(all) view fun getSpeciesMetadata(): SpeciesMetadata {
         return self.speciesMetadata
+    }
+
+    // FISHDEX INTEGRATION - Public query functions
+    access(all) view fun getFishDEXAddress(): Address? {
+        return self.fishDEXAddress
+    }
+    
+    access(all) view fun getFishDEXRegistrationStatus(): Bool {
+        return self.isRegisteredWithFishDEX
+    }
+    
+    access(all) view fun getRegistryInfo(): {String: AnyStruct} {
+        return {
+            "speciesCode": self.speciesMetadata.speciesCode,
+            "ticker": self.speciesMetadata.ticker,
+            "commonName": self.speciesMetadata.commonName,
+            "scientificName": self.speciesMetadata.scientificName,
+            "family": self.speciesMetadata.family,
+            "totalSupply": self.totalSupply,
+            "contractAddress": self.account.address,
+            "fishDEXAddress": self.fishDEXAddress,
+            "isRegistered": self.isRegisteredWithFishDEX,
+            "dataYear": self.speciesMetadata.dataYear
+        }
+    }
+    
+    // Create public capability for FishDEX coordinator (called during account setup)
+    access(all) fun createFishDEXCoordinatorCapability(): Capability<&FishDEXCoordinator> {
+        return self.account.capabilities.storage.issue<&FishDEXCoordinator>(self.FishDEXCoordinatorStoragePath)
     }
 
     // TEMPORAL METADATA MANAGEMENT - Track changes over time
@@ -1073,22 +1264,14 @@ access(all) contract ExampleFishCoin: FungibleToken {
         return summary
     }
 
-    // MISSING: Essential token interaction functions
+    // Essential token interaction functions
     access(all) view fun getTotalSupply(): UFix64 {
         return self.totalSupply
     }
     
-    access(all) fun burnTokens(from: @ExampleFishCoin.Vault) {
-        // Public burn function for token holders
-        let vault <- from
-        let amount = vault.balance
-        let owner = vault.owner?.address
-        
-        self.totalSupply = self.totalSupply - amount
-        emit TokensBurned(amount: amount, from: owner)
-        
-        destroy vault
-    }
+    // NOTE: Fish coins represent permanent historical catch records
+    // No burning functions provided - total supply always equals total verified catches
+    // Only natural vault destruction (via burnCallback) affects individual balances
     
     // MISSING: Token utility functions
     access(all) view fun getVaultBalance(vaultRef: &ExampleFishCoin.Vault): UFix64 {
@@ -1128,17 +1311,21 @@ access(all) contract ExampleFishCoin: FungibleToken {
         // Initialize community curation system
         self.pendingUpdates = []
         
+        // Initialize FishDEX integration
+        self.fishDEXAddress = nil
+        self.isRegisteredWithFishDEX = false
+        
         // Set comprehensive species metadata for Example Fish
         self.speciesMetadata = SpeciesMetadata(
             // IMMUTABLE CORE FIELDS
+            commonName: "Example Fish",
             speciesCode: "EXAMPLE_FISH",
             ticker: "EXFISH",
             scientificName: "Exampleus fishicus",
             family: "Exampleidae",
-            dataYear: 2024,
+            dataYear: UInt64(2024),
             
             // BASIC DESCRIPTIVE FIELDS
-            commonName: "Example Fish",
             habitat: "Freshwater lakes and rivers",
             averageWeight: 3.5,
             averageLength: 15.0,
@@ -1233,6 +1420,8 @@ access(all) contract ExampleFishCoin: FungibleToken {
         self.VaultPublicPath = PublicPath(identifier: "ExampleFishCoinReceiver")!
         self.MinterStoragePath = StoragePath(identifier: "ExampleFishCoinMinter")!
         self.MetadataAdminStoragePath = StoragePath(identifier: "ExampleFishCoinMetadataAdmin")!
+        self.FishDEXCoordinatorStoragePath = StoragePath(identifier: "ExampleFishCoinFishDEXCoordinator")!
+        self.FishDEXCoordinatorPublicPath = PublicPath(identifier: "ExampleFishCoinFishDEXCoordinator")!
 
         // Create and store admin resources
         let minter <- create Minter()
@@ -1240,5 +1429,18 @@ access(all) contract ExampleFishCoin: FungibleToken {
         
         let metadataAdmin <- create MetadataAdmin()
         self.account.storage.save(<-metadataAdmin, to: self.MetadataAdminStoragePath)
+        
+        // Create and store FishDEX coordinator
+        let fishDEXCoordinator <- create FishDEXCoordinator()
+        self.account.storage.save(<-fishDEXCoordinator, to: self.FishDEXCoordinatorStoragePath)
+        
+        // Create public capability for FishDEX coordinator
+        let coordinatorCapability = self.account.capabilities.storage.issue<&FishDEXCoordinator>(self.FishDEXCoordinatorStoragePath)
+        self.account.capabilities.publish(coordinatorCapability, at: self.FishDEXCoordinatorPublicPath)
+
+        let vault <- create Vault(balance: self.totalSupply)
+        self.account.storage.save(<-vault, to: self.VaultStoragePath)
+        let cap = self.account.capabilities.storage.issue<&ExampleFishCoin.Vault>(self.VaultStoragePath)
+        self.account.capabilities.publish(cap, at: self.VaultPublicPath)
     }
 }

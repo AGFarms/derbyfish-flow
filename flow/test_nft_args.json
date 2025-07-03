@@ -1,0 +1,18 @@
+[
+    { "type": "Address", "value": "179b6b1cb6755e31" },
+    { "type": "String", "value": "https://example.com/walleye-bump-1.jpg" },
+    { "type": "String", "value": "https://example.com/walleye-hero-1.jpg" },
+    { "type": "Bool", "value": true },
+    { "type": "Optional", "value": { "type": "String", "value": "https://example.com/walleye-release-1.mp4" } },
+    { "type": "String", "value": "walleye-bump-hash-123" },
+    { "type": "String", "value": "walleye-hero-hash-456" },
+    { "type": "Optional", "value": { "type": "String", "value": "walleye-release-hash-789" } },
+    { "type": "Fix64", "value": "-93.2650" },
+    { "type": "Fix64", "value": "44.9778" },
+    { "type": "UFix64", "value": "24.5" },
+    { "type": "String", "value": "Walleye" },
+    { "type": "String", "value": "Sander vitreus" },
+    { "type": "UFix64", "value": "1699123456" },
+    { "type": "Optional", "value": { "type": "String", "value": "Jig and minnow" } },
+    { "type": "Optional", "value": { "type": "String", "value": "Lake Minnetonka, MN" } }
+  ]

@@ -17,7 +17,8 @@ transaction(
     scientific: String,
     timestamp: UFix64,
     gear: String?,
-    location: String?
+    location: String?,
+    speciesCode: String
 ) {
     let minter: &FishNFT.NFTMinter
 
@@ -27,7 +28,9 @@ transaction(
     }
 
     execute {
-        let metadata = FishNFT.FishMetadata(
+        // Use the enhanced minting function that includes species validation
+        let nft <- self.minter.mintNFTWithSpeciesValidation(
+            recipient: recipient,
             bumpShotUrl: bumpShotUrl,
             heroShotUrl: heroShotUrl,
             hasRelease: hasRelease,
@@ -43,15 +46,7 @@ transaction(
             timestamp: timestamp,
             gear: gear,
             location: location,
-            speciesCode: nil,
-            speciesCoinAddress: nil,
-            verificationSource: "Manual",
-            catchVerified: false
-        )
-
-        let nft <- self.minter.mintNFT(
-            recipient: recipient,
-            metadata: metadata
+            speciesCode: speciesCode
         )
 
         let recipientCollection = getAccount(recipient)
@@ -59,5 +54,10 @@ transaction(
             ?? panic("Could not borrow recipient collection")
 
         recipientCollection.deposit(token: <-nft)
+        
+        log("Fish NFT minted with species validation!")
+        log("Species: ".concat(species))
+        log("Scientific: ".concat(scientific))
+        log("Species Code: ".concat(speciesCode))
     }
-}
+} 
