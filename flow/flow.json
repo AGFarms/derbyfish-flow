@@ -119,7 +119,7 @@
 			}
 		},
 		"testnet-user": {
-			"address": "10e2159a4b5a5003",
+			"address": "10e21595a5003a4b",
 			"key": {
 				"type": "file",
 				"location": "testnet-user.pkey"
