@@ -14,13 +14,13 @@
 ### Test Contract Deployment
 ```bash
 # Verify WalleyeCoin metadata
-flow scripts execute cadence/scripts/get_walleye_coin_all_metadata.cdc --network testnet
+flow scripts execute flow/cadence/scripts/get_walleye_coin_all_metadata.cdc --network testnet
 
 # Check contract info
-flow scripts execute cadence/scripts/get_walleye_coin_info.cdc fdd7b15179ce5eb8 --network testnet
+flow scripts execute flow/cadence/scripts/get_walleye_coin_info.cdc fdd7b15179ce5eb8 --network testnet
 
 # Test FishNFT collection (if any NFTs exist)
-flow scripts execute cadence/scripts/get_fish_nft_ids.cdc fdd7b15179ce5eb8 --network testnet
+flow scripts execute flow/cadence/scripts/get_fish_nft_ids.cdc fdd7b15179ce5eb8 --network testnet
 ```
 
 **Expected Results:**
