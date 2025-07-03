@@ -19,7 +19,7 @@
 			"source": "cadence/contracts/WalleyeCoin.cdc",
 			"aliases": {
 				"testing": "0000000000000007",
-				"testnet": ""
+				"testnet": "0xfdd7b15179ce5eb8"
 			}
 		}
 	},
