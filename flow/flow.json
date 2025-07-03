@@ -3,7 +3,8 @@
 		"BaitCoin": {
 			"source": "cadence/contracts/BaitCoin.cdc",
 			"aliases": {
-				"testing": "0000000000000007"
+				"testing": "0000000000000007",
+				"testnet": "0xfdd7b15179ce5eb8"
 			}
 		},
 		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
@@ -12,6 +13,7 @@
 			"source": "cadence/contracts/Fishdex.cdc",
 			"aliases": {
 				"testing": "0000000000000007",
+				"testnet": "0xfdd7b15179ce5eb8"
 			}
 		},
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
