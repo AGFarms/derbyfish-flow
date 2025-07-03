@@ -78,7 +78,7 @@ export TEST_USER=10e2159a4b5a5003
 # Recommended: All-in-One Transaction (handles everything)
 flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
   --args-json '[
-    {"type":"Address","value":"10e2159a4b5a5003"},
+    {"type":"Address","value":"0x10e2159a4b5a5003"},
     {"type":"String","value":"https://example.com/walleye-bump.jpg"},
     {"type":"String","value":"https://example.com/walleye-hero.jpg"},
     {"type":"Bool","value":true},
