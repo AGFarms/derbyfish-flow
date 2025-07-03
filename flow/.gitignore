@@ -4,9 +4,6 @@ emulator-account.pkey
 imports
 .env
 testnet-account.pkey
-<<<<<<< HEAD
 testnet-user.pkey
-=======
 anthony.pkey
 testnet-account.pkey
->>>>>>> 6d59c0e36c01d655d69a39a38b6ac993f566a93e
