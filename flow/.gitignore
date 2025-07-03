@@ -5,3 +5,4 @@ imports
 .env
 testnet-account.pkey
 testnet-account.pkey
+testnet-user.pkey

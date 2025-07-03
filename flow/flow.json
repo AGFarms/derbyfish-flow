@@ -117,6 +117,13 @@
 				"type": "file",
 				"location": "testnet-account.pkey"
 			}
+		},
+		"testnet-user": {
+			"address": "0d9c42301edb244b",
+			"key": {
+				"type": "file",
+				"location": "testnet-user.pkey"
+			}
 		}
 	},
 	"deployments": {
