@@ -35,7 +35,7 @@ flow scripts execute cadence/scripts/get_fish_nft_ids.cdc fdd7b15179ce5eb8 --net
 ### Create Fresh Testnet Account
 ```bash
 # Generate new testnet account
-flow accounts create --network testnet --name testnet-user
+flow accounts create
 
 # Fund with testnet FLOW (get from faucet)
 # Visit: https://testnet-faucet.onflow.org/
