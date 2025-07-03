@@ -76,7 +76,7 @@ export TEST_USER=10e2159a4b5a5003
 ### Comprehensive Fish NFT + Species Coin Minting
 ```bash
 # Recommended: All-in-One Transaction (handles everything)
-flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
+flow transactions send cadence/transactions/mint_fish_and_species_coins_testnet.cdc \
   --args-json '[
     {"type":"Address","value":"0x10e2159a4b5a5003"},
     {"type":"String","value":"https://example.com/walleye-bump.jpg"},
