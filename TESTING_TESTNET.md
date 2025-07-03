@@ -47,7 +47,7 @@ flow accounts create --network testnet --name testnet-user
 ### Setup Account for DerbyFish
 ```bash
 # Setup WalleyeCoin vault
-flow transactions send cadence/transactions/setup_walleye_coin.cdc --network testnet --signer testnet-user
+flow transactions send cadence/transactions/setup_walleye_coin_.cdc --network testnet --signer testnet-user
 
 # Setup FishNFT collection  
 flow transactions send cadence/transactions/setup_fish_nft_collection.cdc --network testnet --signer testnet-user
