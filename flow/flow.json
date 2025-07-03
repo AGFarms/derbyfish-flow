@@ -127,7 +127,6 @@
 			"key": "8948a1f2195ea05c03256ff42c7bee5975e560c598dd53993921c834ee7d9274"
 		},
 		"testnet-account": {
-<<<<<<< HEAD
 			"address": "0xfdd7b15179ce5eb8",
 			"key": {
 				"type": "file",
@@ -140,10 +139,6 @@
 				"type": "file",
 				"location": "testnet-user.pkey"
 			}
-=======
-			"address": "5a8151874f113819",
-			"key": "0543e3368655701f07e392eb60af77929dbe12f68bc963f1d460de59bf75d46d"
->>>>>>> 6d59c0e36c01d655d69a39a38b6ac993f566a93e
 		}
 	},
 	"deployments": {
