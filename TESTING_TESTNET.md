@@ -53,7 +53,7 @@ flow transactions send cadence/transactions/setup_walleye_coin_account.cdc --net
 flow transactions send cadence/transactions/setup_fish_nft_collection.cdc --network testnet --signer testnet-user
 
 # Setup BaitCoin vault (if needed)
-flow transactions send cadence/transactions/setup_bait_c.cdc --network testnet --signer testnet-user
+flow transactions send cadence/transactions/setup_bc_account.cdc --network testnet --signer testnet-user
 ```
 
 **Check Setup Success:**
