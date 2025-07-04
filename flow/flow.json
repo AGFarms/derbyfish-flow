@@ -132,6 +132,10 @@
 			"address": "179b6b1cb6755e31",
 			"key": "2fa0be1b43811213ae5d0eb78b2d8bc5cb3a9473fbdd8d8e98b05d60858cfd17"
 		},
+		"test-acct-2": {
+			"address": "f3fcd2c1a78f5eee",
+			"key": "4b7bdb803f3f65ea5d774cf3d541f1f46c26fe7245b9c6c7fe5931de19a0339d"
+		},
 		"testnet-account": {
 			"address": "86ef213d1c3a2b94",
 			"key": {
