@@ -162,6 +162,7 @@
 			"testnet-account": [
 				"WalleyeCoin",
 				"FishNFT",
+				"FishCardNFT",
 				"BaitCoin"
 			]
 		}

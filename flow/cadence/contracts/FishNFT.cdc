@@ -1,8 +1,14 @@
 import "NonFungibleToken"
 import "ViewResolver"
 import "MetadataViews"
+import "FungibleToken"
 
 access(all) contract FishNFT: NonFungibleToken {
+
+    // Define public interface for species coin redemption
+    access(all) resource interface SpeciesCoinRedeemer {
+        access(all) fun redeemCatch(fishData: {String: AnyStruct}, angler: Address): @{FungibleToken.Vault}
+    }
 
     // DESIGN NOTES:
     // This NFT contract implements strict immutability - once a catch is minted,
@@ -31,6 +37,8 @@ access(all) contract FishNFT: NonFungibleToken {
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
+    access(all) let SpeciesCoinRedeemerPath: PublicPath
+    access(all) let VaultReceiverPath: PublicPath
 
     // Events
     access(all) event SpeciesRegistered(speciesCode: String, contractAddress: Address)
@@ -838,9 +846,9 @@ access(all) contract FishNFT: NonFungibleToken {
         // Get the species coin contract account
         let speciesCoinAccount = getAccount(contractAddress)
         
-        // Get the FishDEXCoordinator capability
-        if let coordinator = speciesCoinAccount.capabilities
-            .borrow<&{SpeciesCoinPublic}>(WalleyeCoin.FishDEXCoordinatorPublicPath) {
+        // Get the species coin redeemer capability
+        if let redeemer = speciesCoinAccount.capabilities
+            .borrow<&{SpeciesCoinRedeemer}>(self.SpeciesCoinRedeemerPath) {
             
             // Prepare fish data for redemption
             let fishData: {String: AnyStruct} = {
@@ -849,12 +857,12 @@ access(all) contract FishNFT: NonFungibleToken {
             }
             
             // Call the species coin contract to redeem
-            let vault <- coordinator.processRedemptionFromNFT(fishData: fishData, angler: angler)
+            let vault <- redeemer.redeemCatch(fishData: fishData, angler: angler)
             
             // Get the recipient's vault capability
             let recipientAccount = getAccount(angler)
             if let recipientVault = recipientAccount.capabilities
-                .borrow<&{FungibleToken.Receiver}>(WalleyeCoin.VaultPublicPath) {
+                .borrow<&{FungibleToken.Receiver}>(self.VaultReceiverPath) {
                 // Deposit the redeemed coins
                 recipientVault.deposit(from: <-vault)
             } else {
@@ -863,7 +871,7 @@ access(all) contract FishNFT: NonFungibleToken {
                 panic("Recipient does not have a vault set up")
             }
         } else {
-            panic("Could not borrow FishDEXCoordinator capability")
+            panic("Could not borrow SpeciesCoinRedeemer capability")
         }
     }
 
@@ -896,6 +904,8 @@ access(all) contract FishNFT: NonFungibleToken {
         self.CollectionStoragePath = /storage/FishNFTCollection
         self.CollectionPublicPath = /public/FishNFTCollection
         self.MinterStoragePath = /storage/FishNFTMinter
+        self.SpeciesCoinRedeemerPath = /public/SpeciesCoinRedeemer
+        self.VaultReceiverPath = /public/GenericFungibleTokenReceiver
 
         // Initialize species integration variables
         self.speciesRegistry = {}
