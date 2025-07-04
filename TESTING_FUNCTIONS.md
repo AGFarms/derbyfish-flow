@@ -15,7 +15,12 @@ flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc <angler_address> <nf
 flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc 0x179b6b1cb6755e31 1
 ```
 
-**Returns:** Complete NFT metadata including species, location, photos, minting details
+**Returns:** Complete NFT metadata including:
+- Core catch data (species, length, weight, timestamp)
+- Location data (coordinates, water body)
+- Media (bump shot, hero shot, release video)
+- Verification status
+- Species code for coin minting
 
 ### Get All NFT IDs for Account
 ```bash
@@ -48,7 +53,11 @@ flow scripts execute cadence/scripts/get_walleye_coin_info.cdc <address>
 flow scripts execute cadence/scripts/get_walleye_coin_info.cdc 0x179b6b1cb6755e31
 ```
 
-**Returns:** Token metadata, vault paths, balance, total supply, contract info, setup status
+**Returns:** 
+- Vault setup status
+- Balance information
+- Public capability status
+- Interface compliance
 
 ### Complete WalleyeCoin Metadata Profile
 ```bash
@@ -190,7 +199,15 @@ flow transactions send cadence/transactions/swap_baitcoin_for_fusd.cdc 50.0 \
 flow transactions send cadence/transactions/setup_fish_nft_collection.cdc \
   --signer <account> \
   --network emulator
+
+# Verify setup
+flow scripts execute cadence/scripts/check_nft_collection.cdc <account>
 ```
+
+**Verifies:**
+- Collection exists at correct storage path
+- Public capability exposed with required interfaces
+- Ready to receive NFTs
 
 ### Setup WalleyeCoin Vault
 ```bash
@@ -198,7 +215,15 @@ flow transactions send cadence/transactions/setup_fish_nft_collection.cdc \
 flow transactions send cadence/transactions/setup_walleye_coin_account.cdc \
   --signer <account> \
   --network emulator
+
+# Verify setup
+flow scripts execute cadence/scripts/check_walleye_setup.cdc <account>
 ```
+
+**Verifies:**
+- Vault exists at correct storage path
+- Public capability exposed with Receiver and Balance interfaces
+- Ready to receive WalleyeCoin
 
 ### Setup Species Coin Vault (Generic)
 ```bash
@@ -230,24 +255,24 @@ flow transactions send cadence/transactions/setup_fusd_account.cdc \
 
 ### Test Complete Catch Flow
 ```bash
-# 1. Mint Fish NFT + Species Coins (comprehensive)
-flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
+# 1. Mint Fish NFT with metadata
+flow transactions send cadence/transactions/mint_fish_nft_with_species.cdc \
   --args-json '[
     {"type":"Address","value":"0x179b6b1cb6755e31"},
+    {"type":"String","value":"Walleye"},
+    {"type":"String","value":"Sander vitreus"},
+    {"type":"UFix64","value":"26.0"},
+    {"type":"Optional","value":{"type":"UFix64","value":"8.5"}},
+    {"type":"UFix64","value":"1699123456.0"},
+    {"type":"Bool","value":true},
     {"type":"String","value":"https://example.com/walleye-bump.jpg"},
     {"type":"String","value":"https://example.com/walleye-hero.jpg"},
-    {"type":"Bool","value":true},
-    {"type":"Optional","value":{"type":"String","value":"https://example.com/walleye-release.mp4"}},
     {"type":"String","value":"hash123"},
     {"type":"String","value":"hash456"},
+    {"type":"Optional","value":{"type":"String","value":"https://example.com/walleye-release.mp4"}},
     {"type":"Optional","value":{"type":"String","value":"hash789"}},
     {"type":"Fix64","value":"-93.2650"},
     {"type":"Fix64","value":"44.9778"},
-    {"type":"UFix64","value":"26.0"},
-    {"type":"String","value":"Walleye"},
-    {"type":"String","value":"Sander vitreus"},
-    {"type":"UFix64","value":"1699123456.0"},
-    {"type":"Optional","value":{"type":"String","value":"Jig and minnow"}},
     {"type":"Optional","value":{"type":"String","value":"Lake Minnetonka, MN"}},
     {"type":"String","value":"SANDER_VITREUS"}
   ]' \
@@ -256,7 +281,6 @@ flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
 
 # 2. Check results
 flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc 0x179b6b1cb6755e31 1
-flow scripts execute cadence/scripts/get_walleye_coin_info.cdc 0x179b6b1cb6755e31
 ```
 
 ### Test Species Registration
