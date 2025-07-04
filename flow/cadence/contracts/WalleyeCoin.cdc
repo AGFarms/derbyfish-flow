@@ -13,7 +13,7 @@ access(all) contract WalleyeCoin: FungibleToken {
         access(all) view fun getFamily(): String
         access(all) view fun getTotalSupply(): UFix64
         access(all) view fun getBasicRegistryInfo(): {String: AnyStruct}
-        access(all) fun processCatchFromNFT(fishData: {String: AnyStruct}, angler: Address): @WalleyeCoin.Vault
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @WalleyeCoin.Vault
     }
 
     // FISHDEX COORDINATION - Registry management
@@ -59,6 +59,7 @@ access(all) contract WalleyeCoin: FungibleToken {
     access(all) event FirstCatchRecorded(timestamp: UInt64, angler: Address)
     access(all) event YearlyMetadataCreated(year: UInt64)
     access(all) event MetadataYearUpdated(oldYear: UInt64, newYear: UInt64)
+    access(all) event NFTAlreadyMinted(fishId: UInt64, angler: Address)
     
     // FISHDEX INTEGRATION EVENTS
     access(all) event FishDEXRegistrationAttempted(fishDEXAddress: Address, speciesCode: String)
@@ -68,6 +69,9 @@ access(all) contract WalleyeCoin: FungibleToken {
 
     // Total supply
     access(all) var totalSupply: UFix64
+
+    // Track which NFTs have been used for minting
+    access(all) var fishNFTRegistry: {UInt64: Bool}
 
     // Temporal metadata system - Track yearly updates
     access(all) var currentMetadataYear: UInt64
@@ -549,7 +553,7 @@ access(all) contract WalleyeCoin: FungibleToken {
         }
         
         // Process catch verification from Fish NFT contracts
-        access(all) fun processCatchFromNFT(fishData: {String: AnyStruct}, angler: Address): @WalleyeCoin.Vault {
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @WalleyeCoin.Vault {
             // Validate fish data matches this species
             if let fishSpeciesCode = fishData["speciesCode"] as? String {
                 assert(
@@ -560,6 +564,16 @@ access(all) contract WalleyeCoin: FungibleToken {
             
             // Extract fish NFT ID if available
             let fishNFTId = fishData["nftId"] as? UInt64
+            
+            // Validate NFT hasn't been redeemed before
+            if let nftId = fishNFTId {
+                assert(
+                    WalleyeCoin.fishNFTRegistry[nftId] == nil,
+                    message: "This NFT has already been redeemed for a coin"
+                )
+                // Record this NFT as redeemed
+                WalleyeCoin.fishNFTRegistry[nftId] = true
+            }
             
             // Auto-record first catch if this is the very first mint
             if WalleyeCoin.totalSupply == 0.0 && WalleyeCoin.speciesMetadata.firstCatchDate == nil {
@@ -673,7 +687,11 @@ access(all) contract WalleyeCoin: FungibleToken {
         access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @WalleyeCoin.Vault {
             pre {
                 amount == 1.0: "Only 1 coin per verified catch"
+                WalleyeCoin.fishNFTRegistry[fishId] == nil: "This NFT has already been used to mint a coin"
             }
+            
+            // Record this NFT as used
+            WalleyeCoin.fishNFTRegistry[fishId] = true
             
             // Auto-record first catch if this is the very first mint
             if WalleyeCoin.totalSupply == 0.0 && WalleyeCoin.speciesMetadata.firstCatchDate == nil {
@@ -1300,6 +1318,9 @@ access(all) contract WalleyeCoin: FungibleToken {
     // Contract initialization
     init() {
         self.totalSupply = 0.0
+        
+        // Initialize NFT tracking
+        self.fishNFTRegistry = {}
         
         // Initialize temporal metadata system
         self.currentMetadataYear = 2024

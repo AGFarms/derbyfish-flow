@@ -33,7 +33,7 @@ transaction(
 
     execute {
         // Step 1: Register species if not already registered (using WalleyeCoin as example)
-        let walleyeCoinAddress: Address = 0xfdd7b15179ce5eb8 // Replace with actual address
+        let walleyeCoinAddress: Address = 0x86ef213d1c3a2b94 // Replace with actual address
         
         if FishNFT.getSpeciesAddress(speciesCode: speciesCode) == nil {
             FishNFT.registerSpecies(speciesCode: speciesCode, contractAddress: walleyeCoinAddress)
@@ -94,6 +94,10 @@ transaction(
                 /public/WalleyeCoinReceiver
             ) {
                 anglerVaultRef.deposit(from: <- speciesVault)
+                
+                // Mark that species coins have been minted for this NFT
+                FishNFT.markSpeciesCoinsAsMinted(fishNFTId: fishNFTId)
+                
                 log("SUCCESS: Minted Fish NFT #".concat(fishNFTId.toString()).concat(" and 1.0 ").concat(speciesCode).concat(" coins!"))
             } else {
                 // If angler doesn't have a vault, destroy the tokens

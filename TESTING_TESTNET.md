@@ -78,7 +78,7 @@ export TEST_USER=10e2159a4b5a5003
 # Recommended: All-in-One Transaction (handles everything)
 flow transactions send cadence/transactions/mint_fish_and_species_coins_testnet.cdc \
   --args-json '[
-    {"type":"Address","value":"0x10e2159a4b5a5003"},
+    {"type":"Address","value":"0x7149e49f728573b0"},
     {"type":"String","value":"https://example.com/walleye-bump.jpg"},
     {"type":"String","value":"https://example.com/walleye-hero.jpg"},
     {"type":"Bool","value":true},
@@ -105,6 +105,7 @@ flow transactions send cadence/transactions/mint_fish_and_species_coins_testnet.
 - ✅ Mints Fish NFT with complete metadata
 - ✅ Mints 1.0 SANVIT species coins automatically  
 - ✅ Deposits both NFT and coins to user account
+- ✅ Marks NFT as having species coins minted (prevents double-minting)
 
 **Verify Mint Success:**
 ```bash
@@ -120,7 +121,73 @@ flow scripts execute cadence/scripts/get_registered_species.cdc --network testne
 
 ---
 
-## 💰 **Phase 4: Token Operations**
+## 🔄 **Phase 4: NEW - Retroactive Species Coin Minting**
+
+**Use Case**: Mint species coins for Fish NFTs that were created before the species coin system was implemented, or when automatic minting failed.
+
+### Check Minting Status First
+
+```bash
+# Check which NFTs have/haven't been minted (replace with actual NFT IDs)
+flow scripts execute cadence/scripts/check-nft-minting-status.cdc \
+  --args-json '[{"type":"Array","value":[{"type":"UInt64","value":"1"},{"type":"UInt64","value":"2"},{"type":"UInt64","value":"3"}]}]' \
+  --network testnet
+```
+
+**Example Output:**
+```json
+{
+  "totalRequested": 3,
+  "mintedCount": 1,
+  "unmintedCount": 2,
+  "mintingStatus": {"1": true, "2": false, "3": false},
+  "unmintedNFTs": [2, 3],
+  "totalMintedInContract": 5,
+  "allMintedNFTIds": [1, 4, 5, 8, 12]
+}
+```
+
+### Mint Coins for Existing NFTs
+
+```bash
+# Process multiple existing NFTs for retroactive minting
+flow transactions send cadence/transactions/retroactive-species-coin-mint.cdc \
+  --args-json '[
+    {"type":"Address","value":"0x10e2159a4b5a5003"},
+    {"type":"Array","value":[
+      {"type":"UInt64","value":"2"},
+      {"type":"UInt64","value":"3"},
+      {"type":"UInt64","value":"4"}
+    ]}
+  ]' \
+  --network testnet \
+  --signer testnet-account
+```
+
+**What this transaction does:**
+1. ✅ **Batch checks** which NFTs haven't had species coins minted
+2. ✅ **Validates species** (only processes Walleye NFTs for WalleyeCoin)
+3. ✅ **Prevents double-minting** with built-in tracking
+4. ✅ **Race condition protection** with double-checks
+5. ✅ **Detailed logging** showing processed vs skipped NFTs
+6. ✅ **Final status report** for all requested NFTs
+
+**Example Output:**
+```
+Processing 2 unminted NFTs out of 3 total
+Minted 1.0 SANDER_VITREUS coins for Fish NFT #2
+Fish NFT #3 is not a Walleye (LEPOMIS_MACROCHIRUS) - skipping
+COMPLETED: Minted species coins for 1 Fish NFTs
+SKIPPED: 1 Fish NFTs (already minted or wrong species)
+Final minting status for all requested NFTs:
+NFT #2: MINTED
+NFT #3: NOT MINTED
+NFT #4: MINTED
+```
+
+---
+
+## 💰 **Phase 5: Token Operations**
 
 ### Test WalleyeCoin Rewards
 ```bash
@@ -169,7 +236,7 @@ flow transactions send cadence/transactions/transfer_baitcoin.cdc \
 
 ---
 
-## 🔄 **Phase 5: Advanced Testing**
+## 🔄 **Phase 6: Advanced Testing**
 
 ### Test Species Registry
 ```bash
@@ -215,6 +282,27 @@ echo "=== FUSD ==="
 flow scripts execute cadence/scripts/get_fusd_balance.cdc $TEST_USER --network testnet
 ```
 
+### NEW: Test Anti-Double-Minting System
+```bash
+# Check minting status for multiple NFTs
+flow scripts execute cadence/scripts/check-nft-minting-status.cdc \
+  --args-json '[{"type":"Array","value":[{"type":"UInt64","value":"1"},{"type":"UInt64","value":"2"},{"type":"UInt64","value":"3"}]}]' \
+  --network testnet
+
+# Get all minted NFT IDs globally
+flow scripts execute cadence/scripts/get_all_minted_nft_ids.cdc --network testnet
+
+# Try to mint species coins for already-minted NFT (should be prevented)
+flow transactions send cadence/transactions/retroactive-species-coin-mint.cdc \
+  --args-json '[
+    {"type":"Address","value":"0x10e2159a4b5a5003"},
+    {"type":"Array","value":[{"type":"UInt64","value":"1"}]}
+  ]' \
+  --network testnet \
+  --signer testnet-account
+# Expected: "All specified Fish NFTs have already had species coins minted - nothing to do"
+```
+
 ### Test Token Economy Integration
 ```bash
 # Check FUSD balance (should have some from faucet)
@@ -227,12 +315,12 @@ flow scripts execute cadence/scripts/get_fusd_balance.cdc $TEST_USER --network t
 flow scripts execute cadence/scripts/get_contract_fusd_balance.cdc --network testnet
 ```
 
-### Test Multiple NFT Minting
+### Test Multiple NFT Minting with Tracking
 ```bash
-# Mint a second NFT to test sequential IDs
-flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
+# Mint a second NFT to test sequential IDs and tracking
+flow transactions send cadence/transactions/mint_fish_and_species_coins_testnet.cdc \
   --args-json '[
-    {"type":"Address","value":"10e2159a4b5a5003"},
+    {"type":"Address","value":"0x10e2159a4b5a5003"},
     {"type":"String","value":"https://example.com/walleye2-bump.jpg"},
     {"type":"String","value":"https://example.com/walleye2-hero.jpg"},
     {"type":"Bool","value":false},
@@ -253,14 +341,19 @@ flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
   --network testnet \
   --signer testnet-account
 
-# Check both NFTs exist
+# Check both NFTs exist and are properly tracked
 flow scripts execute cadence/scripts/get_fish_nft_ids.cdc $TEST_USER --network testnet
 flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc $TEST_USER 2 --network testnet
+
+# Verify both NFTs show as minted in tracking system
+flow scripts execute cadence/scripts/check-nft-minting-status.cdc \
+  --args-json '[{"type":"Array","value":[{"type":"UInt64","value":"1"},{"type":"UInt64","value":"2"}]}]' \
+  --network testnet
 ```
 
 ---
 
-## 🧪 **Testing Checklist**
+## 🧪 **Enhanced Testing Checklist**
 
 ### ✅ **Contract Deployment**
 - [ ] Contracts deployed and accessible at `fdd7b15179ce5eb8`
@@ -280,6 +373,7 @@ flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc $TEST_USER 2 --netwo
 - [ ] Sequential NFT IDs work properly
 - [ ] NFT transfers between accounts successful
 - [ ] Species auto-registration on first mint
+- [ ] **NEW**: NFT minting tracking works correctly
 
 ### ✅ **Token Operations**  
 - [ ] WalleyeCoin rewards minted automatically (1.0 SANVIT per NFT)
@@ -287,6 +381,22 @@ flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc $TEST_USER 2 --netwo
 - [ ] Token transfers work between accounts
 - [ ] Species coin balance tracking accurate
 - [ ] BaitCoin operations functional
+- [ ] **NEW**: Double-minting prevention works
+
+### ✅ **NEW: Anti-Double-Minting System**
+- [ ] Status checking scripts return accurate data
+- [ ] Retroactive minting processes only unminted NFTs
+- [ ] Already-minted NFTs are properly skipped
+- [ ] Batch operations handle mixed minted/unminted NFTs
+- [ ] Race condition protection prevents concurrent double-minting
+- [ ] Species validation works (only Walleye → WalleyeCoin)
+
+### ✅ **NEW: Retroactive Minting**
+- [ ] Can identify which NFTs need retroactive processing
+- [ ] Batch processing handles multiple NFTs efficiently
+- [ ] Detailed logging shows exactly what was processed
+- [ ] Final status report accurate for all requested NFTs
+- [ ] Cross-species validation prevents wrong coin types
 
 ### ✅ **System Integration**
 - [ ] Species registry tracks all registered species
@@ -294,6 +404,7 @@ flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc $TEST_USER 2 --netwo
 - [ ] Multiple species can be registered
 - [ ] Account overview shows all assets correctly
 - [ ] FUSD integration works (if applicable)
+- [ ] **NEW**: Tracking system integrates across all transactions
 
 ### ✅ **Data Integrity**
 - [ ] NFT metadata matches input parameters exactly
@@ -301,6 +412,7 @@ flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc $TEST_USER 2 --netwo
 - [ ] Token supplies tracked correctly across all operations
 - [ ] Blockchain state consistent after all operations
 - [ ] Events emitted properly for all transactions
+- [ ] **NEW**: Minting status persistent and accurate
 
 ---
 
@@ -346,6 +458,22 @@ Solution: Check registered species and use correct code:
   Use "SANDER_VITREUS" for Walleye
 ```
 
+### **NEW: "Species coins already minted"**
+```
+Error/Log: "All specified Fish NFTs have already had species coins minted - nothing to do"
+Solution: This is EXPECTED behavior - the anti-double-minting system is working!
+  - Check status: flow scripts execute cadence/scripts/check-nft-minting-status.cdc
+  - Verify which NFTs are already processed vs need processing
+```
+
+### **NEW: "Fish NFT is not a Walleye"**
+```
+Log: "Fish NFT #X is not a Walleye (OTHER_SPECIES) - skipping"
+Solution: This is EXPECTED behavior - WalleyeCoin only processes Walleye NFTs
+  - Verify NFT species code: should be "SANDER_VITREUS" for WalleyeCoin
+  - Other species will need their respective species coin contracts
+```
+
 ### **Transaction Arguments Error**
 ```
 Error: invalid argument format / cannot parse argument
@@ -353,6 +481,7 @@ Solution: Use exact JSON format from examples:
   - Strings: {"type":"String","value":"example"}
   - Addresses: {"type":"Address","value":"10e2159a4b5a5003"}
   - Numbers: {"type":"UFix64","value":"26.0"}
+  - Arrays: {"type":"Array","value":[{"type":"UInt64","value":"1"}]}
   - Optional: {"type":"Optional","value":null} or {"type":"Optional","value":{"type":"String","value":"example"}}
 ```
 
@@ -386,6 +515,8 @@ Solution: Check key file and permissions:
 6. **UI Integration** - Test all scripts/transactions from frontend application
 7. **Security Audit** - Review contract permissions, access controls, potential vulnerabilities
 8. **Mainnet Preparation** - Plan mainnet deployment strategy, user onboarding flow
+9. **NEW: Anti-Double-Minting Testing** - Stress test tracking system with concurrent transactions
+10. **NEW: Retroactive Processing** - Test with large batches of existing NFTs
 
 ---
 
@@ -395,18 +526,58 @@ Solution: Check key file and permissions:
 |-------|-----------|--------------|-------------------|
 | **1** | Contract Verification | `get_walleye_coin_all_metadata.cdc` | Deployment success, metadata integrity |
 | **2** | Account Setup | `setup_*_account.cdc` transactions | Account initialization, vault creation |
-| **3** | NFT + Token Minting | `mint_fish_and_species_coins.cdc` | Core system functionality, auto-rewards |
-| **4** | Token Operations | Balance/transfer scripts | Token economy, cross-account transfers |
-| **5** | Advanced Testing | Multi-NFT, registry, overview | System integration, multiple operations |
+| **3** | NFT + Token Minting | `mint_fish_and_species_coins_testnet.cdc` | Core system functionality, auto-rewards |
+| **4** | **NEW: Retroactive Minting** | `retroactive-species-coin-mint.cdc` | Batch processing, anti-double-minting |
+| **5** | Token Operations | Balance/transfer scripts | Token economy, cross-account transfers |
+| **6** | Advanced Testing | Multi-NFT, registry, tracking | System integration, multiple operations |
 
-**Total Test Functions:** 15+ scripts and transactions  
-**Coverage:** NFTs, Tokens, Transfers, Registry, Metadata, Account Management
+**Total Test Functions:** 20+ scripts and transactions  
+**Coverage:** NFTs, Tokens, Transfers, Registry, Metadata, Account Management, **Anti-Double-Minting**
 
 ---
 
-## 🚀 **Quick Start Commands**
+## 🆕 **New Architecture Overview**
 
-**New to testing? Start here:**
+### Enhanced Testnet Design with Tracking
+```
+FishNFT Contract (fdd7b15179ce5eb8)
+├── Species Registry: {String: Address}
+├── Species Coin Tracking: {UInt64: Bool}  ← NEW
+├── registerSpecies(code, address)
+├── getSpeciesAddress(code) -> Address?
+├── hasSpeciesCoinsBeenMinted(nftId) -> Bool  ← NEW
+├── markSpeciesCoinsAsMinted(nftId)  ← NEW
+├── getUnmintedNFTs(nftIds) -> [UInt64]  ← NEW
+├── getMintingStatus(nftIds) -> {UInt64: Bool}  ← NEW
+└── mintNFTWithSpeciesValidation(...)
+
+Transaction Layer  
+├── mint_fish_and_species_coins_testnet.cdc (recommended for new NFTs)
+├── retroactive-species-coin-mint.cdc (NEW - for existing NFTs)
+├── mint_fish_nft_with_species.cdc (NFT only)
+└── mint_species_coin_for_catch.cdc (coins only)
+
+Script Layer
+├── check-nft-minting-status.cdc (NEW - check tracking status)
+├── get_fish_nft_ids.cdc
+├── get_species_coin_balance.cdc
+├── get_registered_species.cdc
+└── get_all_minted_nft_ids.cdc (NEW - global tracking view)
+```
+
+### Enhanced Process Flow
+1. **Register Species**: Maps species code to contract address
+2. **Mint Fish NFT**: Stores species code in metadata + marks as minted
+3. **Mint Species Coins**: Calls WalleyeCoin's `processCatchFromNFT()`
+4. **Track Minting**: Prevents double-minting across all species
+5. **Retroactive Support**: Handle existing NFTs with batch processing
+6. **Status Checking**: Query which NFTs need processing
+
+---
+
+## 🚀 **Quick Start Commands for Testnet**
+
+**New to testnet testing? Start here:**
 ```bash
 # 1. Verify deployment
 flow scripts execute cadence/scripts/get_walleye_coin_all_metadata.cdc --network testnet
@@ -423,13 +594,19 @@ flow transactions send cadence/transactions/setup_fish_nft_collection.cdc --netw
 flow transactions send cadence/transactions/setup_walleye_coin_account.cdc --network testnet --signer testnet-user
 
 # 5. Mint your first NFT + tokens
-flow transactions send cadence/transactions/mint_fish_and_species_coins.cdc \
-  --args-json '[{"type":"Address","value":"10e2159a4b5a5003"},{"type":"String","value":"https://example.com/walleye-bump.jpg"},{"type":"String","value":"https://example.com/walleye-hero.jpg"},{"type":"Bool","value":true},{"type":"Optional","value":{"type":"String","value":"https://example.com/walleye-release.mp4"}},{"type":"String","value":"hash123"},{"type":"String","value":"hash456"},{"type":"Optional","value":{"type":"String","value":"hash789"}},{"type":"Fix64","value":"-93.2650"},{"type":"Fix64","value":"44.9778"},{"type":"UFix64","value":"26.0"},{"type":"String","value":"Walleye"},{"type":"String","value":"Sander vitreus"},{"type":"UFix64","value":"1699123456.0"},{"type":"Optional","value":{"type":"String","value":"Jig and minnow"}},{"type":"Optional","value":{"type":"String","value":"Lake Minnetonka, MN"}},{"type":"String","value":"SANDER_VITREUS"}]' \
+flow transactions send cadence/transactions/mint_fish_and_species_coins_testnet.cdc \
+  --args-json '[{"type":"Address","value":"0x10e2159a4b5a5003"},{"type":"String","value":"https://example.com/walleye-bump.jpg"},{"type":"String","value":"https://example.com/walleye-hero.jpg"},{"type":"Bool","value":true},{"type":"Optional","value":{"type":"String","value":"https://example.com/walleye-release.mp4"}},{"type":"String","value":"hash123"},{"type":"String","value":"hash456"},{"type":"Optional","value":{"type":"String","value":"hash789"}},{"type":"Fix64","value":"-93.2650"},{"type":"Fix64","value":"44.9778"},{"type":"UFix64","value":"26.0"},{"type":"String","value":"Walleye"},{"type":"String","value":"Sander vitreus"},{"type":"UFix64","value":"1699123456.0"},{"type":"Optional","value":{"type":"String","value":"Jig and minnow"}},{"type":"Optional","value":{"type":"String","value":"Lake Minnetonka, MN"}},{"type":"String","value":"SANDER_VITREUS"}]' \
   --network testnet --signer testnet-account
 
-# 6. Verify success
+# 6. Verify success and tracking
 flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc $TEST_USER 1 --network testnet
 flow scripts execute cadence/scripts/get_species_coin_balance.cdc $TEST_USER "SANVIT" --network testnet
+flow scripts execute cadence/scripts/check-nft-minting-status.cdc --args-json '[{"type":"Array","value":[{"type":"UInt64","value":"1"}]}]' --network testnet
+
+# 7. NEW: Test retroactive minting (will show "already minted" - expected!)
+flow transactions send cadence/transactions/retroactive-species-coin-mint.cdc \
+  --args-json '[{"type":"Address","value":"0x10e2159a4b5a5003"},{"type":"Array","value":[{"type":"UInt64","value":"1"}]}]' \
+  --network testnet --signer testnet-account
 ```
 
 ---
@@ -443,4 +620,4 @@ flow scripts execute cadence/scripts/get_species_coin_balance.cdc $TEST_USER "SA
 
 ---
 
-**🎉 Happy Testing on Flow Testnet!**
+**🎉 Happy Testing with Enhanced Anti-Double-Minting on Flow Testnet!**
