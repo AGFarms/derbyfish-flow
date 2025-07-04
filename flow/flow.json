@@ -128,7 +128,10 @@
 			"address": "f8d6e0586b0a20c7",
 			"key": "59d2f5c528cb4f690003b38f50363fe5488615a8969bd11869bac7f16877fc57"
 		},
-
+		"test-acct": {
+			"address": "179b6b1cb6755e31",
+			"key": "2fa0be1b43811213ae5d0eb78b2d8bc5cb3a9473fbdd8d8e98b05d60858cfd17"
+		},
 		"testnet-account": {
 			"address": "86ef213d1c3a2b94",
 			"key": {
