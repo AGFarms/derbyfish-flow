@@ -7,7 +7,7 @@ DerbyFish creates the closest thing to real-life Pokémon through verified fish 
 **Core System Components**:
 
 * **Fish NFTs**: Non-transferable digital assets representing verified fish catches, permanently owned by the angler who caught them, with the ability to redeem one species coin per fish caught
-* **Species Coins**: Fungible tokens serving as fish dex, fish index, and decentralized exchange all-in-one (e.g., WalleyeCoin, BassCoin), with maximum supply capped at total fish caught of that species and current supply representing total redeemed coins
+* **Species Coins**: Fungible tokens serving as FishDEX (fish index and decentralized exchange) all-in-one (e.g., WalleyeCoin, BassCoin), with maximum supply capped at total fish caught of that species and current supply representing total redeemed coins
 * **FishCards**: Tradeable NFT trading cards with randomized metadata reveals and royalties to original anglers
 * **Bait**: A 1:1 USDC‑backed stablecoin for marketplace transactions and merchant integrations
 
