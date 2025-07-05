@@ -703,10 +703,9 @@ access(all) contract FishNFT: NonFungibleToken {
             destroy oldToken
         }
 
+        // Override withdraw to prevent transfers
         access(NonFungibleToken.Withdraw) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
-            let token <- self.ownedNFTs.remove(key: withdrawID)
-                ?? panic("Could not withdraw an NFT with the specified ID")
-            return <-token
+            panic("FishNFTs are non-transferable")
         }
 
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
@@ -732,7 +731,7 @@ access(all) contract FishNFT: NonFungibleToken {
         return <- create Collection()
     }
 
-    // FishCard Collection Resource
+    // FishCard Collection Resource - Remains transferable
     access(all) resource FishCardCollection: NonFungibleToken.Collection {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
@@ -763,6 +762,7 @@ access(all) contract FishNFT: NonFungibleToken {
             destroy oldToken
         }
 
+        // Keep withdraw enabled for FishCards
         access(NonFungibleToken.Withdraw) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
             let token <- self.ownedNFTs.remove(key: withdrawID)
                 ?? panic("Could not withdraw a FishCard with the specified ID")

@@ -6,6 +6,37 @@
 **Contract Address:** `fdd7b15179ce5eb8`  
 **Deployed Contracts:** WalleyeCoin, FishNFT, BaitCoin  
 
+## 🔑 **Prerequisites**
+
+Before interacting with the contracts:
+
+1. **Flow CLI Configuration**
+```bash
+flow config add testnet-account --network testnet --signer testnet-account
+```
+
+2. **Get Testnet FLOW Tokens**
+- Visit the Flow Testnet Faucet: https://testnet-faucet.onflow.org/
+- Fund your account with testnet FLOW tokens
+- Wait for confirmation (usually a few seconds)
+
+3. **Network Configuration**
+```javascript
+// Configure FCL for testnet
+fcl.config()
+  .put("accessNode.api", "https://rest-testnet.onflow.org")
+  .put("discovery.wallet", "https://fcl-discovery.onflow.org/testnet/authn")
+  .put("flow.network", "testnet")
+  .put("app.detail.title", "DerbyFish")
+  .put("app.detail.icon", "https://derbyfish.app/icon.png")
+```
+
+4. **Important Notes**
+- Block times are ~2-3 seconds on testnet
+- Keep your testnet private keys secure
+- Contract addresses differ between testnet and mainnet
+- Always check transaction status before proceeding
+
 ---
 
 ## 📋 **Phase 1: Account Setup**
@@ -258,32 +289,34 @@ const getRegisteredSpecies = () => flow.send([
 ### Transfer WalleyeCoin
 ```javascript
 const transferWalleyeCoin = async (recipient, amount) => {
-  return flow.send([
-    flow.transaction`
-      import WalleyeCoin from 0xfdd7b15179ce5eb8
-      
-      transaction(recipient: Address, amount: UFix64) {
-        let vault: @WalleyeCoin.Vault
+  return handleFlowTransaction(async () => {
+    return flow.send([
+      flow.transaction`
+        import WalleyeCoin from 0xfdd7b15179ce5eb8
         
-        prepare(signer: auth(BorrowValue) &Account) {
-          let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &WalleyeCoin.Vault>(from: WalleyeCoin.VaultStoragePath)
-            ?? panic("Could not borrow reference to the owner's Vault!")
-          self.vault <- vaultRef.withdraw(amount: amount)
+        transaction(recipient: Address, amount: UFix64) {
+          let vault: @WalleyeCoin.Vault
+          
+          prepare(signer: auth(BorrowValue) &Account) {
+            let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &WalleyeCoin.Vault>(from: WalleyeCoin.VaultStoragePath)
+              ?? panic("Could not borrow reference to the owner's Vault!")
+            self.vault <- vaultRef.withdraw(amount: amount)
+          }
+          
+          execute {
+            let recipient = getAccount(recipient)
+            let receiverRef = recipient.capabilities.borrow<&WalleyeCoin.Vault>(WalleyeCoin.VaultPublicPath)
+              ?? panic("Could not borrow receiver reference to the recipient's Vault")
+            receiverRef.deposit(from: <-self.vault)
+          }
         }
-        
-        execute {
-          let recipient = getAccount(recipient)
-          let receiverRef = recipient.capabilities.borrow<&WalleyeCoin.Vault>(WalleyeCoin.VaultPublicPath)
-            ?? panic("Could not borrow receiver reference to the recipient's Vault")
-          receiverRef.deposit(from: <-self.vault)
-        }
-      }
-    `,
-    flow.args([
-      flow.arg(recipient, t.Address),
-      flow.arg(amount, t.UFix64)
+      `,
+      flow.args([
+        flow.arg(recipient, t.Address),
+        flow.arg(amount, t.UFix64)
+      ])
     ])
-  ])
+  })
 }
 ```
 
@@ -429,21 +462,58 @@ const Contracts = {
 
 ### Error Handling
 ```javascript
+const ErrorCodes = {
+  INSUFFICIENT_BALANCE: "Insufficient balance",
+  ACCOUNT_NOT_FOUND: "Account not found or invalid address",
+  VAULT_NOT_INITIALIZED: "Could not borrow recipient species coin vault",
+  SPECIES_NOT_REGISTERED: "Species code not registered",
+  WRONG_SPECIES: "Fish NFT is not of the correct species",
+  NFT_NOT_FOUND: "Could not borrow Fish NFT",
+  FISHCARD_NOT_ENABLED: "FishCard minting not enabled for this Fish NFT",
+  COLLECTION_NOT_SETUP: "Could not borrow Fish NFT collection",
+  COMMIT_NOT_FOUND: "Commit not found",
+  BLOCK_WAIT_REQUIRED: "Must wait at least 1 block to reveal",
+  MINTER_ERROR: "Could not borrow FishCard minter"
+}
+
 const handleFlowTransaction = async (txFunction) => {
   try {
     const txId = await txFunction()
+    console.log("Transaction submitted:", txId)
+    
+    // Wait for at least 2 blocks on testnet
+    await new Promise(resolve => setTimeout(resolve, 6000))
+    
     const result = await fcl.tx(txId).onceSealed()
     
     if (result.status === 4) {
       console.log("✅ Transaction succeeded:", txId)
       return { success: true, txId, data: result }
     } else {
-      console.log("❌ Transaction failed:", result.errorMessage)
-      return { success: false, error: result.errorMessage }
+      const error = parseFlowError(result.errorMessage)
+      console.log("❌ Transaction failed:", error)
+      return { success: false, error }
     }
   } catch (error) {
     console.error("Transaction error:", error)
     return { success: false, error: error.message }
+  }
+}
+
+const parseFlowError = (errorMessage) => {
+  for (const [code, message] of Object.entries(ErrorCodes)) {
+    if (errorMessage.includes(message)) {
+      return {
+        code,
+        message,
+        details: errorMessage
+      }
+    }
+  }
+  return {
+    code: "UNKNOWN_ERROR",
+    message: errorMessage,
+    details: errorMessage
   }
 }
 ```
@@ -456,6 +526,21 @@ const handleFlowTransaction = async (txFunction) => {
 // Complete user onboarding flow
 const onboardUser = async (userAddress) => {
   console.log("🏗️ Setting up user account...")
+  
+  // 0. Check testnet FLOW balance
+  const flowBalance = await fcl.query({
+    cadence: `
+      pub fun main(address: Address): UFix64 {
+        return getAccount(address).balance
+      }
+    `,
+    args: (arg, t) => [arg(userAddress, t.Address)]
+  })
+  
+  if (flowBalance < 0.1) {
+    console.warn("⚠️ Low FLOW balance. Visit https://testnet-faucet.onflow.org/")
+    return
+  }
   
   // 1. Setup vaults/collections
   await setupWalleyeCoinVault()
@@ -526,6 +611,23 @@ const mintFirstCatch = async (catchData) => {
 | `transferWalleyeCoin` | `Address, UFix64` | Transfer coins |
 | `transferFishNFT` | `Address, UInt64` | Transfer NFT |
 | `retroactiveMintSpeciesCoins` | `Address, [UInt64]` | Process existing NFTs |
+
+---
+
+## 🌐 **Network-Specific Notes**
+
+### Testnet Considerations
+- Always include `--network testnet` in Flow CLI commands
+- Fund accounts via Flow Testnet Faucet
+- Block times are ~2-3 seconds
+- Keep testnet private keys secure
+- Contract addresses differ from mainnet
+
+### Transaction Tips
+- Wait for at least 2 blocks before checking transaction status
+- Include proper error handling for network-specific errors
+- Monitor testnet FLOW balance
+- Check for proper account setup before transactions
 
 ---
 

@@ -50,7 +50,9 @@
 		"Xorshift128plus": {
 			"source": "cadence/contracts/Xorshift128plus.cdc",
 			"aliases": {
-				"testing": "0000000000000007"
+				"testing": "0000000000000007",
+				"testnet": "0xed24dbe901028c5c",
+				"mainnet": "0x45caec600164c9e6"
 			}
 		}
 	},
@@ -159,18 +161,15 @@
 			"address": "179b6b1cb6755e31",
 			"key": "bf2067161ca5fda4f9e9b737311e0b4fae08f769fdc4e1f570e43f595c52d37e"
 		},
+		"test-acct-2": {
+			"address": "f3fcd2c1a78f5eee",
+			"key": "6ceea497c40e44bbe36fcec1a86ae59dbe1eb1ab0e97c98a05fc52565f5a16a7"
+		},
 		"testnet-account": {
-			"address": "86ef213d1c3a2b94",
+			"address": "0x22a5eff85d93acc6",
 			"key": {
 				"type": "file",
 				"location": "testnet-account.pkey"
-			}
-		},
-		"testnet-user": {
-			"address": "7149e49f728573b0",
-			"key": {
-				"type": "file",
-				"location": "testnet-user.pkey"
 			}
 		}
 	},
@@ -188,10 +187,8 @@
 		},
 		"testnet": {
 			"testnet-account": [
-				"WalleyeCoin",
 				"FishNFT",
-				"FishCardNFT",
-				"BaitCoin"
+				"WalleyeCoin"
 			]
 		}
 	}
