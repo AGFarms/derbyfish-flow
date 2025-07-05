@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DerbyFish Tokenomics Prototype</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: linear-gradient(to bottom, #022c22, #000);
+      color: #e5e7eb; /* gray-200 */
+    }
+
+    .section {
+      background-color: rgba(0, 0, 0, 0.2);
+      border: 1px solid #4b5563; /* gray-600 */
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin: 1rem;
+      transition: background 0.3s;
+    }
+
+    .section:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .section h2 {
+      margin-top: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="section">
+    <h2>Overview</h2>
+    <p>DerbyFish turns real fish catches into a living digital economy.</p>
+    <!-- Add intro animation or fish counter -->
+  </div>
+
+  <div class="section">
+    <h2>Verified Catches (Fish Records)</h2>
+    <p>Every time an angler verifies a fish, a permanent record is created.</p>
+    <ul>
+      <li>Species, size, date/time</li>
+      <li>Public & private data fields</li>
+      <li>Owned forever by the angler</li>
+    </ul>
+    <!-- Later: Add table of sample catch records -->
+  </div>
+
+  <div class="section">
+    <h2>Species Coins (FishDex)</h2>
+    <p>Each species has its own coin. 1 coin is added for every verified catch.</p>
+    <ul>
+      <li>Walleye → WalleyeCoin</li>
+      <li>Scarcity: rare fish = fewer coins</li>
+      <li>Built-in encyclopedia metadata per species</li>
+    </ul>
+    <!-- Later: Integrate species coin stats & search -->
+  </div>
+
+  <div class="section">
+    <h2>FishCards</h2>
+    <p>Tradeable cards that reveal randomized private data about real catches.</p>
+    <ul>
+      <li>Rarity based on revealed info</li>
+      <li>Cards can be bought, sold, and traded</li>
+      <li>Angler earns royalties</li>
+    </ul>
+    <!-- Later: Add card gallery grid with rarity filters -->
+  </div>
+
+  <div class="section">
+    <h2>Bait (Fishing Credits)</h2>
+    <p>1:1 USDC-backed stablecoin used for:</p>
+    <ul>
+      <li>FishCard packs</li>
+      <li>Shop purchases</li>
+      <li>Swapping between species coins</li>
+    </ul>
+    <!-- Later: Integrate Bait balance, purchase modal -->
+  </div>
+
+  <div class="section">
+    <h2>FishDex Intelligence</h2>
+    <div class="grid">
+      <div class="section">
+        <h3>Biological</h3>
+        <p>Lifespan, diet, predators, and more.</p>
+      </div>
+      <div class="section">
+        <h3>Geographic</h3>
+        <p>Native waters, migration, invasive risk.</p>
+      </div>
+      <div class="section">
+        <h3>Regulatory</h3>
+        <p>Size limits, seasons, licenses by region.</p>
+      </div>
+      <div class="section">
+        <h3>Recreational</h3>
+        <p>Angler fight rating, best baits, taste, and difficulty.</p>
+      </div>
+      <div class="section">
+        <h3>Conservation</h3>
+        <p>IUCN status, threats, protected regions.</p>
+      </div>
+      <div class="section">
+        <h3>Scientific</h3>
+        <p>Active research, population trends, gaps in data.</p>
+      </div>
+    </div>
+    <!-- Later: Add live FishDex query interface with completeness scores -->
+  </div>
+
+  <div class="section">
+    <h2>Marketplace & Royalties</h2>
+    <p>FishCard trades generate royalties for the angler. Bait used across all purchases.</p>
+    <ul>
+      <li>Pack opening & rarity reveals</li>
+      <li>Merch + FishCard shop integrations</li>
+    </ul>
+    <!-- Later: Add royalty distribution graph + live marketplace links -->
+  </div>
+
+  <div class="section">
+    <h2>Security & Privacy</h2>
+    <p>All records and trades are secured and verified. Sensitive catch data is only revealed by chance.</p>
+    <ul>
+      <li>Royalties without identity leaks</li>
+      <li>Commit-reveal privacy protection</li>
+    </ul>
+    <!-- Later: Embed legal/privacy policy links -->
+  </div>
+</body>
+</html>
