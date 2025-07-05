@@ -2,12 +2,36 @@
 
 ### Overview
 
-DerbyFish uses a dual‑token model on Flow:
+DerbyFish creates the closest thing to real-life Pokémon through verified fish catching. The tokenomics is built on actual fish catches verified by the DerbyFish sanctioning body, creating a unique ecosystem where real-world fishing translates into digital assets.
 
-* **Bait**: A 1:1 USDC‑backed stablecoin for in‑app purchases, marketplace transactions, and merchant integrations.
-* **SpeciesCoins**: One fungible token contract per fish species (e.g., WalleyeCoin, BassCoin), minted by anglers when they verify a catch and mint a FishNFT.
-* **FishNFTs**: Non‑fungible tokens representing the actual catch, storing full metadata (species, GPS, time, gear). Users can optionally mint **Trading‑Card NFTs** derived from their FishNFT.
-* **Badges**: On‑chain, soulbound Badge NFTs granted on first‑catch per species (extendable to location or gear achievements).
+**Core System Components**:
+
+* **Fish NFTs**: Non-transferable digital assets representing verified fish catches, permanently owned by the angler who caught them
+* **Species Coins**: Fungible tokens serving as fish dex, fish index, and decentralized exchange all-in-one (e.g., WalleyeCoin, BassCoin)
+* **FishCards**: Tradeable NFT trading cards with randomized metadata reveals and royalties to original anglers
+* **Bait**: A 1:1 USDC‑backed stablecoin for marketplace transactions and merchant integrations
+
+### The Real Fish Catching Experience
+
+When an angler catches a fish and gets verified by DerbyFish's sanctioning body, they receive a **Fish NFT** - a permanent, non-transferable digital asset that represents their actual catch. This NFT contains both public core information and private metadata fields:
+
+**Core Public Information** (always visible):
+- Species name and scientific classification
+- Fish length and weight
+- Catch timestamp and date
+- Species code identifier
+- Basic catch verification status
+
+**Private Metadata Fields** (angler-controlled):
+- Exact GPS coordinates and location details
+- Water conditions (temperature, clarity, current)
+- Weather data (conditions, moon phase, barometric pressure)
+- Detailed gear information (rod, reel, line, bait/lure specifics)
+- Fishing technique and presentation method
+- Angler personal notes and catch story
+- Photo metadata and verification hashes
+
+These Fish NFTs are **forever owned by the angler** - they cannot be transferred or sold, representing a permanent record of their fishing achievements.
 
 ---
 
