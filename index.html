@@ -905,17 +905,31 @@
       </div>
     </section>
 
-    <!-- My Cards Section -->
-    <section id="my-cards" class="page-section">
+    <!-- Explore Section -->
+    <section id="explore" class="page-section">
       <div class="search-section">
         <div class="search-header">
-          <h2 class="search-title">🎴 My FishCards</h2>
+          <h2 class="search-title">🔍 Explore Fish & Cards</h2>
+          <div class="nav-tabs" style="margin-bottom: 1rem;">
+            <div class="nav-tab active" onclick="showSubSection('other-fish')">Other Fish</div>
+            <div class="nav-tab" onclick="showSubSection('other-cards')">FishCards Market</div>
+          </div>
           <div class="search-bar">
-            <input type="text" class="search-input" placeholder="Search cards by species, rarity, or revealed fields...">
+            <input type="text" class="search-input" placeholder="Search fish and cards by species, angler, or location...">
             <button class="search-btn">Search</button>
           </div>
         </div>
         <div class="filters-grid">
+          <div class="filter-group">
+            <label class="filter-label">Species</label>
+            <select class="filter-select">
+              <option>All Species</option>
+              <option>Trout</option>
+              <option>Salmon</option>
+              <option>Muskie</option>
+              <option>Catfish</option>
+            </select>
+          </div>
           <div class="filter-group">
             <label class="filter-label">Rarity</label>
             <select class="filter-select">
@@ -927,137 +941,237 @@
             </select>
           </div>
           <div class="filter-group">
-            <label class="filter-label">Species</label>
+            <label class="filter-label">Price Range</label>
             <select class="filter-select">
-              <option>All Species</option>
-              <option>Walleye</option>
-              <option>Bass</option>
-              <option>Pike</option>
+              <option>All Prices</option>
+              <option>0-5 BAIT</option>
+              <option>5-20 BAIT</option>
+              <option>20+ BAIT</option>
             </select>
           </div>
           <div class="filter-group">
-            <label class="filter-label">Status</label>
+            <label class="filter-label">Location</label>
             <select class="filter-select">
-              <option>All</option>
-              <option>Listed</option>
-              <option>Not Listed</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label class="filter-label">Sort By</label>
-            <select class="filter-select">
-              <option>Rarity</option>
-              <option>Date Created</option>
-              <option>Species</option>
-              <option>Value</option>
+              <option>All Locations</option>
+              <option>Minnesota</option>
+              <option>Wisconsin</option>
+              <option>Michigan</option>
+              <option>Canada</option>
             </select>
           </div>
         </div>
       </div>
 
-      <div class="content-grid">
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Walleye Card</h3>
-              <p class="card-subtitle">From NFT #101</p>
+      <!-- Other Fish Sub-section -->
+      <div id="other-fish" class="sub-section active">
+        <div class="content-grid">
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Brook Trout</h3>
+                <p class="card-subtitle">Salvelinus fontinalis</p>
+              </div>
+              <div class="card-badge badge-epic">Trophy</div>
             </div>
-            <div class="card-badge badge-rare">Rare</div>
-          </div>
-          <div class="revealed-fields">
-            <span class="field-tag field-revealed">✓ Length</span>
-            <span class="field-tag field-revealed">✓ Weight</span>
-            <span class="field-tag field-hidden">✗ GPS</span>
-            <span class="field-tag field-revealed">✓ Gear</span>
-            <span class="field-tag field-hidden">✗ Weather</span>
-            <span class="field-tag field-revealed">✓ Technique</span>
-          </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">4/6</div>
-              <div class="stat-label">Revealed</div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">21.2"</div>
+                <div class="stat-label">Length</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">4.4 lbs</div>
+                <div class="stat-label">Weight</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Sep 8</div>
+                <div class="stat-label">Caught</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">@TroutMaster</div>
+                <div class="stat-label">Angler</div>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">~8.5 BAIT</div>
-              <div class="stat-label">Est. Value</div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Trout #301')">Mint FishCard</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View fish details')">View Details</button>
             </div>
           </div>
-          <div class="interactive-chart">
-            <div class="chart-line"></div>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Muskellunge</h3>
+                <p class="card-subtitle">Esox masquinongy</p>
+              </div>
+              <div class="card-badge badge-legendary">Monster</div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">48.5"</div>
+                <div class="stat-label">Length</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">28.3 lbs</div>
+                <div class="stat-label">Weight</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Oct 22</div>
+                <div class="stat-label">Caught</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">@MuskieHunter</div>
+                <div class="stat-label">Angler</div>
+              </div>
+            </div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Muskie #302')">Mint FishCard</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View fish details')">View Details</button>
+            </div>
           </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('List Walleye Card for sale')">List for Sale</button>
-            <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Chinook Salmon</h3>
+                <p class="card-subtitle">Oncorhynchus tshawytscha</p>
+              </div>
+              <div class="card-badge badge-rare">Keeper</div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">34.7"</div>
+                <div class="stat-label">Length</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">15.2 lbs</div>
+                <div class="stat-label">Weight</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Aug 14</div>
+                <div class="stat-label">Caught</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">@SalmonSlayer</div>
+                <div class="stat-label">Angler</div>
+              </div>
+            </div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-secondary" onclick="console.log('FishCard minting disabled')">Minting Disabled</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View fish details')">View Details</button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Bass Card</h3>
-              <p class="card-subtitle">From NFT #102</p>
+      <!-- Other Cards Sub-section -->
+      <div id="other-cards" class="sub-section">
+        <div class="content-grid">
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Smallmouth Bass Card</h3>
+                <p class="card-subtitle">From @BassMaster_92</p>
+              </div>
+              <div class="card-badge badge-rare">Rare</div>
             </div>
-            <div class="card-badge badge-epic">Epic</div>
-          </div>
-          <div class="revealed-fields">
-            <span class="field-tag field-revealed">✓ Length</span>
-            <span class="field-tag field-revealed">✓ Weight</span>
-            <span class="field-tag field-revealed">✓ GPS</span>
-            <span class="field-tag field-revealed">✓ Gear</span>
-            <span class="field-tag field-revealed">✓ Weather</span>
-            <span class="field-tag field-hidden">✗ Notes</span>
-          </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">5/6</div>
-              <div class="stat-label">Revealed</div>
+            <div class="revealed-fields">
+              <span class="field-tag field-revealed">✓ Length</span>
+              <span class="field-tag field-revealed">✓ Weight</span>
+              <span class="field-tag field-revealed">✓ GPS</span>
+              <span class="field-tag field-hidden">✗ Gear</span>
+              <span class="field-tag field-hidden">✗ Weather</span>
+              <span class="field-tag field-hidden">✗ Technique</span>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">~15.2 BAIT</div>
-              <div class="stat-label">Est. Value</div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">3/6</div>
+                <div class="stat-label">Revealed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">19.8"</div>
+                <div class="stat-label">Length</div>
+              </div>
+            </div>
+            <div class="price-display">2.5 BAIT</div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy Smallmouth Bass Card for 2.5 BAIT')">Buy Now</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
             </div>
           </div>
-          <div class="interactive-chart">
-            <div class="chart-line"></div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('List Bass Card for sale')">List for Sale</button>
-            <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
-          </div>
-        </div>
 
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Pike Card</h3>
-              <p class="card-subtitle">From NFT #103</p>
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Rainbow Trout Card</h3>
+                <p class="card-subtitle">From @TroutWhisperer</p>
+              </div>
+              <div class="card-badge badge-epic">Epic</div>
             </div>
-            <div class="card-badge badge-legendary">Legendary</div>
-          </div>
-          <div class="revealed-fields">
-            <span class="field-tag field-revealed">✓ Length</span>
-            <span class="field-tag field-revealed">✓ Weight</span>
-            <span class="field-tag field-revealed">✓ GPS</span>
-            <span class="field-tag field-revealed">✓ Gear</span>
-            <span class="field-tag field-revealed">✓ Weather</span>
-            <span class="field-tag field-revealed">✓ Technique</span>
-          </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">6/6</div>
-              <div class="stat-label">Revealed</div>
+            <div class="revealed-fields">
+              <span class="field-tag field-revealed">✓ Length</span>
+              <span class="field-tag field-revealed">✓ Weight</span>
+              <span class="field-tag field-hidden">✗ GPS</span>
+              <span class="field-tag field-revealed">✓ Gear</span>
+              <span class="field-tag field-revealed">✓ Weather</span>
+              <span class="field-tag field-revealed">✓ Technique</span>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">~32.8 BAIT</div>
-              <div class="stat-label">Est. Value</div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">5/6</div>
+                <div class="stat-label">Revealed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">24.1"</div>
+                <div class="stat-label">Length</div>
+              </div>
+            </div>
+            <div class="price-display">8.2 BAIT</div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy Rainbow Trout Card for 8.2 BAIT')">Buy Now</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
             </div>
           </div>
-          <div class="interactive-chart">
-            <div class="chart-line"></div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('List Pike Card for sale')">List for Sale</button>
-            <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Atlantic Salmon Card</h3>
+                <p class="card-subtitle">From @SalmonKing</p>
+              </div>
+              <div class="card-badge badge-legendary">Legendary</div>
+            </div>
+            <div class="revealed-fields">
+              <span class="field-tag field-revealed">✓ Length</span>
+              <span class="field-tag field-revealed">✓ Weight</span>
+              <span class="field-tag field-revealed">✓ GPS</span>
+              <span class="field-tag field-revealed">✓ Gear</span>
+              <span class="field-tag field-revealed">✓ Weather</span>
+              <span class="field-tag field-revealed">✓ Technique</span>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">6/6</div>
+                <div class="stat-label">Revealed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">29.4"</div>
+                <div class="stat-label">Length</div>
+              </div>
+            </div>
+            <div class="price-display">25.0 BAIT</div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy Atlantic Salmon Card for 25.0 BAIT')">Buy Now</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
+            </div>
           </div>
         </div>
       </div>
