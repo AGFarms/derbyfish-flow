@@ -1,5 +1,6 @@
 import "NonFungibleToken"
 import "MetadataViews"
+import "Xorshift128plus"
 
 access(all) contract FishNFT: NonFungibleToken {
 
@@ -27,6 +28,11 @@ access(all) contract FishNFT: NonFungibleToken {
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
+    
+    // FishCard storage paths
+    access(all) let FishCardCollectionStoragePath: StoragePath
+    access(all) let FishCardCollectionPublicPath: PublicPath
+    access(all) let FishCardMinterStoragePath: StoragePath
 
     // Events
     access(all) event SpeciesRegistered(speciesCode: String, contractAddress: Address)
@@ -42,6 +48,58 @@ access(all) contract FishNFT: NonFungibleToken {
         timestamp: UFix64,
         speciesCode: String
     )
+
+    // FishCard events
+    access(all) event FishCardMinted(
+        id: UInt64,
+        fishNFTId: UInt64,
+        recipient: Address,
+        species: String,
+        revealedFields: [String]
+    )
+
+    access(all) event FishCardCommitted(
+        commitId: UInt64,
+        fishNFTId: UInt64,
+        committer: Address,
+        commitBlock: UInt64,
+        revealBlock: UInt64
+    )
+
+    access(all) event FishCardRevealed(
+        commitId: UInt64,
+        fishCardId: UInt64,
+        revealedFields: [String]
+    )
+
+    // FishCard state
+    access(all) var totalFishCards: UInt64
+    access(all) var nextCommitId: UInt64
+
+    // Active commits for commit-reveal scheme
+    access(self) var activeCommits: {UInt64: FishCardCommit}
+
+    // FishCard Receipt storage path
+    access(all) let FishCardReceiptStoragePath: StoragePath
+
+    // Simple commit structure
+    access(all) struct FishCardCommit {
+        access(all) let id: UInt64
+        access(all) let fishNFTId: UInt64
+        access(all) let fishNFTOwner: Address
+        access(all) let recipient: Address
+        access(all) let commitBlock: UInt64
+        access(all) let userSalt: [UInt8]
+
+        init(id: UInt64, fishNFTId: UInt64, fishNFTOwner: Address, recipient: Address, userSalt: [UInt8]) {
+            self.id = id
+            self.fishNFTId = fishNFTId
+            self.fishNFTOwner = fishNFTOwner
+            self.recipient = recipient
+            self.commitBlock = getCurrentBlock().height
+            self.userSalt = userSalt
+        }
+    }
 
     access(all) struct FishMetadata {
         // PUBLIC CORE DATA - Always visible to everyone
@@ -301,6 +359,122 @@ access(all) contract FishNFT: NonFungibleToken {
         }
     }
 
+    // FishCard metadata structure - contains selectively revealed data from Fish NFT
+    access(all) struct FishCardMetadata {
+        // CORE FIELDS - Always included from original Fish NFT
+        access(all) let fishNFTId: UInt64
+        access(all) let originalOwner: Address
+        access(all) let species: String
+        access(all) let scientific: String
+        access(all) let length: UFix64
+        access(all) let timestamp: UFix64
+        access(all) let speciesCode: String
+        access(all) let hasRelease: Bool
+        
+        // SELECTIVELY REVEALED FIELDS - Based on VRF coin flips
+        access(all) let weight: UFix64?
+        access(all) let qualityScore: UFix64?
+        access(all) let waterBody: String?
+        access(all) let verificationLevel: String?
+        access(all) let bumpShotUrl: String?
+        access(all) let heroShotUrl: String?
+        
+        // REVEALED LOCATION DATA - Based on coin flips
+        access(all) let longitude: Fix64?
+        access(all) let latitude: Fix64?
+        access(all) let waterTemp: UFix64?
+        access(all) let airTemp: UFix64?
+        access(all) let weather: String?
+        access(all) let moonPhase: String?
+        access(all) let tide: String?
+        
+        // REVEALED ANGLER DATA - Based on coin flips  
+        access(all) let location: String?
+        access(all) let gear: String?
+        access(all) let baitLure: String?
+        access(all) let technique: String?
+        access(all) let girth: UFix64?
+        access(all) let fightDuration: UFix64?
+        
+        // METADATA
+        access(all) let revealedFields: [String]
+        access(all) let cardRarity: String  // Based on number of revealed fields
+        
+        init(
+            fishNFTId: UInt64,
+            originalOwner: Address,
+            species: String,
+            scientific: String,
+            length: UFix64,
+            timestamp: UFix64,
+            speciesCode: String,
+            hasRelease: Bool,
+            weight: UFix64?,
+            qualityScore: UFix64?,
+            waterBody: String?,
+            verificationLevel: String?,
+            bumpShotUrl: String?,
+            heroShotUrl: String?,
+            longitude: Fix64?,
+            latitude: Fix64?,
+            waterTemp: UFix64?,
+            airTemp: UFix64?,
+            weather: String?,
+            moonPhase: String?,
+            tide: String?,
+            location: String?,
+            gear: String?,
+            baitLure: String?,
+            technique: String?,
+            girth: UFix64?,
+            fightDuration: UFix64?,
+            revealedFields: [String]
+        ) {
+            self.fishNFTId = fishNFTId
+            self.originalOwner = originalOwner
+            self.species = species
+            self.scientific = scientific
+            self.length = length
+            self.timestamp = timestamp
+            self.speciesCode = speciesCode
+            self.hasRelease = hasRelease
+            self.weight = weight
+            self.qualityScore = qualityScore
+            self.waterBody = waterBody
+            self.verificationLevel = verificationLevel
+            self.bumpShotUrl = bumpShotUrl
+            self.heroShotUrl = heroShotUrl
+            self.longitude = longitude
+            self.latitude = latitude
+            self.waterTemp = waterTemp
+            self.airTemp = airTemp
+            self.weather = weather
+            self.moonPhase = moonPhase
+            self.tide = tide
+            self.location = location
+            self.gear = gear
+            self.baitLure = baitLure
+            self.technique = technique
+            self.girth = girth
+            self.fightDuration = fightDuration
+            self.revealedFields = revealedFields
+            
+            // Calculate rarity based on revealed fields
+            let revealCount = revealedFields.length
+            if revealCount <= 3 {
+                self.cardRarity = "Common"
+            } else if revealCount <= 6 {
+                self.cardRarity = "Uncommon"
+            } else if revealCount <= 9 {
+                self.cardRarity = "Rare"
+            } else if revealCount <= 12 {
+                self.cardRarity = "Epic"
+            } else {
+                self.cardRarity = "Legendary"
+            }
+        }
+    }
+
     access(all) resource NFT: NonFungibleToken.NFT {
         access(all) let id: UInt64
         access(all) let metadata: FishMetadata
@@ -431,6 +605,74 @@ access(all) contract FishNFT: NonFungibleToken {
         }
     }
 
+    // FishCard NFT Resource
+    access(all) resource FishCard: NonFungibleToken.NFT {
+        access(all) let id: UInt64
+        access(all) let metadata: FishCardMetadata
+        access(all) let mintedBy: Address
+        access(all) let mintedAt: UFix64
+
+        // Convenience accessors
+        access(all) view fun getSpecies(): String {
+            return self.metadata.species
+        }
+
+        access(all) view fun getFishNFTId(): UInt64 {
+            return self.metadata.fishNFTId
+        }
+
+        access(all) view fun getRarity(): String {
+            return self.metadata.cardRarity
+        }
+
+        access(all) view fun getRevealedFields(): [String] {
+            return self.metadata.revealedFields
+        }
+
+        // Views implementation for FishCard
+        access(all) view fun getViews(): [Type] {
+            return [
+                Type<MetadataViews.Display>(),
+                Type<MetadataViews.Serial>(),
+                Type<MetadataViews.Traits>()
+            ]
+        }
+
+        access(all) fun resolveView(_ view: Type): AnyStruct? {
+            switch view {
+                case Type<MetadataViews.Display>():
+                    return MetadataViews.Display(
+                        name: self.metadata.species.concat(" Card #").concat(self.id.toString()),
+                        description: "A trading card featuring a ".concat(self.metadata.species).concat(" catch - ").concat(self.metadata.cardRarity).concat(" rarity"),
+                        thumbnail: MetadataViews.HTTPFile(
+                            url: self.metadata.heroShotUrl ?? "https://derby.fish/images/card-placeholder.png"
+                        )
+                    )
+                case Type<MetadataViews.Serial>():
+                    return MetadataViews.Serial(self.id)
+                case Type<MetadataViews.Traits>():
+                    let traits: [MetadataViews.Trait] = []
+                    traits.append(MetadataViews.Trait(name: "species", value: self.metadata.species, displayType: nil, rarity: nil))
+                    traits.append(MetadataViews.Trait(name: "rarity", value: self.metadata.cardRarity, displayType: nil, rarity: nil))
+                    traits.append(MetadataViews.Trait(name: "revealedFields", value: self.metadata.revealedFields.length, displayType: "Number", rarity: nil))
+                    traits.append(MetadataViews.Trait(name: "fishNFTId", value: self.metadata.fishNFTId, displayType: "Number", rarity: nil))
+                    return MetadataViews.Traits(traits)
+            }
+            return nil
+        }
+
+        access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
+            return <-create FishCardCollection()
+        }
+
+        init(id: UInt64, metadata: FishCardMetadata, mintedBy: Address) {
+            self.id = id
+            self.metadata = metadata
+            self.mintedBy = mintedBy
+            self.mintedAt = getCurrentBlock().timestamp
+        }
+    }
+
     access(all) resource Collection: NonFungibleToken.Collection {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
@@ -488,6 +730,75 @@ access(all) contract FishNFT: NonFungibleToken {
 
     access(all) fun createEmptyCollection(nftType: Type): @{NonFungibleToken.Collection} {
         return <- create Collection()
+    }
+
+    // FishCard Collection Resource
+    access(all) resource FishCardCollection: NonFungibleToken.Collection {
+        access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
+
+        access(all) view fun getLength(): Int {
+            return self.ownedNFTs.length
+        }
+
+        access(all) view fun getIDs(): [UInt64] {
+            return self.ownedNFTs.keys
+        }
+
+        access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? {
+            return &self.ownedNFTs[id]
+        }
+
+        access(all) fun borrowFishCard(id: UInt64): &FishNFT.FishCard? {
+            if self.ownedNFTs[id] != nil {
+                let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
+                return ref as! &FishNFT.FishCard
+            }
+            return nil
+        }
+
+        access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
+            let token <- token as! @FishNFT.FishCard
+            let id = token.id
+            let oldToken <- self.ownedNFTs[id] <- token
+            destroy oldToken
+        }
+
+        access(NonFungibleToken.Withdraw) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
+            let token <- self.ownedNFTs.remove(key: withdrawID)
+                ?? panic("Could not withdraw a FishCard with the specified ID")
+            return <-token
+        }
+
+        access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
+            let supportedTypes: {Type: Bool} = {}
+            supportedTypes[Type<@FishNFT.FishCard>()] = true
+            return supportedTypes
+        }
+
+        access(all) view fun isSupportedNFTType(type: Type): Bool {
+            return type == Type<@FishNFT.FishCard>()
+        }
+
+        access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
+            return <-create FishCardCollection()
+        }
+
+        init() {
+            self.ownedNFTs <- {}
+        }
+    }
+
+    access(all) fun createEmptyFishCardCollection(): @{NonFungibleToken.Collection} {
+        return <- create FishCardCollection()
+    }
+
+    // Simple FishCard Receipt for commit-reveal scheme
+    access(all) resource FishCardReceipt {
+        access(all) let commitId: UInt64
+
+        init(commitId: UInt64) {
+            self.commitId = commitId
+        }
     }
 
     access(all) resource NFTMinter {
@@ -670,9 +981,261 @@ access(all) contract FishNFT: NonFungibleToken {
         }
     }
 
+    // FishCard Minter Resource with RandomConsumer commit-reveal pattern
+    access(all) resource FishCardMinter {
+        access(all) var nextCardID: UInt64
+
+        init() {
+            self.nextCardID = 1
+        }
+
+        // COMMIT PHASE: Create receipt for future FishCard minting
+        access(all) fun commitFishCard(
+            fishNFTId: UInt64,
+            fishNFTOwner: Address,
+            recipient: Address,
+            userSalt: [UInt8]
+        ): @FishCardReceipt {
+            // Verify Fish NFT exists and can mint cards
+            let ownerAccount = getAccount(fishNFTOwner)
+            let collectionRef = ownerAccount.capabilities.borrow<&FishNFT.Collection>(FishNFT.CollectionPublicPath)
+                ?? panic("Could not borrow Fish NFT collection from owner")
+            
+            let fishNFT = collectionRef.borrowEntireNFT(id: fishNFTId)
+                ?? panic("Could not borrow Fish NFT with ID: ".concat(fishNFTId.toString()))
+
+            assert(fishNFT.canMintFishCards(), message: "FishCard minting not enabled for this Fish NFT")
+
+            // Create commit
+            let commitId = FishNFT.nextCommitId
+            let commit = FishCardCommit(
+                id: commitId,
+                fishNFTId: fishNFTId,
+                fishNFTOwner: fishNFTOwner,
+                recipient: recipient,
+                userSalt: userSalt
+            )
+
+            // Store the commit
+            FishNFT.activeCommits[commitId] = commit
+            FishNFT.nextCommitId = FishNFT.nextCommitId + 1
+
+            // Create and return receipt
+            let receipt <- create FishCardReceipt(commitId: commitId)
+
+            emit FishCardCommitted(
+                commitId: commitId,
+                fishNFTId: fishNFTId,
+                committer: recipient,
+                commitBlock: commit.commitBlock,
+                revealBlock: commit.commitBlock + 1
+            )
+
+            return <-receipt
+        }
+
+        // REVEAL PHASE: Use committed randomness to mint FishCard
+        access(all) fun revealFishCard(receipt: @FishCardReceipt): @FishNFT.FishCard {
+            // Get commit data
+            let commit = FishNFT.activeCommits[receipt.commitId]
+                ?? panic("Commit not found")
+
+            assert(getCurrentBlock().height > commit.commitBlock, message: "Must wait at least 1 block to reveal")
+
+            // Get Fish NFT
+            let ownerAccount = getAccount(commit.fishNFTOwner)
+            let collectionRef = ownerAccount.capabilities.borrow<&FishNFT.Collection>(FishNFT.CollectionPublicPath)
+                ?? panic("Could not borrow Fish NFT collection from owner")
+            
+            let fishNFT = collectionRef.borrowEntireNFT(id: commit.fishNFTId)
+                ?? panic("Could not borrow Fish NFT")
+
+            // Get private data from Fish NFT
+            let privateData = fishNFT.getPrivateData(caller: FishNFT.account.address)
+            let fishMetadata = fishNFT.metadata
+
+            // Create randomness source using current block + user salt
+            let blockHash = getCurrentBlock().id
+            var blockHashArray: [UInt8] = []
+            var i = 0
+            while i < blockHash.length {
+                blockHashArray.append(blockHash[i])
+                i = i + 1
+            }
+            let randomSource = commit.userSalt.concat(blockHashArray)
+            var prg = Xorshift128plus.PRG(sourceOfRandomness: randomSource, salt: commit.fishNFTId.toBigEndianBytes())
+            
+            // Perform coin flips for each non-core field using PRG
+            let revealedFields: [String] = []
+            
+            // Non-core fields to coin flip
+            let weight = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) ? fishMetadata.weight : nil
+            if weight != nil { revealedFields.append("weight") }
+            
+            let qualityScore = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) ? fishMetadata.qualityScore : nil
+            if qualityScore != nil { revealedFields.append("qualityScore") }
+            
+            let waterBody = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) ? fishMetadata.waterBody : nil
+            if waterBody != nil { revealedFields.append("waterBody") }
+            
+            let verificationLevel = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) ? fishMetadata.verificationLevel : nil
+            if verificationLevel != nil { revealedFields.append("verificationLevel") }
+            
+            let bumpShotUrl = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) ? fishMetadata.bumpShotUrl : nil
+            if bumpShotUrl != nil { revealedFields.append("bumpShotUrl") }
+            
+            let heroShotUrl = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) ? fishMetadata.heroShotUrl : nil
+            if heroShotUrl != nil { revealedFields.append("heroShotUrl") }
+
+            // Private location data coin flips
+            let longitude = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["longitude"] as! Fix64?) : nil
+            if longitude != nil { revealedFields.append("longitude") }
+            
+            let latitude = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["latitude"] as! Fix64?) : nil
+            if latitude != nil { revealedFields.append("latitude") }
+            
+            let waterTemp = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["waterTemp"] as! UFix64?) : nil
+            if waterTemp != nil { revealedFields.append("waterTemp") }
+            
+            let airTemp = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["airTemp"] as! UFix64?) : nil
+            if airTemp != nil { revealedFields.append("airTemp") }
+            
+            let weather = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["weather"] as! String?) : nil
+            if weather != nil { revealedFields.append("weather") }
+            
+            let moonPhase = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["moonPhase"] as! String?) : nil
+            if moonPhase != nil { revealedFields.append("moonPhase") }
+            
+            let tide = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["tide"] as! String?) : nil
+            if tide != nil { revealedFields.append("tide") }
+
+            // Private angler data coin flips
+            let location = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["location"] as! String?) : nil
+            if location != nil { revealedFields.append("location") }
+            
+            let gear = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["gear"] as! String?) : nil
+            if gear != nil { revealedFields.append("gear") }
+            
+            let baitLure = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["baitLure"] as! String?) : nil
+            if baitLure != nil { revealedFields.append("baitLure") }
+            
+            let technique = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["technique"] as! String?) : nil
+            if technique != nil { revealedFields.append("technique") }
+            
+            let girth = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["girth"] as! UFix64?) : nil
+            if girth != nil { revealedFields.append("girth") }
+            
+            let fightDuration = self.coinFlip(prg: &prg as &Xorshift128plus.PRG) && privateData != nil ? (privateData!["fightDuration"] as! UFix64?) : nil
+            if fightDuration != nil { revealedFields.append("fightDuration") }
+
+            // Create FishCard metadata
+            let cardMetadata = FishCardMetadata(
+                fishNFTId: fishNFT.id,
+                originalOwner: fishMetadata.owner,
+                species: fishMetadata.species,
+                scientific: fishMetadata.scientific,
+                length: fishMetadata.length,
+                timestamp: fishMetadata.timestamp,
+                speciesCode: fishMetadata.speciesCode,
+                hasRelease: fishMetadata.hasRelease,
+                weight: weight,
+                qualityScore: qualityScore,
+                waterBody: waterBody,
+                verificationLevel: verificationLevel,
+                bumpShotUrl: bumpShotUrl,
+                heroShotUrl: heroShotUrl,
+                longitude: longitude,
+                latitude: latitude,
+                waterTemp: waterTemp,
+                airTemp: airTemp,
+                weather: weather,
+                moonPhase: moonPhase,
+                tide: tide,
+                location: location,
+                gear: gear,
+                baitLure: baitLure,
+                technique: technique,
+                girth: girth,
+                fightDuration: fightDuration,
+                revealedFields: revealedFields
+            )
+
+            // Create and return the FishCard
+            let newFishCard <- create FishCard(
+                id: self.nextCardID,
+                metadata: cardMetadata,
+                mintedBy: FishNFT.account.address
+            )
+
+            emit FishCardMinted(
+                id: self.nextCardID,
+                fishNFTId: fishNFT.id,
+                recipient: commit.recipient,
+                species: fishMetadata.species,
+                revealedFields: revealedFields
+            )
+
+            emit FishCardRevealed(
+                commitId: receipt.commitId,
+                fishCardId: self.nextCardID,
+                revealedFields: revealedFields
+            )
+
+            // Update counts and cleanup
+            FishNFT.totalFishCards = FishNFT.totalFishCards + 1
+            self.nextCardID = self.nextCardID + 1
+            FishNFT.activeCommits.remove(key: receipt.commitId)
+
+            // Clean up receipt
+            destroy receipt
+
+            return <-newFishCard
+        }
+
+        // Simple coin flip using PRG
+        access(contract) fun coinFlip(prg: &Xorshift128plus.PRG): Bool {
+            let randomValue = prg.nextUInt64()
+            return randomValue % 2 == 0
+        }
+    }
+
     // Public query functions
     access(all) view fun getTotalFishCaught(): UInt64 {
         return self.totalFishCaught
+    }
+
+    access(all) view fun getTotalFishCards(): UInt64 {
+        return self.totalFishCards
+    }
+
+    // Public FishCard commit function - anyone can call to start the process
+    access(all) fun commitFishCard(
+        fishNFTId: UInt64,
+        fishNFTOwner: Address,
+        recipient: Address,
+        userSalt: [UInt8]
+    ): @FishCardReceipt {
+        // Get minter reference
+        let minterRef = self.account.storage.borrow<&FishCardMinter>(from: self.FishCardMinterStoragePath)
+            ?? panic("Could not borrow FishCard minter")
+
+        // Commit the card request
+        return <- minterRef.commitFishCard(
+            fishNFTId: fishNFTId,
+            fishNFTOwner: fishNFTOwner,
+            recipient: recipient,
+            userSalt: userSalt
+        )
+    }
+
+    // Public FishCard reveal function - reveals the card from a receipt
+    access(all) fun revealFishCard(receipt: @FishCardReceipt): @FishNFT.FishCard {
+        // Get minter reference
+        let minterRef = self.account.storage.borrow<&FishCardMinter>(from: self.FishCardMinterStoragePath)
+            ?? panic("Could not borrow FishCard minter")
+
+        // Reveal the card
+        return <- minterRef.revealFishCard(receipt: <-receipt)
     }
 
     // Contract Views (required by NonFungibleToken interface)
@@ -736,10 +1299,22 @@ access(all) contract FishNFT: NonFungibleToken {
         self.CollectionPublicPath = /public/FishNFTCollection
         self.MinterStoragePath = /storage/FishNFTMinter
 
+        // Initialize FishCard storage paths
+        self.FishCardCollectionStoragePath = /storage/FishCardCollection
+        self.FishCardCollectionPublicPath = /public/FishCardCollection
+        self.FishCardMinterStoragePath = /storage/FishCardMinter
+
         // Initialize species integration variables
         self.speciesRegistry = {}
         self.totalFishCaught = 0
+        self.totalFishCards = 0
+        self.nextCommitId = 0
+        self.activeCommits = {}
 
+        // Set FishCard Receipt storage path
+        self.FishCardReceiptStoragePath = StoragePath(identifier: "FishCardReceipt_".concat(self.account.address.toString()))!
+
+        // Create Fish NFT collection and minter
         let collection <- create Collection()
         self.account.storage.save(<-collection, to: self.CollectionStoragePath)
 
@@ -748,5 +1323,15 @@ access(all) contract FishNFT: NonFungibleToken {
 
         let minter <- create NFTMinter()
         self.account.storage.save(<-minter, to: self.MinterStoragePath)
+
+        // Create FishCard collection and minter
+        let fishCardCollection <- create FishCardCollection()
+        self.account.storage.save(<-fishCardCollection, to: self.FishCardCollectionStoragePath)
+
+        let fishCardCollectionCap = self.account.capabilities.storage.issue<&FishNFT.FishCardCollection>(self.FishCardCollectionStoragePath)
+        self.account.capabilities.publish(fishCardCollectionCap, at: self.FishCardCollectionPublicPath)
+
+        let fishCardMinter <- create FishCardMinter()
+        self.account.storage.save(<-fishCardMinter, to: self.FishCardMinterStoragePath)
     }
 } 
