@@ -1842,13 +1842,45 @@
     }
 
     function showSubSection(subSectionId) {
-      // Hide all sub-sections
-      document.querySelectorAll('.sub-section').forEach(section => {
-        section.classList.remove('active');
+      // Get the parent section
+      const parentSection = event.target.closest('.page-section');
+      
+      // Hide all sub-sections in this parent
+      parentSection.querySelectorAll('.sub-section').forEach(subSection => {
+        subSection.classList.remove('active');
+      });
+      
+      // Remove active class from all sub-tabs in this parent
+      parentSection.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
       });
       
       // Show selected sub-section
       document.getElementById(subSectionId).classList.add('active');
+      
+      // Add active class to clicked sub-tab
+      event.target.classList.add('active');
+    }
+
+    function showViewMode(viewModeId) {
+      // Get the parent section
+      const parentSection = event.target.closest('.page-section');
+      
+      // Hide all view modes in this parent
+      parentSection.querySelectorAll('.view-mode').forEach(viewMode => {
+        viewMode.classList.remove('active');
+      });
+      
+      // Remove active class from all view tabs in this parent
+      parentSection.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show selected view mode
+      document.getElementById(viewModeId).classList.add('active');
+      
+      // Add active class to clicked view tab
+      event.target.classList.add('active');
     }
 
     // Initialize charts and animations
