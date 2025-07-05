@@ -35,19 +35,57 @@ These Fish NFTs are **forever owned by the angler** - they cannot be transferred
 
 ---
 
-### 1. Token Roles & Mechanics
+### 1. Species Coins: Fish Dex, Index & Exchange All-in-One
+
+Once a Fish NFT is minted, a **species-specific coin** is automatically generated (e.g., WalleyeCoin for Walleye catches). These coins serve as a revolutionary **two-in-one system**:
+
+**Fish Dex/Index Functions**:
+Species coins contain comprehensive encyclopedic information about each fish species, stored directly in the contract metadata:
+
+* **Biological Data**: Lifespan, diet, predators, spawning behavior, migration patterns, habitat preferences
+* **Geographic Information**: Native regions, current range, water types, invasive status, seasonal movements  
+* **Economic Impact**: Regional commercial values, tourism impact, ecosystem role, fishery importance
+* **Recreational Details**: Best baits, fight ratings, culinary quality, catch difficulty, angling techniques
+* **Regulatory Framework**: Size/bag limits, closed seasons, license requirements by region, conservation rules
+* **Conservation Status**: IUCN classification, population trends, threats, protected areas, restoration efforts
+* **Scientific Research**: Research priority, genetic markers, active study programs, data gaps
+* **Record Keeping**: World record weight/length with location and date, notable catches
+
+**Decentralized Exchange Functions**:
+- **Supply Mechanism**: Exactly 1 coin minted per verified fish catch, creating natural scarcity
+- **Trading Integration**: Standard FungibleToken interface enables DEX trading and liquidity pools
+- **Rarity Economics**: Rare/endangered species naturally have lower token supply, increasing value
+- **Cross-Species Trading**: BaitCoin exchange rates create ecosystem-wide liquidity
+
+#### FishCards: Tradeable NFTs with Randomized Reveals
+
+Users can mint **FishCards** from other people's Fish NFTs, creating a unique trading card ecosystem:
+
+**Core Data** (always included):
+- Species name and scientific classification
+- Fish length and basic catch info
+- Timestamp and verification status
+
+**Private Data Randomization**:
+Each private metadata field gets an independent **coin toss** (50/50 chance) to determine if it appears on the FishCard:
+- Location details (may or may not be revealed)
+- Exact GPS coordinates (random reveal)
+- Gear specifications (coin toss reveal)
+- Weather conditions (random inclusion)
+- Angling techniques (chance-based reveal)
+- Personal angler notes (privacy-protected)
+
+**Rarity & Economics**:
+- Cards with more revealed fields become rarer (Common → Legendary)
+- **Royalties**: Original angler receives royalties on all FishCard trades
+- **Transferable**: Unlike Fish NFTs, FishCards can be bought, sold, and traded
+- **Privacy Protection**: Sensitive data only revealed by chance, protecting angler privacy
 
 #### Bait (Stablecoin)
 
 * **Pegging & Reserves**: Strictly 1:1 backed by USDC. Reserves held in a multi‑sig vault with time‑locks and proof‑of‑reserves snapshots available in‑app.
 * **Mint/Burn**: Users mint Bait by depositing USDC via in‑app custodial flows; burn by redeeming USDC on‑chain or through a KYC‑gate in the app.
 * **Gas Sponsorship**: DerbyFish pays all Flow gas; users never see transaction fees.
-
-#### SpeciesCoins (Per Species)
-
-* **Deployment**: A `SpeciesCoinFactory` contract allows on‑chain registration of new species IDs and dynamic creation of fungible token contracts (e.g., `WalleyeCoin`).
-* **Minting**: `mintSpeciesCoin(speciesID, 1)` is called automatically in the Fish‑mint transaction, crediting the angler with 1 token.
-* **Supply**: Capped to the total number of FishNFTs ever minted for that species; future caps enforced via upgradeable contract governance.
 
 ---
 
