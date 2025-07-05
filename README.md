@@ -115,11 +115,17 @@ Each private metadata field gets an independent **coin toss** (50/50 chance) to 
 
 ---
 
-### 3. Fishdex & Badging System
+### 3. Integrated Fishdex Ecosystem
 
-* **On‑Chain Events**: `FishMinted` and `BadgeAwarded` events trigger off‑chain amplification to update the Fishdex UI.
-* **Fishdex UI**: Displays species sightings, badge collections, gear logs, and geographic heatmaps.
-* **Rewards**: First‑catch badges unlock UI achievements; can integrate bonus SpeciesCoin airdrops in future.
+The DerbyFish ecosystem creates a comprehensive fish database through the combination of verified catches and species coin metadata:
+
+* **Real-World Data**: Every Fish NFT adds verified catch data to the species database
+* **Living Encyclopedia**: Species coins contain evolving encyclopedic information updated by marine biologists and researchers
+* **Geographic Intelligence**: Catch locations build heatmaps of species distribution and seasonal patterns
+* **Conservation Tracking**: Real-time data on species abundance and fishing pressure
+* **Research Integration**: Scientific community can access aggregated, anonymized catch data
+* **Community Contributions**: Expert anglers and researchers can contribute to species metadata
+* **Trading Intelligence**: DEX integration provides real-time species coin pricing and market data
 
 ---
 
