@@ -131,14 +131,23 @@ The DerbyFish ecosystem creates a comprehensive fish database through the combin
 
 ### 4. Marketplace & Economic Flows
 
-#### FishCards ↔ Bait
+#### FishCard Trading Ecosystem
 
-* Fish trading‑card NFTs can be listed in the in‑app marketplace for Bait at dynamic, market‑driven prices.
+The FishCard marketplace creates a unique economy where **original anglers earn royalties** from their catches forever:
 
-#### SpeciesCoin ↔ Bait
+* **Randomized Rarity**: Cards with more revealed private data fields become more valuable
+* **Perpetual Royalties**: Original angler receives a percentage of every FishCard trade
+* **Privacy Economics**: Rare cards with sensitive location data command premium prices
+* **Collection Building**: Traders seek complete species sets and high-rarity reveals
+* **Cross-Species Trading**: Popular species cards maintain higher liquidity and value
 
-* Initial private sale per species at a fixed price in Bait, handled by a `PrivateSale` contract.
-* Post‑sale, DerbyFish seeds an AMM pool (`SpeciesCoin–Bait`) and reinvests a portion of fees to maintain liquidity.
+#### Species Coin Exchange Functions
+
+* **Natural Scarcity Trading**: Rare species coins trade at premium due to limited catch numbers
+* **Conservation Economics**: Endangered species coins become increasingly valuable as catches become rarer
+* **Regional Arbitrage**: Species coins may trade at different rates in different geographic markets
+* **Liquidity Pools**: AMM pools enable seamless trading between species coins and Bait
+* **Research Funding**: Portion of trading fees can fund conservation and research initiatives
 
 #### Merchant & In‑Store Use Cases
 
