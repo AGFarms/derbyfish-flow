@@ -3,20 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DerbyFish FishDEX</title>
+  <title>DerbyFish FishDEX - Real Fish Catching Tokenomics</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(to bottom, #022c22, #000);
-      color: #e5e7eb; /* gray-200 */
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+
+    .header {
+      text-align: center;
+      padding: 2rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid #4b5563;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      background: linear-gradient(45deg, #10b981, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      margin: 0.5rem 0 0 0;
+      color: #9ca3af;
+      font-size: 1.1rem;
     }
 
     .section {
       background-color: rgba(0, 0, 0, 0.2);
-      border: 1px solid #4b5563; /* gray-600 */
+      border: 1px solid #4b5563;
       border-radius: 0.5rem;
-      padding: 1rem;
+      padding: 1.5rem;
       margin: 1rem;
       transition: background 0.3s;
     }
@@ -27,6 +54,15 @@
 
     .section h2 {
       margin-top: 0;
+      margin-bottom: 0.5rem;
+      color: #10b981;
+      font-size: 1.5rem;
+    }
+
+    .section p {
+      margin: 0 0 1rem 0;
+      color: #9ca3af;
+      line-height: 1.5;
     }
 
     .grid {
@@ -40,124 +76,618 @@
       border: 1px solid #4b5563;
       border-radius: 0.5rem;
       padding: 1rem;
+      transition: background 0.3s;
     }
 
     .card:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
 
-    input, select, button {
-      width: 100%;
+    .card-header {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #10b981;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-content {
+      line-height: 1.4;
+      margin-bottom: 1rem;
+    }
+
+    .card-meta {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+
+    .revealed-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.5rem 0;
+    }
+
+    .field-tag {
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .field-revealed {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border: 1px solid #10b981;
+    }
+
+    .field-hidden {
+      background-color: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid #ef4444;
+    }
+
+    .rarity-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .rarity-common { background-color: #6b7280; color: #fff; }
+    .rarity-uncommon { background-color: #10b981; color: #fff; }
+    .rarity-rare { background-color: #3b82f6; color: #fff; }
+    .rarity-epic { background-color: #8b5cf6; color: #fff; }
+    .rarity-legendary { background-color: #f59e0b; color: #fff; }
+
+    .price-tag {
+      font-weight: bold;
+      color: #10b981;
+      font-size: 1.1rem;
+    }
+
+    .supply-info {
+      background-color: rgba(16, 185, 129, 0.1);
+      border: 1px solid #10b981;
+      border-radius: 0.25rem;
       padding: 0.5rem;
+      margin: 0.5rem 0;
+    }
+
+    .supply-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #374151;
+      border-radius: 4px;
+      overflow: hidden;
       margin-top: 0.5rem;
-      background-color: #1f2937; /* gray-800 */
+    }
+
+    .supply-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #3b82f6);
+      transition: width 0.3s;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      background-color: #1f2937;
       color: #fff;
       border: 1px solid #4b5563;
       border-radius: 0.25rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
     }
 
     button:hover {
       background-color: #374151;
+      border-color: #10b981;
+    }
+
+    button.primary {
+      background-color: #10b981;
+      border-color: #10b981;
+    }
+
+    button.primary:hover {
+      background-color: #059669;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 0.5rem;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #10b981;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: #9ca3af;
     }
   </style>
 </head>
 <body>
+  <div class="header">
+    <h1>🎣 DerbyFish FishDEX</h1>
+    <p>Real Fish Catching Tokenomics - The Closest Thing to Real-Life Pokémon</p>
+  </div>
+
+  <!-- My Fish Section -->
   <div class="section">
-    <h2>🎣 My Fish</h2>
-    <p>These are your verified catches (Fish Records). You can mint FishCards from these.</p>
+    <h2>🐟 My Fish</h2>
+    <p>Your verified, non-transferable Fish NFTs (catch records). These are forever yours and represent your actual catches verified by DerbyFish sanctioning body.</p>
     <div class="grid">
       <div class="card">
-        <strong>Walleye</strong><br>
-        Length: 26in<br>
-        Weight: 6.2lb<br>
-        Date: 2025-06-12<br>
-        <button onclick="console.log('Mint FishCard for Walleye ID 101')">Mint FishCard</button>
+        <div class="card-header">Walleye (Sander vitreus)</div>
+        <div class="card-content">
+          <strong>Length:</strong> 26.5 inches<br>
+          <strong>Weight:</strong> 6.2 lbs<br>
+          <strong>Date:</strong> June 12, 2024<br>
+          <strong>Location:</strong> Lake Minnetonka, MN<br>
+          <strong>Species Code:</strong> SANDER_VITREUS
+        </div>
+        <div class="card-meta">NFT ID: #101 • Verified ✓ • Non-transferable</div>
+        <button onclick="console.log('Mint FishCard from Walleye NFT #101')">Mint FishCard</button>
+        <button onclick="console.log('Redeem WalleyeCoin from NFT #101')">Redeem Species Coin</button>
       </div>
+      
       <div class="card">
-        <strong>Bass</strong><br>
-        Length: 18in<br>
-        Weight: 3.8lb<br>
-        Date: 2025-05-30<br>
-        <button onclick="console.log('Mint FishCard for Bass ID 102')">Mint FishCard</button>
+        <div class="card-header">Largemouth Bass (Micropterus salmoides)</div>
+        <div class="card-content">
+          <strong>Length:</strong> 18.3 inches<br>
+          <strong>Weight:</strong> 3.8 lbs<br>
+          <strong>Date:</strong> May 30, 2024<br>
+          <strong>Location:</strong> Private Lake, TX<br>
+          <strong>Species Code:</strong> MICROPTERUS_SALMOIDES
+        </div>
+        <div class="card-meta">NFT ID: #102 • Verified ✓ • Non-transferable</div>
+        <button onclick="console.log('Mint FishCard from Bass NFT #102')">Mint FishCard</button>
+        <button onclick="console.log('Redeem BassCoin from NFT #102')">Redeem Species Coin</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Northern Pike (Esox lucius)</div>
+        <div class="card-content">
+          <strong>Length:</strong> 32.1 inches<br>
+          <strong>Weight:</strong> 8.7 lbs<br>
+          <strong>Date:</strong> April 15, 2024<br>
+          <strong>Location:</strong> Boundary Waters, MN<br>
+          <strong>Species Code:</strong> ESOX_LUCIUS
+        </div>
+        <div class="card-meta">NFT ID: #103 • Verified ✓ • Non-transferable</div>
+        <button onclick="console.log('Mint FishCard from Pike NFT #103')">Mint FishCard</button>
+        <button onclick="console.log('Redeem PikeCoin from NFT #103')">Redeem Species Coin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- My FishCards Section -->
+  <div class="section">
+    <h2>🎴 My FishCards</h2>
+    <p>Your tradable FishCards with randomized metadata reveals. Each card shows core data plus randomly revealed private fields. You earn royalties when others trade these cards.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="rarity-badge rarity-rare">Rare</div>
+        <div class="card-header">Walleye FishCard</div>
+        <div class="card-content">
+          <strong>Length:</strong> 26.5 inches<br>
+          <strong>Weight:</strong> 6.2 lbs<br>
+          <strong>Date:</strong> June 12, 2024
+        </div>
+        <div class="revealed-fields">
+          <span class="field-tag field-revealed">Length ✓</span>
+          <span class="field-tag field-revealed">Weight ✓</span>
+          <span class="field-tag field-hidden">GPS ✕</span>
+          <span class="field-tag field-revealed">Gear ✓</span>
+          <span class="field-tag field-hidden">Weather ✕</span>
+          <span class="field-tag field-revealed">Technique ✓</span>
+        </div>
+        <div class="card-meta">Card ID: #201 • From NFT #101 • 4/6 fields revealed</div>
+        <button onclick="console.log('List Walleye FishCard #201 for sale')">List for Sale</button>
+      </div>
+
+      <div class="card">
+        <div class="rarity-badge rarity-epic">Epic</div>
+        <div class="card-header">Bass FishCard</div>
+        <div class="card-content">
+          <strong>Length:</strong> 18.3 inches<br>
+          <strong>Weight:</strong> 3.8 lbs<br>
+          <strong>Date:</strong> May 30, 2024
+        </div>
+        <div class="revealed-fields">
+          <span class="field-tag field-revealed">Length ✓</span>
+          <span class="field-tag field-revealed">Weight ✓</span>
+          <span class="field-tag field-revealed">GPS ✓</span>
+          <span class="field-tag field-revealed">Gear ✓</span>
+          <span class="field-tag field-revealed">Weather ✓</span>
+          <span class="field-tag field-hidden">Notes ✕</span>
+        </div>
+        <div class="card-meta">Card ID: #202 • From NFT #102 • 5/6 fields revealed</div>
+        <button onclick="console.log('List Bass FishCard #202 for sale')">List for Sale</button>
+      </div>
+
+      <div class="card">
+        <div class="rarity-badge rarity-legendary">Legendary</div>
+        <div class="card-header">Pike FishCard</div>
+        <div class="card-content">
+          <strong>Length:</strong> 32.1 inches<br>
+          <strong>Weight:</strong> 8.7 lbs<br>
+          <strong>Date:</strong> April 15, 2024
+        </div>
+        <div class="revealed-fields">
+          <span class="field-tag field-revealed">Length ✓</span>
+          <span class="field-tag field-revealed">Weight ✓</span>
+          <span class="field-tag field-revealed">GPS ✓</span>
+          <span class="field-tag field-revealed">Gear ✓</span>
+          <span class="field-tag field-revealed">Weather ✓</span>
+          <span class="field-tag field-revealed">Technique ✓</span>
+        </div>
+        <div class="card-meta">Card ID: #203 • From NFT #103 • 6/6 fields revealed</div>
+        <button onclick="console.log('List Pike FishCard #203 for sale')">List for Sale</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Explore Fish Section -->
+  <div class="section">
+    <h2>🔍 Explore Fish</h2>
+    <p>Browse verified fish catches by other anglers. These Fish NFTs are non-transferable, but you can mint FishCards from them if the owner allows it.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">Brook Trout (Salvelinus fontinalis)</div>
+        <div class="card-content">
+          <strong>Length:</strong> 21.2 inches<br>
+          <strong>Weight:</strong> 4.4 lbs<br>
+          <strong>Date:</strong> September 8, 2024<br>
+          <strong>Angler:</strong> @TroutMaster_87
+        </div>
+        <div class="card-meta">NFT ID: #301 • Verified ✓ • FishCard Minting: Enabled</div>
+        <button onclick="console.log('Mint FishCard from Trout NFT #301')">Mint FishCard</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Muskellunge (Esox masquinongy)</div>
+        <div class="card-content">
+          <strong>Length:</strong> 48.5 inches<br>
+          <strong>Weight:</strong> 28.3 lbs<br>
+          <strong>Date:</strong> October 22, 2024<br>
+          <strong>Angler:</strong> @MuskieHunter
+        </div>
+        <div class="card-meta">NFT ID: #302 • Verified ✓ • FishCard Minting: Enabled</div>
+        <button onclick="console.log('Mint FishCard from Muskie NFT #302')">Mint FishCard</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Chinook Salmon (Oncorhynchus tshawytscha)</div>
+        <div class="card-content">
+          <strong>Length:</strong> 34.7 inches<br>
+          <strong>Weight:</strong> 15.2 lbs<br>
+          <strong>Date:</strong> August 14, 2024<br>
+          <strong>Angler:</strong> @SalmonSlayer
+        </div>
+        <div class="card-meta">NFT ID: #303 • Verified ✓ • FishCard Minting: Disabled</div>
+        <button disabled onclick="console.log('FishCard minting disabled for Salmon NFT #303')">Minting Disabled</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FishCard Market Section -->
+  <div class="section">
+    <h2>🏪 FishCard Market</h2>
+    <p>Browse and buy FishCards minted from other anglers' catches. Rarity is based on how many private metadata fields were randomly revealed. Original anglers earn royalties on all trades.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="rarity-badge rarity-uncommon">Uncommon</div>
+        <div class="card-header">Smallmouth Bass FishCard</div>
+        <div class="card-content">
+          <strong>Length:</strong> 19.8 inches<br>
+          <strong>Weight:</strong> 4.1 lbs<br>
+          <strong>Date:</strong> July 3, 2024
+        </div>
+        <div class="revealed-fields">
+          <span class="field-tag field-revealed">Length ✓</span>
+          <span class="field-tag field-revealed">Weight ✓</span>
+          <span class="field-tag field-revealed">GPS ✓</span>
+          <span class="field-tag field-hidden">Gear ✕</span>
+          <span class="field-tag field-hidden">Weather ✕</span>
+          <span class="field-tag field-hidden">Technique ✕</span>
+        </div>
+        <div class="card-meta">Card ID: #401 • From NFT #204 • 3/6 fields revealed</div>
+        <div class="price-tag">Price: 2.5 BAIT</div>
+        <button class="primary" onclick="console.log('Buy Smallmouth Bass FishCard #401 for 2.5 BAIT')">Buy Now</button>
+      </div>
+
+      <div class="card">
+        <div class="rarity-badge rarity-rare">Rare</div>
+        <div class="card-header">Rainbow Trout FishCard</div>
+        <div class="card-content">
+          <strong>Length:</strong> 24.1 inches<br>
+          <strong>Weight:</strong> 5.7 lbs<br>
+          <strong>Date:</strong> June 28, 2024
+        </div>
+        <div class="revealed-fields">
+          <span class="field-tag field-revealed">Length ✓</span>
+          <span class="field-tag field-revealed">Weight ✓</span>
+          <span class="field-tag field-hidden">GPS ✕</span>
+          <span class="field-tag field-revealed">Gear ✓</span>
+          <span class="field-tag field-revealed">Weather ✓</span>
+          <span class="field-tag field-revealed">Technique ✓</span>
+        </div>
+        <div class="card-meta">Card ID: #402 • From NFT #205 • 5/6 fields revealed</div>
+        <div class="price-tag">Price: 8.2 BAIT</div>
+        <button class="primary" onclick="console.log('Buy Rainbow Trout FishCard #402 for 8.2 BAIT')">Buy Now</button>
+      </div>
+
+      <div class="card">
+        <div class="rarity-badge rarity-legendary">Legendary</div>
+        <div class="card-header">Atlantic Salmon FishCard</div>
+        <div class="card-content">
+          <strong>Length:</strong> 29.4 inches<br>
+          <strong>Weight:</strong> 12.8 lbs<br>
+          <strong>Date:</strong> September 15, 2024
+        </div>
+        <div class="revealed-fields">
+          <span class="field-tag field-revealed">Length ✓</span>
+          <span class="field-tag field-revealed">Weight ✓</span>
+          <span class="field-tag field-revealed">GPS ✓</span>
+          <span class="field-tag field-revealed">Gear ✓</span>
+          <span class="field-tag field-revealed">Weather ✓</span>
+          <span class="field-tag field-revealed">Technique ✓</span>
+        </div>
+        <div class="card-meta">Card ID: #403 • From NFT #206 • 6/6 fields revealed</div>
+        <div class="price-tag">Price: 25.0 BAIT</div>
+        <button class="primary" onclick="console.log('Buy Atlantic Salmon FishCard #403 for 25.0 BAIT')">Buy Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FishDEX Species Encyclopedia Section -->
+  <div class="section">
+    <h2>🧬 FishDEX: Species Encyclopedia</h2>
+    <p>Comprehensive species database with biological, geographic, regulatory, and angling data. Each species corresponds to a fungible token with supply capped at total verified catches.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">WalleyeCoin (SANDER_VITREUS)</div>
+        <div class="supply-info">
+          <strong>Current Supply:</strong> 13,215 coins<br>
+          <strong>Max Supply:</strong> 15,000 (total catches)<br>
+          <strong>Redeemed:</strong> 88.1%
+          <div class="supply-bar">
+            <div class="supply-fill" style="width: 88.1%"></div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">Native</div>
+            <div class="stat-label">Status</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">8.5/10</div>
+            <div class="stat-label">Fight Rating</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">Spring</div>
+            <div class="stat-label">Peak Season</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">$4.20</div>
+            <div class="stat-label">Price/Coin</div>
+          </div>
+        </div>
+        <button onclick="console.log('View Walleye species encyclopedia entry')">View Species Data</button>
+        <button class="primary" onclick="console.log('Buy WalleyeCoin')">Buy WalleyeCoin</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">BassCoin (MICROPTERUS_SALMOIDES)</div>
+        <div class="supply-info">
+          <strong>Current Supply:</strong> 20,019 coins<br>
+          <strong>Max Supply:</strong> 21,000 (total catches)<br>
+          <strong>Redeemed:</strong> 95.3%
+          <div class="supply-bar">
+            <div class="supply-fill" style="width: 95.3%"></div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">Popular</div>
+            <div class="stat-label">Status</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">9.2/10</div>
+            <div class="stat-label">Fight Rating</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">Summer</div>
+            <div class="stat-label">Peak Season</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">$6.80</div>
+            <div class="stat-label">Price/Coin</div>
+          </div>
+        </div>
+        <button onclick="console.log('View Bass species encyclopedia entry')">View Species Data</button>
+        <button class="primary" onclick="console.log('Buy BassCoin')">Buy BassCoin</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">TroutCoin (SALVELINUS_FONTINALIS)</div>
+        <div class="supply-info">
+          <strong>Current Supply:</strong> 4,892 coins<br>
+          <strong>Max Supply:</strong> 5,200 (total catches)<br>
+          <strong>Redeemed:</strong> 94.1%
+          <div class="supply-bar">
+            <div class="supply-fill" style="width: 94.1%"></div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">Native</div>
+            <div class="stat-label">Status</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">7.8/10</div>
+            <div class="stat-label">Fight Rating</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">Fall</div>
+            <div class="stat-label">Peak Season</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">$12.50</div>
+            <div class="stat-label">Price/Coin</div>
+          </div>
+        </div>
+        <button onclick="console.log('View Trout species encyclopedia entry')">View Species Data</button>
+        <button class="primary" onclick="console.log('Buy TroutCoin')">Buy TroutCoin</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">MuskieCoin (ESOX_MASQUINONGY)</div>
+        <div class="supply-info">
+          <strong>Current Supply:</strong> 1,247 coins<br>
+          <strong>Max Supply:</strong> 1,680 (total catches)<br>
+          <strong>Redeemed:</strong> 74.2%
+          <div class="supply-bar">
+            <div class="supply-fill" style="width: 74.2%"></div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">Rare</div>
+            <div class="stat-label">Status</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">10/10</div>
+            <div class="stat-label">Fight Rating</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">Fall</div>
+            <div class="stat-label">Peak Season</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">$45.20</div>
+            <div class="stat-label">Price/Coin</div>
+          </div>
+        </div>
+        <button onclick="console.log('View Muskie species encyclopedia entry')">View Species Data</button>
+        <button class="primary" onclick="console.log('Buy MuskieCoin')">Buy MuskieCoin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Species Coins Section -->
+  <div class="section">
+    <h2>💰 My Species Coins</h2>
+    <p>Your species coin balances earned from verified catches. Each coin represents one verified fish catch and can be traded with BaitCoin via liquidity pools.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">WalleyeCoin Balance</div>
+        <div class="card-content">
+          <div class="stat-item">
+            <div class="stat-value">12.0</div>
+            <div class="stat-label">WALLEYE</div>
+          </div>
+          <div class="card-meta">
+            <strong>Current Price:</strong> $4.20 per coin<br>
+            <strong>Portfolio Value:</strong> $50.40<br>
+            <strong>24h Change:</strong> <span style="color: #10b981;">+2.3%</span>
+          </div>
+        </div>
+        <button onclick="console.log('Trade WalleyeCoin for BAIT')">Trade for BAIT</button>
+        <button onclick="console.log('Add WalleyeCoin to liquidity pool')">Add to LP</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">BassCoin Balance</div>
+        <div class="card-content">
+          <div class="stat-item">
+            <div class="stat-value">4.5</div>
+            <div class="stat-label">BASS</div>
+          </div>
+          <div class="card-meta">
+            <strong>Current Price:</strong> $6.80 per coin<br>
+            <strong>Portfolio Value:</strong> $30.60<br>
+            <strong>24h Change:</strong> <span style="color: #ef4444;">-1.2%</span>
+          </div>
+        </div>
+        <button onclick="console.log('Trade BassCoin for BAIT')">Trade for BAIT</button>
+        <button onclick="console.log('Add BassCoin to liquidity pool')">Add to LP</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">PikeCoin Balance</div>
+        <div class="card-content">
+          <div class="stat-item">
+            <div class="stat-value">1.0</div>
+            <div class="stat-label">PIKE</div>
+          </div>
+          <div class="card-meta">
+            <strong>Current Price:</strong> $8.90 per coin<br>
+            <strong>Portfolio Value:</strong> $8.90<br>
+            <strong>24h Change:</strong> <span style="color: #10b981;">+5.7%</span>
+          </div>
+        </div>
+        <button onclick="console.log('Trade PikeCoin for BAIT')">Trade for BAIT</button>
+        <button onclick="console.log('Add PikeCoin to liquidity pool')">Add to LP</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">BAIT Balance</div>
+        <div class="card-content">
+          <div class="stat-item">
+            <div class="stat-value">127.50</div>
+            <div class="stat-label">BAIT</div>
+          </div>
+          <div class="card-meta">
+            <strong>FUSD Backing:</strong> 1:1 Stable<br>
+            <strong>Portfolio Value:</strong> $127.50<br>
+            <strong>Total Portfolio:</strong> $217.40
+          </div>
+        </div>
+        <button onclick="console.log('Convert BAIT to FUSD')">Convert to FUSD</button>
+        <button onclick="console.log('Use BAIT to buy FishCards')">Buy FishCards</button>
       </div>
     </div>
   </div>
 
   <div class="section">
-    <h2>📸 FishCards</h2>
-    <p>Your tradable cards with randomized metadata reveals. See which details are public and manage your card collection.</p>
-    <div class="grid">
-      <div class="card">
-        <strong>Species:</strong> Walleye<br>
-        <em>Fields:</em> Length ✓ · Weight ✓ · GPS ✕ · Gear ✓<br>
-        <button onclick="console.log('Sell FishCard #201')">Sell</button>
+    <h2>📊 Portfolio Summary</h2>
+    <p>Your complete DerbyFish ecosystem overview.</p>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Fish NFTs Owned</div>
       </div>
-      <div class="card">
-        <strong>Species:</strong> Bass<br>
-        <em>Fields:</em> Length ✓ · Weight ✓ · GPS ✓ · Notes ✕<br>
-        <button onclick="console.log('Sell FishCard #202')">Sell</button>
+      <div class="stat-item">
+        <div class="stat-value">3</div>
+        <div class="stat-label">FishCards Owned</div>
       </div>
-      <div class="card">
-        <strong>Species:</strong> Pike<br>
-        <em>Fields:</em> Length ✓ · Weight ✓ · Weather ✓ · Gear ✓<br>
-        <button onclick="console.log('Sell FishCard #203')">Sell</button>
+      <div class="stat-item">
+        <div class="stat-value">4</div>
+        <div class="stat-label">Species Coins</div>
       </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>🔍 Public Fish Records</h2>
-    <p>Explore verified fish catches by other users. You can't buy them, but you can mint FishCards if they allow it.</p>
-    <div class="grid">
-      <div class="card">
-        <strong>Trout</strong><br>
-        Length: 21in<br>
-        Weight: 4.4lb<br>
-        <button onclick="console.log('Mint FishCard for Trout ID 301')">Mint FishCard</button>
-      </div>
-      <div class="card">
-        <strong>Pike</strong><br>
-        Length: 30in<br>
-        Weight: 8.1lb<br>
-        <button onclick="console.log('Mint FishCard for Pike ID 302')">Mint FishCard</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>🧬 FishDEX Species Encyclopedia</h2>
-    <p>View all registered species with scientific, geographic, regulatory, and angling data. Each species corresponds to a token with max supply = total catches.</p>
-    <div class="grid">
-      <div class="card">
-        <strong>WalleyeCoin</strong><br>
-        Supply: 13,215 / Max: 15,000<br>
-        Status: Native<br>
-        <button onclick="console.log('View Walleye Encyclopedia Entry')">See Species Info</button>
-        <button onclick="console.log('Buy WalleyeCoin')">Buy Coin</button>
-      </div>
-      <div class="card">
-        <strong>BassCoin</strong><br>
-        Supply: 20,019 / Max: 21,000<br>
-        Status: Popular Gamefish<br>
-        <button onclick="console.log('View Bass Encyclopedia Entry')">See Species Info</button>
-        <button onclick="console.log('Buy BassCoin')">Buy Coin</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>💱 My Species Coins</h2>
-    <p>Check your coin balances. These represent verified catches of each species and can be traded or held.</p>
-    <div class="grid">
-      <div class="card">
-        <strong>WalleyeCoin</strong><br>
-        Balance: 12.0<br>
-        <button onclick="console.log('Trade WalleyeCoin')">Trade</button>
-      </div>
-      <div class="card">
-        <strong>BassCoin</strong><br>
-        Balance: 4.5<br>
-        <button onclick="console.log('Trade BassCoin')">Trade</button>
+      <div class="stat-item">
+        <div class="stat-value">$217.40</div>
+        <div class="stat-label">Total Portfolio</div>
       </div>
     </div>
   </div>
