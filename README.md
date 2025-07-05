@@ -13,7 +13,7 @@ DerbyFish creates the closest thing to real-life Pokémon through verified fish 
 
 ### The Real Fish Catching Experience
 
-When an angler catches a fish and gets verified by DerbyFish's sanctioning body, they receive a **Fish NFT** - a permanent, non-transferable digital asset that represents their actual catch. This NFT contains both public core information and private metadata fields:
+When an angler catches a fish and it gets verified by DerbyFish's sanctioning body, they receive a **Fish NFT** - a permanent, non-transferable digital asset that represents their actual catch. This NFT contains both public core information and private metadata fields:
 
 **Core Public Information** (always visible):
 - Species name and scientific classification
