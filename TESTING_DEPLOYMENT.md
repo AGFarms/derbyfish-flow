@@ -98,9 +98,59 @@ flow transactions send cadence/transactions/mint-species-coin.cdc \
 flow scripts execute cadence/scripts/get_fish_nft_ids.cdc \
   --args-json '[{"type": "Address", "value": "0x179b6b1cb6755e31"}]'
 
+# Check specific NFT details
+flow scripts execute cadence/scripts/get_fish_nft_by_id.cdc \
+  --args-json '[
+    {"type": "Address", "value": "0x179b6b1cb6755e31"},
+    {"type": "UInt64", "value": "1"}
+  ]'
+
 # Check species coin balance
 flow scripts execute cadence/scripts/get_walleye_coin_balance.cdc \
   --args-json '[{"type": "Address", "value": "0x179b6b1cb6755e31"}]'
+```
+
+### 6. Set Up FishCard NFT Collection and Mint FishCards
+
+```bash
+# Set up FishCard NFT collection for test account
+flow transactions send cadence/transactions/setup_fish_card_collection.cdc --signer test-acct
+
+# Enable fish card minting for your FishNFT (one-time setup per NFT)
+flow transactions send cadence/transactions/enable_fish_cards.cdc \
+  --args-json '[
+    {"type": "UInt64", "value": "1"}
+  ]' \
+  --signer test-acct
+
+# COMMIT-REVEAL MINTING (Secure randomness)
+# Step 1: Commit - provide user salt for randomness
+flow transactions send cadence/transactions/commit_fish_card.cdc \
+  --args-json '[
+    {"type": "UInt64", "value": "1"},
+    {"type": "Address", "value": "0x179b6b1cb6755e31"},
+    {"type": "Address", "value": "0x179b6b1cb6755e31"},
+    {"type": "Array", "value": [{"type": "UInt8", "value": "1"}, {"type": "UInt8", "value": "2"}, {"type": "UInt8", "value": "3"}, {"type": "UInt8", "value": "4"}, {"type": "UInt8", "value": "5"}, {"type": "UInt8", "value": "6"}, {"type": "UInt8", "value": "7"}, {"type": "UInt8", "value": "8"}]}
+  ]' \
+  --signer test-acct
+
+# Step 2: Wait at least 1 block, then reveal using the receipt
+flow transactions send cadence/transactions/reveal_fish_card.cdc \
+  --args-json '[
+    {"type": "UInt64", "value": "0"}
+  ]' \
+  --signer test-acct
+
+# Verify FishCard collection
+flow scripts execute cadence/scripts/get_fish_card_ids.cdc \
+  --args-json '[{"type": "Address", "value": "0x179b6b1cb6755e31"}]'
+
+# Check specific FishCard details and revealed fields
+flow scripts execute cadence/scripts/get_fish_card_by_id.cdc \
+  --args-json '[
+    {"type": "Address", "value": "0x179b6b1cb6755e31"},
+    {"type": "UInt64", "value": "1"}
+  ]'
 ```
 
 ## System Architecture
@@ -122,6 +172,23 @@ flow scripts execute cadence/scripts/get_walleye_coin_balance.cdc \
 3. **Removed automatic species coin minting** from NFT minting process
 4. **Species coins are now fully independent** - they track their own NFT usage
 
+### FishCard NFT System
+- **FishCard NFT Contract**: 
+  - Creates randomized trading cards from existing FishNFTs
+  - Uses **commit-reveal scheme** with Xorshift128plus for secure randomness
+  - Each card randomly reveals fishing data fields via independent coin flips
+  - Two-phase minting: Commit (with user salt) → Wait (≥1 block) → Reveal & Mint
+  - No payment required - anyone can mint cards from enabled FishNFTs
+  - Cards show core data (species, length, etc.) but hide/reveal private data randomly
+
+### FishCard Features
+- **Secure Randomness**: Uses user-provided salt + future block hash for unbiased results
+- **Independent Coin Flips**: Each non-core field gets its own 50/50 chance to be revealed
+- **Rarity System**: Cards with more revealed fields are rarer (Common → Legendary)
+- **Privacy Protection**: Sensitive location/angler data only revealed based on chance
+- **NFT Integration**: Must own a FishNFT and enable card minting per NFT
+- **Anti-Manipulation**: Commit-reveal prevents users from cherry-picking favorable outcomes
+
 ## Transaction Status
 
 | Transaction | Status | Purpose |
@@ -131,6 +198,10 @@ flow scripts execute cadence/scripts/get_walleye_coin_balance.cdc \
 | `mint_fish_nft_with_species.cdc` | ✅ Working | Mint NFT with full metadata |
 | `mint_fish_nft.cdc` | ✅ Working | Mint NFT with basic metadata |
 | `mint-species-coin.cdc` | ✅ Working | Mint species coins from NFT |
+| `setup_fish_card_collection.cdc` | ✅ Working | Set up FishCard NFT collection |
+| `enable_fish_cards.cdc` | ✅ Working | Enable fish card minting for FishNFT |
+| `commit_fish_card.cdc` | ✅ Working | Commit FishCard mint with user salt |
+| `reveal_fish_card.cdc` | ✅ Working | Reveal and mint FishCard using receipt |
 
 ## Error Handling
 
@@ -147,6 +218,25 @@ flow scripts execute cadence/scripts/get_walleye_coin_balance.cdc \
 4. **"Could not borrow Fish NFT"**
    - Solution: Ensure the NFT ID exists and belongs to the recipient
 
+### FishCard-Specific Issues
+5. **"FishCard minting not enabled for this Fish NFT"**
+   - Solution: Run `enable_fish_cards.cdc` for the NFT first
+
+6. **"Could not borrow Fish NFT collection from owner"**
+   - Solution: Ensure the NFT owner has set up their collection properly
+
+7. **"Could not borrow FishCard collection"**
+   - Solution: Run `setup_fish_card_collection.cdc` first
+
+8. **"Commit not found"**
+   - Solution: Ensure you've run `commit_fish_card.cdc` first and saved the receipt ID
+
+9. **"Must wait at least 1 block to reveal"**
+   - Solution: Wait for at least 1 block after committing before revealing
+
+10. **"Could not borrow FishCard minter"**
+    - Solution: This indicates a contract deployment issue
+
 ## Testing Scenarios
 
 ### Basic Flow Test
@@ -160,8 +250,28 @@ flow scripts execute cadence/scripts/get_walleye_coin_balance.cdc \
 1. Mint non-Walleye NFT → Try to mint WalleyeCoin
 2. Expected: Transaction fails with species mismatch error
 
+### FishCard Flow Test
+1. Set up FishCard collection → Enable fish card minting → Commit with user salt → Wait ≥1 block → Reveal & mint
+2. Expected: FishCard NFT is minted with randomly revealed fishing data based on commit-reveal randomness
+
+### FishCard Randomness Test
+1. Commit multiple FishCards from the same FishNFT with different user salts → Reveal each after ≥1 block
+2. Expected: Each card reveals different combinations of fishing data fields due to different salt/block combinations
+
+### FishCard Security Test
+1. Try to reveal a commit immediately without waiting for next block
+2. Expected: Transaction fails with "Must wait at least 1 block to reveal" error
+
 ## Notes
 - Species coins now handle all duplicate prevention logic
 - FishNFT contract is simplified and focused on NFT functionality
 - Each species coin contract maintains its own list of redeemed NFTs
+- **FishCard system uses commit-reveal for secure randomness**:
+  - Users provide salt at commit time
+  - System uses future block hash + salt for unpredictable randomness
+  - Prevents manipulation while ensuring fairness
+- **Core vs Non-Core Fields**:
+  - Core fields (species, length, timestamp, etc.) always revealed
+  - Non-core fields (location, gear, technique, etc.) have 50/50 reveal chance
+  - Each field gets independent coin flip for maximum variety
 - The system is more modular and easier to maintain
