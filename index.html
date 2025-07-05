@@ -582,6 +582,127 @@
     .tooltip:hover::after {
       opacity: 1;
     }
+
+    /* Sub-sections */
+    .sub-section {
+      display: none;
+    }
+
+    .sub-section.active {
+      display: block;
+    }
+
+    .view-mode {
+      display: none;
+    }
+
+    .view-mode.active {
+      display: block;
+    }
+
+    /* Exchange Table Styles */
+    .exchange-table {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+
+    .table-header {
+      background: rgba(16, 185, 129, 0.1);
+      border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+      transition: background 0.3s;
+    }
+
+    .table-row:hover {
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .table-header .table-row {
+      font-weight: 600;
+      color: #10b981;
+    }
+
+    .table-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .species-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .species-name {
+      font-weight: 600;
+      color: #10b981;
+    }
+
+    .species-scientific {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      font-style: italic;
+    }
+
+    .supply-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.9rem;
+    }
+
+    .supply-bar-mini {
+      height: 4px;
+      background: rgba(107, 114, 128, 0.3);
+      border-radius: 2px;
+      overflow: hidden;
+      width: 100px;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+    }
+
+    /* Responsive table */
+    @media (max-width: 1200px) {
+      .table-row {
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+      }
+      
+      .table-cell:nth-child(5),
+      .table-cell:nth-child(6) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .table-row {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      
+      .table-cell {
+        justify-content: space-between;
+      }
+      
+      .table-cell::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #10b981;
+      }
+    }
   </style>
 </head>
 <body>
