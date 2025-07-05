@@ -1,198 +1,223 @@
 {
-	"contracts": {
-		"BaitCoin": {
-			"source": "cadence/contracts/BaitCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "86ef213d1c3a2b94"
-			}
-		},
-		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
-		"FishCardNFT": {
-			"source": "cadence/contracts/FishCardNFT.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"FishCardnFT2": {
-			"source": "cadence/contracts/FishCardnFT2.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"FishNFT": {
-			"source": "cadence/contracts/FishNFT.cdc",
-			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "86ef213d1c3a2b94"
-			}
-		},
-		"Fishdex": {
-			"source": "cadence/contracts/Fishdex.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
-		"RandomConsumer": {
-			"source": "cadence/contracts/RandomConsumer.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"WalleyeCoin": {
-			"source": "cadence/contracts/WalleyeCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "86ef213d1c3a2b94"
-			}
-		},
-		"Xorshift128plus": {
-			"source": "cadence/contracts/Xorshift128plus.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		}
-	},
-	"dependencies": {
-		"Burner": {
-			"source": "mainnet://f233dcee88fe0abe.Burner",
-			"hash": "71af18e227984cd434a3ad00bb2f3618b76482842bae920ee55662c37c8bf331",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "f233dcee88fe0abe",
-				"testnet": "9a0766d93b6608b7"
-			}
-		},
-		"FUSD": {
-			"source": "mainnet://3c5959b568896393.FUSD",
-			"hash": "d248c7cc68e1b452d0069e80741fba47b401a585c1b65ec6d421d530f745ebbb",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "3c5959b568896393",
-				"testnet": "e223d8a629e49c68"
-			}
-		},
-		"FlowToken": {
-			"source": "mainnet://1654653399040a61.FlowToken",
-			"hash": "cefb25fd19d9fc80ce02896267eb6157a6b0df7b1935caa8641421fe34c0e67a",
-			"aliases": {
-				"emulator": "0ae53cb6e3f42a79",
-				"mainnet": "1654653399040a61",
-				"testnet": "7e60df042a9c0868"
-			}
-		},
-		"FungibleToken": {
-			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
-			"hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
-			"aliases": {
-				"emulator": "ee82856bf20e2aa6",
-				"mainnet": "f233dcee88fe0abe",
-				"testnet": "9a0766d93b6608b7"
-			}
-		},
-		"FungibleTokenMetadataViews": {
-			"source": "mainnet://f233dcee88fe0abe.FungibleTokenMetadataViews",
-			"hash": "dff704a6e3da83997ed48bcd244aaa3eac0733156759a37c76a58ab08863016a",
-			"aliases": {
-				"emulator": "ee82856bf20e2aa6",
-				"mainnet": "f233dcee88fe0abe",
-				"testnet": "9a0766d93b6608b7"
-			}
-		},
-		"MetadataViews": {
-			"source": "mainnet://1d7e57aa55817448.MetadataViews",
-			"hash": "10a239cc26e825077de6c8b424409ae173e78e8391df62750b6ba19ffd048f51",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "1d7e57aa55817448",
-				"testnet": "631e88ae7f1d7c20"
-			}
-		},
-		"NonFungibleToken": {
-			"source": "mainnet://1d7e57aa55817448.NonFungibleToken",
-			"hash": "b63f10e00d1a814492822652dac7c0574428a200e4c26cb3c832c4829e2778f0",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "1d7e57aa55817448",
-				"testnet": "631e88ae7f1d7c20"
-			}
-		},
-		"RandomBeaconHistory": {
-			"source": "mainnet://e467b9dd11fa00df.RandomBeaconHistory",
-			"hash": "fe7f11c46dd54446bd60d88015ffe5057d7245c4b77374e11db2adf0a8156167",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "e467b9dd11fa00df",
-				"testnet": "8c5303eaa26202d6"
-			}
-		},
-		"ViewResolver": {
-			"source": "mainnet://1d7e57aa55817448.ViewResolver",
-			"hash": "374a1994046bac9f6228b4843cb32393ef40554df9bd9907a702d098a2987bde",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "1d7e57aa55817448",
-				"testnet": "631e88ae7f1d7c20"
-			}
-		}
-	},
-	"networks": {
-		"emulator": "127.0.0.1:3569",
-		"mainnet": "access.mainnet.nodes.onflow.org:9000",
-		"testing": "127.0.0.1:3569",
-		"testnet": "access.devnet.nodes.onflow.org:9000"
-	},
-	"accounts": {
-		"anthony": {
-			"address": "15770cd6ad1b0299",
-			"key": {
-				"type": "file",
-				"location": "anthony.pkey"
-			}
-		},
-		"emulator-account": {
-			"address": "f8d6e0586b0a20c7",
-			"key": "59d2f5c528cb4f690003b38f50363fe5488615a8969bd11869bac7f16877fc57"
-		},
-		"test-acct": {
-			"address": "179b6b1cb6755e31",
-			"key": "bf2067161ca5fda4f9e9b737311e0b4fae08f769fdc4e1f570e43f595c52d37e"
-		},
-		"testnet-account": {
-			"address": "86ef213d1c3a2b94",
-			"key": {
-				"type": "file",
-				"location": "testnet-account.pkey"
-			}
-		},
-		"testnet-user": {
-			"address": "7149e49f728573b0",
-			"key": {
-				"type": "file",
-				"location": "testnet-user.pkey"
-			}
-		}
-	},
-	"deployments": {
-		"emulator": {
-			"emulator-account": [
-				"BaitCoin",
-				"FUSD",
-				"ExampleFishCoin",
-				"WalleyeCoin",
-				"FishNFT",
-				"Fishdex",
-				"Xorshift128plus"
-			]
-		},
-		"testnet": {
-			"testnet-account": [
-				"WalleyeCoin",
-				"FishNFT",
-				"FishCardNFT",
-				"BaitCoin"
-			]
-		}
-	}
+  "contracts": {
+    "BaitCoin": {
+      "source": "cadence/contracts/BaitCoin.cdc",
+      "aliases": {
+        "testing": "0000000000000007",
+        "testnet": "86ef213d1c3a2b94",
+        "mainnet": "44100f14f70e3f78"
+      }
+    },
+    "ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
+    "FishCardNFT": {
+      "source": "cadence/contracts/FishCardNFT.cdc",
+      "aliases": {
+        "testing": "0000000000000007",
+        "mainnet": "44100f14f70e3f78"
+      }
+    },
+    "FishCardnFT2": {
+      "source": "cadence/contracts/FishCardnFT2.cdc",
+      "aliases": {
+        "testing": "0000000000000007"
+      }
+    },
+    "FishNFT": {
+      "source": "cadence/contracts/FishNFT.cdc",
+      "aliases": {
+        "testing": "0000000000000007",
+        "testnet": "86ef213d1c3a2b94",
+        "mainnet": "44100f14f70e3f78"
+      }
+    },
+    "Fishdex": {
+      "source": "cadence/contracts/Fishdex.cdc",
+      "aliases": {
+        "testing": "0000000000000007"
+      }
+    },
+    "LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
+    "RandomConsumer": {
+      "source": "cadence/contracts/RandomConsumer.cdc",
+      "aliases": {
+        "testing": "0000000000000007"
+      }
+    },
+    "WalleyeCoin": {
+      "source": "cadence/contracts/WalleyeCoin.cdc",
+      "aliases": {
+        "testing": "0000000000000007",
+        "testnet": "86ef213d1c3a2b94",
+        "mainnet": "44100f14f70e3f78"
+      }
+    },
+    "Xorshift128plus": {
+      "source": "cadence/contracts/Xorshift128plus.cdc",
+      "aliases": {
+        "testing": "0000000000000007",
+        "mainnet": "44100f14f70e3f78"
+      }
+    }
+  },
+  "dependencies": {
+    "Burner": {
+      "source": "mainnet://f233dcee88fe0abe.Burner",
+      "hash": "71af18e227984cd434a3ad00bb2f3618b76482842bae920ee55662c37c8bf331",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "mainnet": "f233dcee88fe0abe",
+        "testnet": "9a0766d93b6608b7"
+      }
+    },
+    "FUSD": {
+      "source": "mainnet://3c5959b568896393.FUSD",
+      "hash": "d248c7cc68e1b452d0069e80741fba47b401a585c1b65ec6d421d530f745ebbb",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "mainnet": "3c5959b568896393",
+        "testnet": "e223d8a629e49c68"
+      }
+    },
+    "FlowToken": {
+      "source": "mainnet://1654653399040a61.FlowToken",
+      "hash": "cefb25fd19d9fc80ce02896267eb6157a6b0df7b1935caa8641421fe34c0e67a",
+      "aliases": {
+        "emulator": "0ae53cb6e3f42a79",
+        "mainnet": "1654653399040a61",
+        "testnet": "7e60df042a9c0868"
+      }
+    },
+    "FungibleToken": {
+      "source": "mainnet://f233dcee88fe0abe.FungibleToken",
+      "hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
+      "aliases": {
+        "emulator": "ee82856bf20e2aa6",
+        "mainnet": "f233dcee88fe0abe",
+        "testnet": "9a0766d93b6608b7"
+      }
+    },
+    "FungibleTokenMetadataViews": {
+      "source": "mainnet://f233dcee88fe0abe.FungibleTokenMetadataViews",
+      "hash": "dff704a6e3da83997ed48bcd244aaa3eac0733156759a37c76a58ab08863016a",
+      "aliases": {
+        "emulator": "ee82856bf20e2aa6",
+        "mainnet": "f233dcee88fe0abe",
+        "testnet": "9a0766d93b6608b7"
+      }
+    },
+    "MetadataViews": {
+      "source": "mainnet://1d7e57aa55817448.MetadataViews",
+      "hash": "10a239cc26e825077de6c8b424409ae173e78e8391df62750b6ba19ffd048f51",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "mainnet": "1d7e57aa55817448",
+        "testnet": "631e88ae7f1d7c20"
+      }
+    },
+    "NonFungibleToken": {
+      "source": "mainnet://1d7e57aa55817448.NonFungibleToken",
+      "hash": "b63f10e00d1a814492822652dac7c0574428a200e4c26cb3c832c4829e2778f0",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "mainnet": "1d7e57aa55817448",
+        "testnet": "631e88ae7f1d7c20"
+      }
+    },
+    "RandomBeaconHistory": {
+      "source": "mainnet://e467b9dd11fa00df.RandomBeaconHistory",
+      "hash": "fe7f11c46dd54446bd60d88015ffe5057d7245c4b77374e11db2adf0a8156167",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "mainnet": "e467b9dd11fa00df",
+        "testnet": "8c5303eaa26202d6"
+      }
+    },
+    "ViewResolver": {
+      "source": "mainnet://1d7e57aa55817448.ViewResolver",
+      "hash": "374a1994046bac9f6228b4843cb32393ef40554df9bd9907a702d098a2987bde",
+      "aliases": {
+        "emulator": "f8d6e0586b0a20c7",
+        "mainnet": "1d7e57aa55817448",
+        "testnet": "631e88ae7f1d7c20"
+      }
+    }
+  },
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "testing": "127.0.0.1:3569",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "anthony": {
+      "address": "15770cd6ad1b0299",
+      "key": {
+        "type": "file",
+        "location": "anthony.pkey"
+      }
+    },
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": "59d2f5c528cb4f690003b38f50363fe5488615a8969bd11869bac7f16877fc57"
+    },
+    "test-acct": {
+      "address": "179b6b1cb6755e31",
+      "key": "bf2067161ca5fda4f9e9b737311e0b4fae08f769fdc4e1f570e43f595c52d37e"
+    },
+    "testnet-account": {
+      "address": "86ef213d1c3a2b94",
+      "key": {
+        "type": "file",
+        "location": "testnet-account.pkey"
+      }
+    },
+    "testnet-user": {
+      "address": "7149e49f728573b0",
+      "key": {
+        "type": "file",
+        "location": "testnet-user.pkey"
+      }
+    },
+    "mainnet-agfarms": {
+  "address": "44100f14f70e3f78",
+  "key": {
+    "type": "hex",
+    "index": 0,
+    "signatureAlgorithm": "ECDSA_secp256k1",
+    "hashAlgorithm": "SHA2_256",
+    "privateKey": "0719a7196b0bccf51af9798446ffec15aabe051bf84126218af0b9a07ff7a8f8"
+  }
 }
+
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": [
+        "BaitCoin",
+        "FUSD",
+        "ExampleFishCoin",
+        "WalleyeCoin",
+        "FishNFT",
+        "Fishdex",
+        "Xorshift128plus"
+      ]
+    },
+    "testnet": {
+      "testnet-account": [
+        "WalleyeCoin",
+        "FishNFT",
+        "FishCardNFT",
+        "BaitCoin"
+      ]
+    },
+    "mainnet": {
+      "mainnet-agfarms": [
+        "WalleyeCoin",
+        "FishNFT",
+        "BaitCoin",
+        "Xorshift128plus"
+      ]
+    }
+  }
+}
+
