@@ -34,108 +34,111 @@
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 1rem;
     }
+
+    label {
+      display: block;
+      margin-top: 0.5rem;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
+      background-color: #1f2937; /* gray-800 */
+      color: #fff;
+      border: 1px solid #4b5563;
+      border-radius: 0.25rem;
+    }
+
+    button:hover {
+      background-color: #374151; /* gray-700 */
+    }
   </style>
 </head>
 <body>
   <div class="section">
-    <h2>Overview</h2>
-    <p>DerbyFish turns real fish catches into a living digital economy.</p>
-    <!-- Add intro animation or fish counter -->
+    <h2>FishNFT Tools</h2>
+    <label>Initialize NFT Collection</label>
+    <button>Run setup_fish_nft_collection</button>
+
+    <label>Register Species</label>
+    <input type="text" placeholder="Species name">
+    <button>Run register_species</button>
+
+    <label>Mint Fish NFT (Basic)</label>
+    <input type="text" placeholder="Fish data JSON">
+    <button>Run mint_fish_nft</button>
+
+    <label>Mint Fish NFT with Species</label>
+    <select>
+      <option>Select registered species</option>
+      <option>Walleye</option>
+      <option>Bass</option>
+    </select>
+    <button>Run mint_fish_nft_with_species</button>
+
+    <label>Setup FishCard Collection</label>
+    <button>Run setup_fish_card_collection</button>
+
+    <label>Enable FishCards</label>
+    <input type="text" placeholder="Fish NFT ID">
+    <button>Run enable_fish_cards</button>
+
+    <label>Commit FishCard</label>
+    <input type="text" placeholder="Salt">
+    <button>Run commit_fish_card</button>
+
+    <label>Reveal FishCard</label>
+    <input type="text" placeholder="Salt Hash">
+    <button>Run reveal_fish_card</button>
+
+    <label>Transfer FishCard</label>
+    <input type="text" placeholder="To Address">
+    <input type="text" placeholder="FishCard ID">
+    <button>Run transfer_fish_card</button>
   </div>
 
   <div class="section">
-    <h2>Verified Catches (Fish Records)</h2>
-    <p>Every time an angler verifies a fish, a permanent record is created.</p>
+    <h2>FishNFT Queries</h2>
+    <label>View My Fish NFTs</label>
+    <button>Run get_fish_nft_ids</button>
+
+    <label>Get NFT by ID</label>
+    <input type="text" placeholder="NFT ID">
+    <button>Run get_fish_nft_by_id</button>
+
+    <label>Get My FishCards</label>
+    <button>Run get_fish_card_ids</button>
+
+    <label>Get FishCard by ID</label>
+    <input type="text" placeholder="Card ID">
+    <button>Run get_fish_card_by_id</button>
+  </div>
+
+  <div class="section">
+    <h2>WalleyeCoin Tools</h2>
+    <label>Setup Vault</label>
+    <button>Run setup_walleye_coin_account</button>
+
+    <label>Mint Species Coin</label>
+    <input type="text" placeholder="Fish NFT ID">
+    <button>Run mint-species-coin</button>
+  </div>
+
+  <div class="section">
+    <h2>WalleyeCoin Queries</h2>
+    <label>Check Balance</label>
+    <button>Run get_walleye_coin_balance</button>
+  </div>
+
+  <div class="section">
+    <h2>System Features</h2>
     <ul>
-      <li>Species, size, date/time</li>
-      <li>Public & private data fields</li>
-      <li>Owned forever by the angler</li>
+      <li>Decentralized species coin redemption</li>
+      <li>Privacy-preserving FishCard minting</li>
+      <li>Non-transferable catch records</li>
+      <li>Royalties for FishCard trading</li>
     </ul>
-    <!-- Later: Add table of sample catch records -->
-  </div>
-
-  <div class="section">
-    <h2>Species Coins (FishDex)</h2>
-    <p>Each species has its own coin. 1 coin is added for every verified catch.</p>
-    <ul>
-      <li>Walleye → WalleyeCoin</li>
-      <li>Scarcity: rare fish = fewer coins</li>
-      <li>Built-in encyclopedia metadata per species</li>
-    </ul>
-    <!-- Later: Integrate species coin stats & search -->
-  </div>
-
-  <div class="section">
-    <h2>FishCards</h2>
-    <p>Tradeable cards that reveal randomized private data about real catches.</p>
-    <ul>
-      <li>Rarity based on revealed info</li>
-      <li>Cards can be bought, sold, and traded</li>
-      <li>Angler earns royalties</li>
-    </ul>
-    <!-- Later: Add card gallery grid with rarity filters -->
-  </div>
-
-  <div class="section">
-    <h2>Bait (Fishing Credits)</h2>
-    <p>1:1 USDC-backed stablecoin used for:</p>
-    <ul>
-      <li>FishCard packs</li>
-      <li>Shop purchases</li>
-      <li>Swapping between species coins</li>
-    </ul>
-    <!-- Later: Integrate Bait balance, purchase modal -->
-  </div>
-
-  <div class="section">
-    <h2>FishDex Intelligence</h2>
-    <div class="grid">
-      <div class="section">
-        <h3>Biological</h3>
-        <p>Lifespan, diet, predators, and more.</p>
-      </div>
-      <div class="section">
-        <h3>Geographic</h3>
-        <p>Native waters, migration, invasive risk.</p>
-      </div>
-      <div class="section">
-        <h3>Regulatory</h3>
-        <p>Size limits, seasons, licenses by region.</p>
-      </div>
-      <div class="section">
-        <h3>Recreational</h3>
-        <p>Angler fight rating, best baits, taste, and difficulty.</p>
-      </div>
-      <div class="section">
-        <h3>Conservation</h3>
-        <p>IUCN status, threats, protected regions.</p>
-      </div>
-      <div class="section">
-        <h3>Scientific</h3>
-        <p>Active research, population trends, gaps in data.</p>
-      </div>
-    </div>
-    <!-- Later: Add live FishDex query interface with completeness scores -->
-  </div>
-
-  <div class="section">
-    <h2>Marketplace & Royalties</h2>
-    <p>FishCard trades generate royalties for the angler. Bait used across all purchases.</p>
-    <ul>
-      <li>Pack opening & rarity reveals</li>
-      <li>Merch + FishCard shop integrations</li>
-    </ul>
-    <!-- Later: Add royalty distribution graph + live marketplace links -->
-  </div>
-
-  <div class="section">
-    <h2>Security & Privacy</h2>
-    <p>All records and trades are secured and verified. Sensitive catch data is only revealed by chance.</p>
-    <ul>
-      <li>Royalties without identity leaks</li>
-      <li>Commit-reveal privacy protection</li>
-    </ul>
-    <!-- Later: Embed legal/privacy policy links -->
   </div>
 </body>
 </html>
