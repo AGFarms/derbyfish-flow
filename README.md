@@ -89,24 +89,29 @@ Each private metadata field gets an independent **coin toss** (50/50 chance) to 
 
 ---
 
-### 2. NFT Architecture
+### 2. Three-Tier Digital Asset System
 
-#### FishNFT
+#### Fish NFTs: Permanent Catch Records
+* **Non-transferable**: Forever owned by the angler who caught the fish
+* **Comprehensive Metadata**: 44+ fields covering catch details, location, gear, weather, technique
+* **Verification Proof**: Immutable record of sanctioning body verification
+* **Species Registration**: Links to species coin contracts for encyclopedic data
+* **Privacy Control**: Angler controls which metadata fields are public vs private
 
-* Implements `NonFungibleToken`, stores catch metadata (GPS, timestamp, gear, photos).
-* Serves as the canonical proof of catch and key to minting SpeciesCoin.
+#### Species Coins: Living Fish Encyclopedia
+* **Encyclopedic Database**: Each coin contract contains comprehensive species information
+* **Natural Scarcity**: Supply directly tied to verified catch numbers
+* **Trading Mechanism**: Standard fungible token enabling DEX integration
+* **Research Integration**: Connects to scientific databases and conservation data
+* **Regional Data**: Location-specific regulations, seasons, and fishing information
 
-#### Trading‑Card NFTs
-
-* Users may mint up to an upgradeable limit of "card edition" NFTs from an existing FishNFT.
-* Cards reference the FishNFT ID and optionally include or omit personal metadata for privacy.
-* Card metadata and artwork templates managed via a central registry contract.
-
-#### Badge NFTs
-
-* On first‐catch per species, a soulbound Badge NFT is minted to the user's account.
-* Badges include speciesID and timestamp metadata; non‑transferable.
-* Extendable to other badge categories (locations, gear, leaderboards).
+#### FishCards: Randomized Trading Cards
+* **Commit-Reveal Minting**: Secure randomness prevents manipulation
+* **Independent Coin Flips**: Each private field has 50/50 reveal chance
+* **Rarity Tiers**: More revealed fields = rarer cards (Common to Legendary)
+* **Transferable Assets**: Can be bought, sold, and traded unlike Fish NFTs
+* **Royalty System**: Original angler earns from all secondary sales
+* **Privacy Preservation**: Protects sensitive location data through randomization
 
 ---
 
