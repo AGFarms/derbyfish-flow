@@ -1177,11 +1177,15 @@
       </div>
     </section>
 
-    <!-- Species Section -->
-    <section id="species" class="page-section">
+    <!-- FishDEX Section -->
+    <section id="fishdex" class="page-section">
       <div class="search-section">
         <div class="search-header">
-          <h2 class="search-title">🧬 Species Encyclopedia</h2>
+          <h2 class="search-title">🧬 FishDEX Encyclopedia</h2>
+          <div class="nav-tabs" style="margin-bottom: 1rem;">
+            <div class="nav-tab active" onclick="showViewMode('grid-view')">Grid View</div>
+            <div class="nav-tab" onclick="showViewMode('row-view')">Exchange View</div>
+          </div>
           <div class="search-bar">
             <input type="text" class="search-input" placeholder="Search species by name, habitat, or characteristics...">
             <button class="search-btn">Search</button>
@@ -1217,126 +1221,484 @@
             </select>
           </div>
           <div class="filter-group">
-            <label class="filter-label">Supply</label>
+            <label class="filter-label">Sort By</label>
             <select class="filter-select">
-              <option>All</option>
-              <option>High Supply</option>
-              <option>Medium Supply</option>
-              <option>Low Supply</option>
+              <option>Market Cap</option>
+              <option>Price</option>
+              <option>Supply</option>
+              <option>24h Volume</option>
             </select>
           </div>
         </div>
       </div>
 
-      <div class="content-grid">
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">WalleyeCoin</h3>
-              <p class="card-subtitle">SANDER_VITREUS</p>
+      <!-- Grid View (Pokédex Style) -->
+      <div id="grid-view" class="view-mode active">
+        <div class="content-grid">
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">WalleyeCoin</h3>
+                <p class="card-subtitle">SANDER_VITREUS</p>
+              </div>
+              <div class="card-badge badge-common">Native</div>
             </div>
-            <div class="card-badge badge-common">Native</div>
+            <div class="price-display">$4.20</div>
+            <div class="price-change price-up">+2.3% 24h</div>
+            <div class="supply-progress">
+              <div class="supply-header">
+                <span>Supply: 13,215 / 15,000</span>
+                <span>88.1%</span>
+              </div>
+              <div class="supply-bar">
+                <div class="supply-fill" style="width: 88.1%"></div>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">8.5/10</div>
+                <div class="stat-label">Fight Rating</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Spring</div>
+                <div class="stat-label">Peak Season</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$55.5K</div>
+                <div class="stat-label">Market Cap</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$1.2K</div>
+                <div class="stat-label">24h Volume</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy WalleyeCoin')">Buy Coin</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
+            </div>
           </div>
-          <div class="price-display">$4.20</div>
-          <div class="price-change price-up">+2.3% 24h</div>
-          <div class="supply-progress">
-            <div class="supply-header">
-              <span>Supply: 13,215 / 15,000</span>
-              <span>88.1%</span>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">BassCoin</h3>
+                <p class="card-subtitle">MICROPTERUS_SALMOIDES</p>
+              </div>
+              <div class="card-badge badge-epic">Popular</div>
             </div>
-            <div class="supply-bar">
-              <div class="supply-fill" style="width: 88.1%"></div>
+            <div class="price-display">$6.80</div>
+            <div class="price-change price-down">-1.2% 24h</div>
+            <div class="supply-progress">
+              <div class="supply-header">
+                <span>Supply: 20,019 / 21,000</span>
+                <span>95.3%</span>
+              </div>
+              <div class="supply-bar">
+                <div class="supply-fill" style="width: 95.3%"></div>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">9.2/10</div>
+                <div class="stat-label">Fight Rating</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Summer</div>
+                <div class="stat-label">Peak Season</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$136.1K</div>
+                <div class="stat-label">Market Cap</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$3.4K</div>
+                <div class="stat-label">24h Volume</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy BassCoin')">Buy Coin</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
             </div>
           </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">8.5/10</div>
-              <div class="stat-label">Fight Rating</div>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">TroutCoin</h3>
+                <p class="card-subtitle">SALVELINUS_FONTINALIS</p>
+              </div>
+              <div class="card-badge badge-rare">Native</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">Spring</div>
-              <div class="stat-label">Peak Season</div>
+            <div class="price-display">$12.50</div>
+            <div class="price-change price-up">+3.8% 24h</div>
+            <div class="supply-progress">
+              <div class="supply-header">
+                <span>Supply: 4,892 / 5,200</span>
+                <span>94.1%</span>
+              </div>
+              <div class="supply-bar">
+                <div class="supply-fill" style="width: 94.1%"></div>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">7.8/10</div>
+                <div class="stat-label">Fight Rating</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Fall</div>
+                <div class="stat-label">Peak Season</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$61.2K</div>
+                <div class="stat-label">Market Cap</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$890</div>
+                <div class="stat-label">24h Volume</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy TroutCoin')">Buy Coin</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
             </div>
           </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('Buy WalleyeCoin')">Buy Coin</button>
-            <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">MuskieCoin</h3>
+                <p class="card-subtitle">ESOX_MASQUINONGY</p>
+              </div>
+              <div class="card-badge badge-legendary">Rare</div>
+            </div>
+            <div class="price-display">$45.20</div>
+            <div class="price-change price-up">+5.7% 24h</div>
+            <div class="supply-progress">
+              <div class="supply-header">
+                <span>Supply: 1,247 / 1,680</span>
+                <span>74.2%</span>
+              </div>
+              <div class="supply-bar">
+                <div class="supply-fill" style="width: 74.2%"></div>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">10/10</div>
+                <div class="stat-label">Fight Rating</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Fall</div>
+                <div class="stat-label">Peak Season</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$56.4K</div>
+                <div class="stat-label">Market Cap</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$2.1K</div>
+                <div class="stat-label">24h Volume</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy MuskieCoin')">Buy Coin</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
+            </div>
+          </div>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">SalmonCoin</h3>
+                <p class="card-subtitle">ONCORHYNCHUS_TSHAWYTSCHA</p>
+              </div>
+              <div class="card-badge badge-epic">Anadromous</div>
+            </div>
+            <div class="price-display">$18.90</div>
+            <div class="price-change price-up">+1.4% 24h</div>
+            <div class="supply-progress">
+              <div class="supply-header">
+                <span>Supply: 2,156 / 2,800</span>
+                <span>77.0%</span>
+              </div>
+              <div class="supply-bar">
+                <div class="supply-fill" style="width: 77.0%"></div>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">9.5/10</div>
+                <div class="stat-label">Fight Rating</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Summer</div>
+                <div class="stat-label">Peak Season</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$40.7K</div>
+                <div class="stat-label">Market Cap</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$1.8K</div>
+                <div class="stat-label">24h Volume</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy SalmonCoin')">Buy Coin</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
+            </div>
+          </div>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">CatfishCoin</h3>
+                <p class="card-subtitle">ICTALURUS_PUNCTATUS</p>
+              </div>
+              <div class="card-badge badge-common">Bottom Feeder</div>
+            </div>
+            <div class="price-display">$2.15</div>
+            <div class="price-change price-down">-0.8% 24h</div>
+            <div class="supply-progress">
+              <div class="supply-header">
+                <span>Supply: 8,945 / 12,000</span>
+                <span>74.5%</span>
+              </div>
+              <div class="supply-bar">
+                <div class="supply-fill" style="width: 74.5%"></div>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">6.5/10</div>
+                <div class="stat-label">Fight Rating</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Summer</div>
+                <div class="stat-label">Peak Season</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$19.2K</div>
+                <div class="stat-label">Market Cap</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$456</div>
+                <div class="stat-label">24h Volume</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Buy CatfishCoin')">Buy Coin</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">BassCoin</h3>
-              <p class="card-subtitle">MICROPTERUS_SALMOIDES</p>
-            </div>
-            <div class="card-badge badge-epic">Popular</div>
-          </div>
-          <div class="price-display">$6.80</div>
-          <div class="price-change price-down">-1.2% 24h</div>
-          <div class="supply-progress">
-            <div class="supply-header">
-              <span>Supply: 20,019 / 21,000</span>
-              <span>95.3%</span>
-            </div>
-            <div class="supply-bar">
-              <div class="supply-fill" style="width: 95.3%"></div>
+      <!-- Row View (Exchange Style) -->
+      <div id="row-view" class="view-mode">
+        <div class="exchange-table">
+          <div class="table-header">
+            <div class="table-row">
+              <div class="table-cell">Species</div>
+              <div class="table-cell">Price</div>
+              <div class="table-cell">24h Change</div>
+              <div class="table-cell">Market Cap</div>
+              <div class="table-cell">Supply</div>
+              <div class="table-cell">Volume</div>
+              <div class="table-cell">Actions</div>
             </div>
           </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">9.2/10</div>
-              <div class="stat-label">Fight Rating</div>
+          <div class="table-body">
+            <div class="table-row">
+              <div class="table-cell">
+                <div class="species-info">
+                  <div class="card-badge badge-epic">Popular</div>
+                  <div>
+                    <div class="species-name">BassCoin</div>
+                    <div class="species-scientific">MICROPTERUS_SALMOIDES</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">
+                <div class="price-display">$6.80</div>
+              </div>
+              <div class="table-cell">
+                <div class="price-change price-down">-1.2%</div>
+              </div>
+              <div class="table-cell">$136.1K</div>
+              <div class="table-cell">
+                <div class="supply-compact">
+                  20,019 / 21,000
+                  <div class="supply-bar-mini">
+                    <div class="supply-fill" style="width: 95.3%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">$3.4K</div>
+              <div class="table-cell">
+                <button class="action-btn btn-primary btn-small" onclick="console.log('Buy BassCoin')">Buy</button>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">Summer</div>
-              <div class="stat-label">Peak Season</div>
-            </div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('Buy BassCoin')">Buy Coin</button>
-            <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
-          </div>
-        </div>
 
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">MuskieCoin</h3>
-              <p class="card-subtitle">ESOX_MASQUINONGY</p>
+            <div class="table-row">
+              <div class="table-cell">
+                <div class="species-info">
+                  <div class="card-badge badge-common">Native</div>
+                  <div>
+                    <div class="species-name">WalleyeCoin</div>
+                    <div class="species-scientific">SANDER_VITREUS</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">
+                <div class="price-display">$4.20</div>
+              </div>
+              <div class="table-cell">
+                <div class="price-change price-up">+2.3%</div>
+              </div>
+              <div class="table-cell">$55.5K</div>
+              <div class="table-cell">
+                <div class="supply-compact">
+                  13,215 / 15,000
+                  <div class="supply-bar-mini">
+                    <div class="supply-fill" style="width: 88.1%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">$1.2K</div>
+              <div class="table-cell">
+                <button class="action-btn btn-primary btn-small" onclick="console.log('Buy WalleyeCoin')">Buy</button>
+              </div>
             </div>
-            <div class="card-badge badge-legendary">Rare</div>
-          </div>
-          <div class="price-display">$45.20</div>
-          <div class="price-change price-up">+5.7% 24h</div>
-          <div class="supply-progress">
-            <div class="supply-header">
-              <span>Supply: 1,247 / 1,680</span>
-              <span>74.2%</span>
+
+            <div class="table-row">
+              <div class="table-cell">
+                <div class="species-info">
+                  <div class="card-badge badge-rare">Native</div>
+                  <div>
+                    <div class="species-name">TroutCoin</div>
+                    <div class="species-scientific">SALVELINUS_FONTINALIS</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">
+                <div class="price-display">$12.50</div>
+              </div>
+              <div class="table-cell">
+                <div class="price-change price-up">+3.8%</div>
+              </div>
+              <div class="table-cell">$61.2K</div>
+              <div class="table-cell">
+                <div class="supply-compact">
+                  4,892 / 5,200
+                  <div class="supply-bar-mini">
+                    <div class="supply-fill" style="width: 94.1%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">$890</div>
+              <div class="table-cell">
+                <button class="action-btn btn-primary btn-small" onclick="console.log('Buy TroutCoin')">Buy</button>
+              </div>
             </div>
-            <div class="supply-bar">
-              <div class="supply-fill" style="width: 74.2%"></div>
+
+            <div class="table-row">
+              <div class="table-cell">
+                <div class="species-info">
+                  <div class="card-badge badge-legendary">Rare</div>
+                  <div>
+                    <div class="species-name">MuskieCoin</div>
+                    <div class="species-scientific">ESOX_MASQUINONGY</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">
+                <div class="price-display">$45.20</div>
+              </div>
+              <div class="table-cell">
+                <div class="price-change price-up">+5.7%</div>
+              </div>
+              <div class="table-cell">$56.4K</div>
+              <div class="table-cell">
+                <div class="supply-compact">
+                  1,247 / 1,680
+                  <div class="supply-bar-mini">
+                    <div class="supply-fill" style="width: 74.2%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">$2.1K</div>
+              <div class="table-cell">
+                <button class="action-btn btn-primary btn-small" onclick="console.log('Buy MuskieCoin')">Buy</button>
+              </div>
             </div>
-          </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">10/10</div>
-              <div class="stat-label">Fight Rating</div>
+
+            <div class="table-row">
+              <div class="table-cell">
+                <div class="species-info">
+                  <div class="card-badge badge-epic">Anadromous</div>
+                  <div>
+                    <div class="species-name">SalmonCoin</div>
+                    <div class="species-scientific">ONCORHYNCHUS_TSHAWYTSCHA</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">
+                <div class="price-display">$18.90</div>
+              </div>
+              <div class="table-cell">
+                <div class="price-change price-up">+1.4%</div>
+              </div>
+              <div class="table-cell">$40.7K</div>
+              <div class="table-cell">
+                <div class="supply-compact">
+                  2,156 / 2,800
+                  <div class="supply-bar-mini">
+                    <div class="supply-fill" style="width: 77.0%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">$1.8K</div>
+              <div class="table-cell">
+                <button class="action-btn btn-primary btn-small" onclick="console.log('Buy SalmonCoin')">Buy</button>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">Fall</div>
-              <div class="stat-label">Peak Season</div>
+
+            <div class="table-row">
+              <div class="table-cell">
+                <div class="species-info">
+                  <div class="card-badge badge-common">Bottom Feeder</div>
+                  <div>
+                    <div class="species-name">CatfishCoin</div>
+                    <div class="species-scientific">ICTALURUS_PUNCTATUS</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">
+                <div class="price-display">$2.15</div>
+              </div>
+              <div class="table-cell">
+                <div class="price-change price-down">-0.8%</div>
+              </div>
+              <div class="table-cell">$19.2K</div>
+              <div class="table-cell">
+                <div class="supply-compact">
+                  8,945 / 12,000
+                  <div class="supply-bar-mini">
+                    <div class="supply-fill" style="width: 74.5%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-cell">$456</div>
+              <div class="table-cell">
+                <button class="action-btn btn-primary btn-small" onclick="console.log('Buy CatfishCoin')">Buy</button>
+              </div>
             </div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('Buy MuskieCoin')">Buy Coin</button>
-            <button class="action-btn btn-secondary" onclick="console.log('View species data')">Species Data</button>
           </div>
         </div>
       </div>
     </section>
-
-    <!-- Other sections would follow similar pattern -->
   </main>
 
   <script>
