@@ -83,8 +83,8 @@ Each private metadata field gets an independent **coin toss** (50/50 chance) to 
 
 #### Bait (Stablecoin)
 
-* **Pegging & Reserves**: Strictly 1:1 backed by USD. Reserves held in a multi‑sig vault with time‑locks and proof‑of‑reserves snapshots available in‑app.
-* **Mint/Burn**: Users mint Bait by depositing USDF via in‑app custodial flows; burn by redeeming USDF on‑chain or through a KYC‑gate in the app.
+* **Pegging & Reserves**: Strictly 1:1 backed by FUSD. Reserves held in a multi‑sig vault with time‑locks and proof‑of‑reserves snapshots available in‑app.
+* **Mint/Burn**: Users mint Bait by depositing USD via in‑app custodial flows; burn by redeeming USDF on‑chain or through a KYC‑gate in the app.
 * **Gas Sponsorship**: DerbyFish pays all Flow gas; users never see transaction fees.
 
 ---
