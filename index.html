@@ -634,9 +634,13 @@
     <section id="my-fish" class="page-section active">
       <div class="search-section">
         <div class="search-header">
-          <h2 class="search-title">🐟 My Fish Collection</h2>
+          <h2 class="search-title">🐟 My Fish & Cards</h2>
+          <div class="nav-tabs" style="margin-bottom: 1rem;">
+            <div class="nav-tab active" onclick="showSubSection('fish-nfts')">Fish NFTs</div>
+            <div class="nav-tab" onclick="showSubSection('fish-cards')">FishCards</div>
+          </div>
           <div class="search-bar">
-            <input type="text" class="search-input" placeholder="Search your fish by species, location, or date...">
+            <input type="text" class="search-input" placeholder="Search your fish and cards...">
             <button class="search-btn">Search</button>
           </div>
         </div>
@@ -680,109 +684,222 @@
         </div>
       </div>
 
-      <div class="content-grid">
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Walleye</h3>
-              <p class="card-subtitle">Sander vitreus</p>
+      <!-- Fish NFTs Sub-section -->
+      <div id="fish-nfts" class="sub-section active">
+        <div class="content-grid">
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Walleye</h3>
+                <p class="card-subtitle">Sander vitreus</p>
+              </div>
+              <div class="card-badge badge-rare">Trophy</div>
             </div>
-            <div class="card-badge badge-rare">Trophy</div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">26.5"</div>
+                <div class="stat-label">Length</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">6.2 lbs</div>
+                <div class="stat-label">Weight</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Jun 12</div>
+                <div class="stat-label">Caught</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">MN</div>
+                <div class="stat-label">Location</div>
+              </div>
+            </div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Walleye #101')">Mint Card</button>
+              <button class="action-btn btn-secondary" onclick="console.log('Redeem WalleyeCoin')">Redeem Coin</button>
+            </div>
           </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">26.5"</div>
-              <div class="stat-label">Length</div>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Largemouth Bass</h3>
+                <p class="card-subtitle">Micropterus salmoides</p>
+              </div>
+              <div class="card-badge badge-epic">Keeper</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">6.2 lbs</div>
-              <div class="stat-label">Weight</div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">18.3"</div>
+                <div class="stat-label">Length</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">3.8 lbs</div>
+                <div class="stat-label">Weight</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">May 30</div>
+                <div class="stat-label">Caught</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">TX</div>
+                <div class="stat-label">Location</div>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">Jun 12</div>
-              <div class="stat-label">Caught</div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">MN</div>
-              <div class="stat-label">Location</div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Bass #102')">Mint Card</button>
+              <button class="action-btn btn-secondary" onclick="console.log('Redeem BassCoin')">Redeem Coin</button>
             </div>
           </div>
-          <div class="interactive-chart">
-            <div class="chart-line"></div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Walleye #101')">Mint Card</button>
-            <button class="action-btn btn-secondary" onclick="console.log('Redeem WalleyeCoin')">Redeem Coin</button>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Northern Pike</h3>
+                <p class="card-subtitle">Esox lucius</p>
+              </div>
+              <div class="card-badge badge-legendary">Monster</div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">32.1"</div>
+                <div class="stat-label">Length</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">8.7 lbs</div>
+                <div class="stat-label">Weight</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">Apr 15</div>
+                <div class="stat-label">Caught</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">MN</div>
+                <div class="stat-label">Location</div>
+              </div>
+            </div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Pike #103')">Mint Card</button>
+              <button class="action-btn btn-secondary" onclick="console.log('Redeem PikeCoin')">Redeem Coin</button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Largemouth Bass</h3>
-              <p class="card-subtitle">Micropterus salmoides</p>
+      <!-- FishCards Sub-section -->
+      <div id="fish-cards" class="sub-section">
+        <div class="content-grid">
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Walleye Card</h3>
+                <p class="card-subtitle">From NFT #101</p>
+              </div>
+              <div class="card-badge badge-rare">Rare</div>
             </div>
-            <div class="card-badge badge-epic">Keeper</div>
+            <div class="revealed-fields">
+              <span class="field-tag field-revealed">✓ Length</span>
+              <span class="field-tag field-revealed">✓ Weight</span>
+              <span class="field-tag field-hidden">✗ GPS</span>
+              <span class="field-tag field-revealed">✓ Gear</span>
+              <span class="field-tag field-hidden">✗ Weather</span>
+              <span class="field-tag field-revealed">✓ Technique</span>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">4/6</div>
+                <div class="stat-label">Revealed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">~8.5 BAIT</div>
+                <div class="stat-label">Est. Value</div>
+              </div>
+            </div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('List Walleye Card for sale')">List for Sale</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
+            </div>
           </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">18.3"</div>
-              <div class="stat-label">Length</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">3.8 lbs</div>
-              <div class="stat-label">Weight</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">May 30</div>
-              <div class="stat-label">Caught</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">TX</div>
-              <div class="stat-label">Location</div>
-            </div>
-          </div>
-          <div class="interactive-chart">
-            <div class="chart-line"></div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Bass #102')">Mint Card</button>
-            <button class="action-btn btn-secondary" onclick="console.log('Redeem BassCoin')">Redeem Coin</button>
-          </div>
-        </div>
 
-        <div class="enhanced-card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Northern Pike</h3>
-              <p class="card-subtitle">Esox lucius</p>
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Bass Card</h3>
+                <p class="card-subtitle">From NFT #102</p>
+              </div>
+              <div class="card-badge badge-epic">Epic</div>
             </div>
-            <div class="card-badge badge-legendary">Monster</div>
+            <div class="revealed-fields">
+              <span class="field-tag field-revealed">✓ Length</span>
+              <span class="field-tag field-revealed">✓ Weight</span>
+              <span class="field-tag field-revealed">✓ GPS</span>
+              <span class="field-tag field-revealed">✓ Gear</span>
+              <span class="field-tag field-revealed">✓ Weather</span>
+              <span class="field-tag field-hidden">✗ Notes</span>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">5/6</div>
+                <div class="stat-label">Revealed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">~15.2 BAIT</div>
+                <div class="stat-label">Est. Value</div>
+              </div>
+            </div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
+            </div>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('List Bass Card for sale')">List for Sale</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
+            </div>
           </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-value">32.1"</div>
-              <div class="stat-label">Length</div>
+
+          <div class="enhanced-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Pike Card</h3>
+                <p class="card-subtitle">From NFT #103</p>
+              </div>
+              <div class="card-badge badge-legendary">Legendary</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">8.7 lbs</div>
-              <div class="stat-label">Weight</div>
+            <div class="revealed-fields">
+              <span class="field-tag field-revealed">✓ Length</span>
+              <span class="field-tag field-revealed">✓ Weight</span>
+              <span class="field-tag field-revealed">✓ GPS</span>
+              <span class="field-tag field-revealed">✓ Gear</span>
+              <span class="field-tag field-revealed">✓ Weather</span>
+              <span class="field-tag field-revealed">✓ Technique</span>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">Apr 15</div>
-              <div class="stat-label">Caught</div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-value">6/6</div>
+                <div class="stat-label">Revealed</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">~32.8 BAIT</div>
+                <div class="stat-label">Est. Value</div>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">MN</div>
-              <div class="stat-label">Location</div>
+            <div class="interactive-chart">
+              <div class="chart-line"></div>
             </div>
-          </div>
-          <div class="interactive-chart">
-            <div class="chart-line"></div>
-          </div>
-          <div class="action-buttons">
-            <button class="action-btn btn-primary" onclick="console.log('Mint FishCard from Pike #103')">Mint Card</button>
-            <button class="action-btn btn-secondary" onclick="console.log('Redeem PikeCoin')">Redeem Coin</button>
+            <div class="action-buttons">
+              <button class="action-btn btn-primary" onclick="console.log('List Pike Card for sale')">List for Sale</button>
+              <button class="action-btn btn-secondary" onclick="console.log('View card details')">View Details</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1125,6 +1242,16 @@
       
       // Add active class to clicked tab
       event.target.classList.add('active');
+    }
+
+    function showSubSection(subSectionId) {
+      // Hide all sub-sections
+      document.querySelectorAll('.sub-section').forEach(section => {
+        section.classList.remove('active');
+      });
+      
+      // Show selected sub-section
+      document.getElementById(subSectionId).classList.add('active');
     }
 
     // Initialize charts and animations
