@@ -35,7 +35,7 @@ These Fish NFTs are **forever owned by the angler** - they cannot be transferred
 
 ---
 
-### 1. Species Coins: Fish Dex, (Index & Exchange)
+### 1. Species Coins: Fishdex (Index & Exchange)
 
 Once a Fish NFT is minted, a **species-specific coin** is automatically generated (e.g., WalleyeCoin for Walleye catches). These coins serve as a revolutionary **two-in-one system**:
 
