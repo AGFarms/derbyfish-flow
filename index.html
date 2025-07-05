@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DerbyFish Tokenomics Prototype</title>
+  <title>DerbyFish FishDEX</title>
   <style>
     body {
       margin: 0;
@@ -35,15 +35,21 @@
       gap: 1rem;
     }
 
-    label {
-      display: block;
-      margin-top: 0.5rem;
+    .card {
+      background-color: rgba(0, 0, 0, 0.2);
+      border: 1px solid #4b5563;
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    .card:hover {
+      background-color: rgba(255, 255, 255, 0.1);
     }
 
     input, select, button {
       width: 100%;
       padding: 0.5rem;
-      margin-top: 0.25rem;
+      margin-top: 0.5rem;
       background-color: #1f2937; /* gray-800 */
       color: #fff;
       border: 1px solid #4b5563;
@@ -51,94 +57,104 @@
     }
 
     button:hover {
-      background-color: #374151; /* gray-700 */
+      background-color: #374151;
     }
   </style>
 </head>
 <body>
   <div class="section">
-    <h2>FishNFT Tools</h2>
-    <label>Initialize NFT Collection</label>
-    <button>Run setup_fish_nft_collection</button>
-
-    <label>Register Species</label>
-    <input type="text" placeholder="Species name">
-    <button>Run register_species</button>
-
-    <label>Mint Fish NFT (Basic)</label>
-    <input type="text" placeholder="Fish data JSON">
-    <button>Run mint_fish_nft</button>
-
-    <label>Mint Fish NFT with Species</label>
-    <select>
-      <option>Select registered species</option>
-      <option>Walleye</option>
-      <option>Bass</option>
-    </select>
-    <button>Run mint_fish_nft_with_species</button>
-
-    <label>Setup FishCard Collection</label>
-    <button>Run setup_fish_card_collection</button>
-
-    <label>Enable FishCards</label>
-    <input type="text" placeholder="Fish NFT ID">
-    <button>Run enable_fish_cards</button>
-
-    <label>Commit FishCard</label>
-    <input type="text" placeholder="Salt">
-    <button>Run commit_fish_card</button>
-
-    <label>Reveal FishCard</label>
-    <input type="text" placeholder="Salt Hash">
-    <button>Run reveal_fish_card</button>
-
-    <label>Transfer FishCard</label>
-    <input type="text" placeholder="To Address">
-    <input type="text" placeholder="FishCard ID">
-    <button>Run transfer_fish_card</button>
+    <h2>🎣 My Fish</h2>
+    <p>These are your verified catches (Fish Records). You can mint FishCards from these.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>Walleye</strong><br>
+        Length: 26in<br>
+        Weight: 6.2lb<br>
+        Date: 2025-06-12<br>
+        <button onclick="console.log('Mint FishCard for Walleye ID 101')">Mint FishCard</button>
+      </div>
+      <div class="card">
+        <strong>Bass</strong><br>
+        Length: 18in<br>
+        Weight: 3.8lb<br>
+        Date: 2025-05-30<br>
+        <button onclick="console.log('Mint FishCard for Bass ID 102')">Mint FishCard</button>
+      </div>
+    </div>
   </div>
 
   <div class="section">
-    <h2>FishNFT Queries</h2>
-    <label>View My Fish NFTs</label>
-    <button>Run get_fish_nft_ids</button>
-
-    <label>Get NFT by ID</label>
-    <input type="text" placeholder="NFT ID">
-    <button>Run get_fish_nft_by_id</button>
-
-    <label>Get My FishCards</label>
-    <button>Run get_fish_card_ids</button>
-
-    <label>Get FishCard by ID</label>
-    <input type="text" placeholder="Card ID">
-    <button>Run get_fish_card_by_id</button>
+    <h2>📸 FishCards</h2>
+    <p>Your tradable cards with randomized metadata reveals. See which details are public and manage your card collection.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>Species:</strong> Walleye<br>
+        <em>Fields:</em> Length ✓ · Weight ✓ · GPS ✕ · Gear ✓<br>
+        <button onclick="console.log('Sell FishCard #201')">Sell</button>
+      </div>
+      <div class="card">
+        <strong>Species:</strong> Bass<br>
+        <em>Fields:</em> Length ✓ · Weight ✓ · GPS ✓ · Notes ✕<br>
+        <button onclick="console.log('Sell FishCard #202')">Sell</button>
+      </div>
+    </div>
   </div>
 
   <div class="section">
-    <h2>WalleyeCoin Tools</h2>
-    <label>Setup Vault</label>
-    <button>Run setup_walleye_coin_account</button>
-
-    <label>Mint Species Coin</label>
-    <input type="text" placeholder="Fish NFT ID">
-    <button>Run mint-species-coin</button>
+    <h2>🔍 Public Fish Records</h2>
+    <p>Explore verified fish catches by other users. You can't buy them, but you can mint FishCards if they allow it.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>Trout</strong><br>
+        Length: 21in<br>
+        Weight: 4.4lb<br>
+        <button onclick="console.log('Mint FishCard for Trout ID 301')">Mint FishCard</button>
+      </div>
+      <div class="card">
+        <strong>Pike</strong><br>
+        Length: 30in<br>
+        Weight: 8.1lb<br>
+        <button onclick="console.log('Mint FishCard for Pike ID 302')">Mint FishCard</button>
+      </div>
+    </div>
   </div>
 
   <div class="section">
-    <h2>WalleyeCoin Queries</h2>
-    <label>Check Balance</label>
-    <button>Run get_walleye_coin_balance</button>
+    <h2>🧬 FishDEX Species Encyclopedia</h2>
+    <p>View all registered species with scientific, geographic, regulatory, and angling data. Each species corresponds to a token with max supply = total catches.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>WalleyeCoin</strong><br>
+        Supply: 13,215 / Max: 15,000<br>
+        Status: Native<br>
+        <button onclick="console.log('View Walleye Encyclopedia Entry')">See Species Info</button>
+        <button onclick="console.log('Buy WalleyeCoin')">Buy Coin</button>
+      </div>
+      <div class="card">
+        <strong>BassCoin</strong><br>
+        Supply: 20,019 / Max: 21,000<br>
+        Status: Popular Gamefish<br>
+        <button onclick="console.log('View Bass Encyclopedia Entry')">See Species Info</button>
+        <button onclick="console.log('Buy BassCoin')">Buy Coin</button>
+      </div>
+    </div>
   </div>
 
   <div class="section">
-    <h2>System Features</h2>
-    <ul>
-      <li>Decentralized species coin redemption</li>
-      <li>Privacy-preserving FishCard minting</li>
-      <li>Non-transferable catch records</li>
-      <li>Royalties for FishCard trading</li>
-    </ul>
+    <h2>💱 My Species Coins</h2>
+    <p>Check your coin balances. These represent verified catches of each species and can be traded or held.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>WalleyeCoin</strong><br>
+        Balance: 12.0<br>
+        <button onclick="console.log('Trade WalleyeCoin')">Trade</button>
+      </div>
+      <div class="card">
+        <strong>BassCoin</strong><br>
+        Balance: 4.5<br>
+        <button onclick="console.log('Trade BassCoin')">Trade</button>
+      </div>
+    </div>
   </div>
 </body>
 </html>
