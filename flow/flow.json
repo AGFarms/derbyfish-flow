@@ -7,18 +7,6 @@
 				"testnet": "86ef213d1c3a2b94"
 			}
 		},
-		"BlueCatfishCoin": {
-			"source": "cadence/contracts/BlueCatfishCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"CrappieCoin": {
-			"source": "cadence/contracts/CrappieCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
 		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
 		"FishCardNFT": {
 			"source": "cadence/contracts/FishCardNFT.cdc",
@@ -46,104 +34,8 @@
 			}
 		},
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
-		"MahiMahiCoin": {
-			"source": "cadence/contracts/MahiMahiCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"BlueMarlinCoin": {
-			"source": "cadence/contracts/BlueMarlinCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"MuskellungeCoin": {
-			"source": "cadence/contracts/MuskellungeCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"NorthernPikeCoin": {
-			"source": "cadence/contracts/NorthernPikeCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
 		"RandomConsumer": {
 			"source": "cadence/contracts/RandomConsumer.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"RedfishCoin": {
-			"source": "cadence/contracts/RedfishCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SailfishCoin": {
-			"source": "cadence/contracts/SailfishCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SalmonCoin": {
-			"source": "cadence/contracts/SalmonCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SmallmouthBassCoin": {
-			"source": "cadence/contracts/SmallmouthBassCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SnookCoin": {
-			"source": "cadence/contracts/SnookCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SpeckledTroutCoin": {
-			"source": "cadence/contracts/SpeckledTroutCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SpottedBassCoin": {
-			"source": "cadence/contracts/SpottedBassCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"StripedBassCoin": {
-			"source": "cadence/contracts/StripedBassCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"AtlanticTarponCoin": {
-			"source": "cadence/contracts/AtlanticTarponCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"RainbowTroutCoin": {
-			"source": "cadence/contracts/RainbowTroutCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"BluefinTunaCoin": {
-			"source": "cadence/contracts/BluefinTunaCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"WahooCoin": {
-			"source": "cadence/contracts/WahooCoin.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
@@ -158,9 +50,9 @@
 		"Xorshift128plus": {
 			"source": "cadence/contracts/Xorshift128plus.cdc",
 			"aliases": {
-				"mainnet": "45caec600164c9e6",
 				"testing": "0000000000000007",
-				"testnet": "ed24dbe901028c5c"
+				"testnet": "0xed24dbe901028c5c",
+				"mainnet": "0x45caec600164c9e6"
 			}
 		}
 	},
@@ -274,7 +166,7 @@
 			"key": "6ceea497c40e44bbe36fcec1a86ae59dbe1eb1ab0e97c98a05fc52565f5a16a7"
 		},
 		"testnet-account": {
-			"address": "22a5eff85d93acc6",
+			"address": "0x22a5eff85d93acc6",
 			"key": {
 				"type": "file",
 				"location": "testnet-account.pkey"
@@ -288,24 +180,6 @@
 				"FUSD",
 				"ExampleFishCoin",
 				"WalleyeCoin",
-				"BlueCatfishCoin",
-				"CrappieCoin",
-				"LargemouthBassCoin",
-				"MahiMahiCoin",
-				"MuskellungeCoin",
-				"NorthernPikeCoin",
-				"RedfishCoin",
-				"SailfishCoin",
-				"SalmonCoin",
-				"SmallmouthBassCoin",
-				"SnookCoin",
-				"SpeckledTroutCoin",
-				"SpottedBassCoin",
-				"StripedBassCoin",
-				"WahooCoin",
-				"AtlanticTarponCoin",
-				"RainbowTroutCoin",
-				"BluefinTunaCoin",
 				"FishNFT",
 				"Fishdex",
 				"Xorshift128plus"
