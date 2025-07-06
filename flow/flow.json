@@ -40,6 +40,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"SmallmouthBassCoin": {
+			"source": "cadence/contracts/SmallmouthBassCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"WalleyeCoin": {
 			"source": "cadence/contracts/WalleyeCoin.cdc",
 			"aliases": {
@@ -50,9 +56,9 @@
 		"Xorshift128plus": {
 			"source": "cadence/contracts/Xorshift128plus.cdc",
 			"aliases": {
+				"mainnet": "45caec600164c9e6",
 				"testing": "0000000000000007",
-				"testnet": "0xed24dbe901028c5c",
-				"mainnet": "0x45caec600164c9e6"
+				"testnet": "ed24dbe901028c5c"
 			}
 		}
 	},
@@ -166,7 +172,7 @@
 			"key": "6ceea497c40e44bbe36fcec1a86ae59dbe1eb1ab0e97c98a05fc52565f5a16a7"
 		},
 		"testnet-account": {
-			"address": "0x22a5eff85d93acc6",
+			"address": "22a5eff85d93acc6",
 			"key": {
 				"type": "file",
 				"location": "testnet-account.pkey"
