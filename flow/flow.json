@@ -94,6 +94,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"TarponCoin": {
+			"source": "cadence/contracts/TarponCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"TroutCoin": {
 			"source": "cadence/contracts/TroutCoin.cdc",
 			"aliases": {
