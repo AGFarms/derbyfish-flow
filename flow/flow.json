@@ -344,6 +344,7 @@
 		"mainnet": {
 			"mainnet-agfarms": [
 				"WalleyeCoin",
+				
 				"FishNFT",
 				"BaitCoin",
 				"Xorshift128plus"
