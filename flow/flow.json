@@ -46,6 +46,12 @@
 			}
 		},
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
+		"MuskellungeCoin": {
+			"source": "cadence/contracts/MuskellungeCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"NorthernPikeCoin": {
 			"source": "cadence/contracts/NorthernPikeCoin.cdc",
 			"aliases": {
