@@ -124,6 +124,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"TunaCoin": {
+			"source": "cadence/contracts/TunaCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"WalleyeCoin": {
 			"source": "cadence/contracts/WalleyeCoin.cdc",
 			"aliases": {
