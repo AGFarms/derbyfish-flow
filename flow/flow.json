@@ -52,8 +52,8 @@
 				"testing": "0000000000000007"
 			}
 		},
-		"MarlinCoin": {
-			"source": "cadence/contracts/MarlinCoin.cdc",
+		"BlueMarlinCoin": {
+			"source": "cadence/contracts/BlueMarlinCoin.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
@@ -124,20 +124,20 @@
 				"testing": "0000000000000007"
 			}
 		},
-		"TarponCoin": {
-			"source": "cadence/contracts/TarponCoin.cdc",
+		"AtlanticTarponCoin": {
+			"source": "cadence/contracts/AtlanticTarponCoin.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
 		},
-		"TroutCoin": {
-			"source": "cadence/contracts/TroutCoin.cdc",
+		"RainbowTroutCoin": {
+			"source": "cadence/contracts/RainbowTroutCoin.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
 		},
-		"TunaCoin": {
-			"source": "cadence/contracts/TunaCoin.cdc",
+		"BluefinTunaCoin": {
+			"source": "cadence/contracts/BluefinTunaCoin.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
@@ -288,6 +288,24 @@
 				"FUSD",
 				"ExampleFishCoin",
 				"WalleyeCoin",
+				"BlueCatfishCoin",
+				"CrappieCoin",
+				"LargemouthBassCoin",
+				"MahiMahiCoin",
+				"MuskellungeCoin",
+				"NorthernPikeCoin",
+				"RedfishCoin",
+				"SailfishCoin",
+				"SalmonCoin",
+				"SmallmouthBassCoin",
+				"SnookCoin",
+				"SpeckledTroutCoin",
+				"SpottedBassCoin",
+				"StripedBassCoin",
+				"WahooCoin",
+				"AtlanticTarponCoin",
+				"RainbowTroutCoin",
+				"BluefinTunaCoin",
 				"FishNFT",
 				"Fishdex",
 				"Xorshift128plus"

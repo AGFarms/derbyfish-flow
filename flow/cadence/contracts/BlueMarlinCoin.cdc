@@ -2,7 +2,7 @@ import "FungibleToken"
 import "MetadataViews"
 import "FungibleTokenMetadataViews"
 
-access(all) contract NorthernPikeCoin: FungibleToken {
+access(all) contract BlueMarlinCoin: FungibleToken {
 
     // FISHDEX INTEGRATION - Cross-contract coordination interface
     access(all) resource interface SpeciesCoinPublic {
@@ -13,7 +13,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         access(all) view fun getFamily(): String
         access(all) view fun getTotalSupply(): UFix64
         access(all) view fun getBasicRegistryInfo(): {String: AnyStruct}
-        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @NorthernPikeCoin.Vault
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @BlueMarlinCoin.Vault
     }
 
     // FISHDEX COORDINATION - Registry management
@@ -496,10 +496,10 @@ access(all) contract NorthernPikeCoin: FungibleToken {
                     storagePath: self.VaultStoragePath,
                     receiverPath: self.VaultPublicPath,
                     metadataPath: self.VaultPublicPath,
-                    receiverLinkedType: Type<&NorthernPikeCoin.Vault>(),
-                    metadataLinkedType: Type<&NorthernPikeCoin.Vault>(),
+                    receiverLinkedType: Type<&BlueMarlinCoin.Vault>(),
+                    metadataLinkedType: Type<&BlueMarlinCoin.Vault>(),
                     createEmptyVaultFunction: (fun(): @{FungibleToken.Vault} {
-                        return <-NorthernPikeCoin.createEmptyVault(vaultType: Type<@NorthernPikeCoin.Vault>())
+                        return <-BlueMarlinCoin.createEmptyVault(vaultType: Type<@BlueMarlinCoin.Vault>())
                     })
                 )
             case Type<FungibleTokenMetadataViews.TotalSupply>():
@@ -513,27 +513,27 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         
         // Interface implementation for FishDEX registry
         access(all) view fun getSpeciesCode(): String {
-            return NorthernPikeCoin.speciesMetadata.speciesCode
+            return BlueMarlinCoin.speciesMetadata.speciesCode
         }
         
         access(all) view fun getTicker(): String {
-            return NorthernPikeCoin.speciesMetadata.ticker
+            return BlueMarlinCoin.speciesMetadata.ticker
         }
         
         access(all) view fun getCommonName(): String {
-            return NorthernPikeCoin.speciesMetadata.commonName
+            return BlueMarlinCoin.speciesMetadata.commonName
         }
         
         access(all) view fun getScientificName(): String {
-            return NorthernPikeCoin.speciesMetadata.scientificName
+            return BlueMarlinCoin.speciesMetadata.scientificName
         }
         
         access(all) view fun getFamily(): String {
-            return NorthernPikeCoin.speciesMetadata.family
+            return BlueMarlinCoin.speciesMetadata.family
         }
         
         access(all) view fun getTotalSupply(): UFix64 {
-            return NorthernPikeCoin.totalSupply
+            return BlueMarlinCoin.totalSupply
         }
         
         access(all) view fun getBasicRegistryInfo(): {String: AnyStruct} {
@@ -544,16 +544,16 @@ access(all) contract NorthernPikeCoin: FungibleToken {
                 "scientificName": self.getScientificName(),
                 "family": self.getFamily(),
                 "totalSupply": self.getTotalSupply(),
-                "contractAddress": NorthernPikeCoin.account.address,
-                "dataYear": NorthernPikeCoin.speciesMetadata.dataYear,
-                "conservationStatus": NorthernPikeCoin.speciesMetadata.globalConservationStatus,
-                "rarityTier": NorthernPikeCoin.speciesMetadata.rarityTier,
-                "isRegistered": NorthernPikeCoin.isRegisteredWithFishDEX
+                "contractAddress": BlueMarlinCoin.account.address,
+                "dataYear": BlueMarlinCoin.speciesMetadata.dataYear,
+                "conservationStatus": BlueMarlinCoin.speciesMetadata.globalConservationStatus,
+                "rarityTier": BlueMarlinCoin.speciesMetadata.rarityTier,
+                "isRegistered": BlueMarlinCoin.isRegisteredWithFishDEX
             }
         }
         
         // Process catch verification from Fish NFT contracts
-        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @NorthernPikeCoin.Vault {
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @BlueMarlinCoin.Vault {
             // Validate fish data matches this species
             if let fishSpeciesCode = fishData["speciesCode"] as? String {
                 assert(
@@ -568,22 +568,22 @@ access(all) contract NorthernPikeCoin: FungibleToken {
             // Validate NFT hasn't been redeemed before
             if let nftId = fishNFTId {
                 assert(
-                    NorthernPikeCoin.fishNFTRegistry[nftId] == nil,
+                    BlueMarlinCoin.fishNFTRegistry[nftId] == nil,
                     message: "This NFT has already been redeemed for a coin"
                 )
                 // Record this NFT as redeemed
-                NorthernPikeCoin.fishNFTRegistry[nftId] = true
+                BlueMarlinCoin.fishNFTRegistry[nftId] = true
             }
             
             // Auto-record first catch if this is the very first mint
-            if NorthernPikeCoin.totalSupply == 0.0 && NorthernPikeCoin.speciesMetadata.firstCatchDate == nil {
-                NorthernPikeCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+            if BlueMarlinCoin.totalSupply == 0.0 && BlueMarlinCoin.speciesMetadata.firstCatchDate == nil {
+                BlueMarlinCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
             }
             
             // Mint 1 coin for verified catch
             let amount: UFix64 = 1.0
-            NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply + amount
+            BlueMarlinCoin.totalSupply = BlueMarlinCoin.totalSupply + amount
             
             // Create vault with the minted amount (not empty!)
             let vault <- create Vault(balance: amount)
@@ -602,7 +602,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         // Register this species with FishDEX
         access(all) fun registerWithFishDEX(fishDEXAddress: Address) {
             pre {
-                !NorthernPikeCoin.isRegisteredWithFishDEX: "Already registered with FishDEX"
+                !BlueMarlinCoin.isRegisteredWithFishDEX: "Already registered with FishDEX"
             }
             
             emit FishDEXRegistrationAttempted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
@@ -613,17 +613,17 @@ access(all) contract NorthernPikeCoin: FungibleToken {
             // Call FishDEX registration function
             // Note: This will be completed when FishDEX contract is implemented
             // For now, just update our state
-            NorthernPikeCoin.fishDEXAddress = fishDEXAddress
-            NorthernPikeCoin.isRegisteredWithFishDEX = true
+            BlueMarlinCoin.fishDEXAddress = fishDEXAddress
+            BlueMarlinCoin.isRegisteredWithFishDEX = true
             
             emit FishDEXRegistrationCompleted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
         }
         
         // Update FishDEX address (admin only via proper access)
         access(all) fun updateFishDEXAddress(newAddress: Address) {
-            let oldAddress = NorthernPikeCoin.fishDEXAddress
-            NorthernPikeCoin.fishDEXAddress = newAddress
-            NorthernPikeCoin.isRegisteredWithFishDEX = false // Reset registration status
+            let oldAddress = BlueMarlinCoin.fishDEXAddress
+            BlueMarlinCoin.fishDEXAddress = newAddress
+            BlueMarlinCoin.isRegisteredWithFishDEX = false // Reset registration status
             emit FishDEXAddressUpdated(oldAddress: oldAddress, newAddress: newAddress)
         }
     }
@@ -638,45 +638,45 @@ access(all) contract NorthernPikeCoin: FungibleToken {
 
         access(contract) fun burnCallback() {
             if self.balance > 0.0 {
-                NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply - self.balance
+                BlueMarlinCoin.totalSupply = BlueMarlinCoin.totalSupply - self.balance
                 emit TokensBurned(amount: self.balance, from: self.owner?.address)
             }
             self.balance = 0.0
         }
 
         access(all) view fun getViews(): [Type] {
-            return NorthernPikeCoin.getContractViews(resourceType: nil)
+            return BlueMarlinCoin.getContractViews(resourceType: nil)
         }
 
         access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return NorthernPikeCoin.resolveContractView(resourceType: nil, viewType: view)
+            return BlueMarlinCoin.resolveContractView(resourceType: nil, viewType: view)
         }
 
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            return {Type<@NorthernPikeCoin.Vault>(): true}
+            return {Type<@BlueMarlinCoin.Vault>(): true}
         }
 
         access(all) view fun isSupportedVaultType(type: Type): Bool {
-            return type == Type<@NorthernPikeCoin.Vault>()
+            return type == Type<@BlueMarlinCoin.Vault>()
         }
 
         access(all) view fun isAvailableToWithdraw(amount: UFix64): Bool {
             return amount <= self.balance
         }
 
-        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @NorthernPikeCoin.Vault {
+        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @BlueMarlinCoin.Vault {
             self.balance = self.balance - amount
             return <-create Vault(balance: amount)
         }
 
         access(all) fun deposit(from: @{FungibleToken.Vault}) {
-            let vault <- from as! @NorthernPikeCoin.Vault
+            let vault <- from as! @BlueMarlinCoin.Vault
             self.balance = self.balance + vault.balance
             vault.balance = 0.0
             destroy vault
         }
 
-        access(all) fun createEmptyVault(): @NorthernPikeCoin.Vault {
+        access(all) fun createEmptyVault(): @BlueMarlinCoin.Vault {
             return <-create Vault(balance: 0.0)
         }
     }
@@ -684,25 +684,25 @@ access(all) contract NorthernPikeCoin: FungibleToken {
     // Minter Resource - Admin only
     access(all) resource Minter {
         
-        access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @NorthernPikeCoin.Vault {
+        access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @BlueMarlinCoin.Vault {
             pre {
                 amount == 1.0: "Only 1 coin per verified catch"
-                NorthernPikeCoin.fishNFTRegistry[fishId] == nil: "This NFT has already been used to mint a coin"
+                BlueMarlinCoin.fishNFTRegistry[fishId] == nil: "This NFT has already been used to mint a coin"
             }
             
             // Record this NFT as used
-            NorthernPikeCoin.fishNFTRegistry[fishId] = true
+            BlueMarlinCoin.fishNFTRegistry[fishId] = true
             
             // Auto-record first catch if this is the very first mint
-            if NorthernPikeCoin.totalSupply == 0.0 && NorthernPikeCoin.speciesMetadata.firstCatchDate == nil {
-                NorthernPikeCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+            if BlueMarlinCoin.totalSupply == 0.0 && BlueMarlinCoin.speciesMetadata.firstCatchDate == nil {
+                BlueMarlinCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
                 
                 // Auto-register with FishDEX after first mint if FishDEX address is set
                 self.autoRegisterWithFishDEX()
             }
             
-            NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply + amount
+            BlueMarlinCoin.totalSupply = BlueMarlinCoin.totalSupply + amount
             
             emit TokensMinted(amount: amount, to: angler)
             emit CatchVerified(fishId: fishId, angler: angler, amount: amount)
@@ -712,11 +712,11 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         
         // Auto-registration helper function
         access(all) fun autoRegisterWithFishDEX() {
-            if let fishDEXAddr = NorthernPikeCoin.fishDEXAddress {
-                if !NorthernPikeCoin.isRegisteredWithFishDEX {
+            if let fishDEXAddr = BlueMarlinCoin.fishDEXAddress {
+                if !BlueMarlinCoin.isRegisteredWithFishDEX {
                     // Get reference to FishDEX coordinator
-                    if let coordinatorRef = NorthernPikeCoin.account.capabilities.borrow<&FishDEXCoordinator>(
-                        NorthernPikeCoin.FishDEXCoordinatorPublicPath
+                    if let coordinatorRef = BlueMarlinCoin.account.capabilities.borrow<&FishDEXCoordinator>(
+                        BlueMarlinCoin.FishDEXCoordinatorPublicPath
                     ) {
                         coordinatorRef.registerWithFishDEX(fishDEXAddress: fishDEXAddr)
                     }
@@ -726,16 +726,16 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         
         // Manual FishDEX registration (admin function)
         access(all) fun registerWithFishDEXManually(fishDEXAddress: Address) {
-            NorthernPikeCoin.fishDEXAddress = fishDEXAddress
+            BlueMarlinCoin.fishDEXAddress = fishDEXAddress
             self.autoRegisterWithFishDEX()
         }
 
-        access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: NorthernPikeCoin.Vault} {
-            let vaults: @{Address: NorthernPikeCoin.Vault} <- {}
+        access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: BlueMarlinCoin.Vault} {
+            let vaults: @{Address: BlueMarlinCoin.Vault} <- {}
             
             for recipient in recipients.keys {
                 let amount = recipients[recipient]!
-                NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply + amount
+                BlueMarlinCoin.totalSupply = BlueMarlinCoin.totalSupply + amount
                 
                 let vault <- create Vault(balance: amount)
                 let oldVault <- vaults[recipient] <- vault
@@ -752,34 +752,34 @@ access(all) contract NorthernPikeCoin: FungibleToken {
     access(all) resource MetadataAdmin {
         
         access(all) fun updateImageURL(newURL: String) {
-            let oldURL = NorthernPikeCoin.speciesMetadata.imageURL ?? ""
-            NorthernPikeCoin.speciesMetadata.setImageURL(newURL)
+            let oldURL = BlueMarlinCoin.speciesMetadata.imageURL ?? ""
+            BlueMarlinCoin.speciesMetadata.setImageURL(newURL)
             emit MetadataUpdated(field: "imageURL", oldValue: oldURL, newValue: newURL)
         }
         
         access(all) fun updateDescription(newDescription: String) {
-            let oldDescription = NorthernPikeCoin.speciesMetadata.description
-            NorthernPikeCoin.speciesMetadata.setDescription(newDescription)
+            let oldDescription = BlueMarlinCoin.speciesMetadata.description
+            BlueMarlinCoin.speciesMetadata.setDescription(newDescription)
             emit MetadataUpdated(field: "description", oldValue: oldDescription, newValue: newDescription)
         }
         
 
             
         access(all) fun updateHabitat(newHabitat: String) {
-            let oldHabitat = NorthernPikeCoin.speciesMetadata.habitat ?? ""
-            NorthernPikeCoin.speciesMetadata.setHabitat(newHabitat)
+            let oldHabitat = BlueMarlinCoin.speciesMetadata.habitat ?? ""
+            BlueMarlinCoin.speciesMetadata.setHabitat(newHabitat)
             emit MetadataUpdated(field: "habitat", oldValue: oldHabitat, newValue: newHabitat)
         }
         
         access(all) fun updateAverageWeight(newWeight: UFix64) {
-            let oldWeight = NorthernPikeCoin.speciesMetadata.averageWeight?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setAverageWeight(newWeight)
+            let oldWeight = BlueMarlinCoin.speciesMetadata.averageWeight?.toString() ?? "0.0"
+            BlueMarlinCoin.speciesMetadata.setAverageWeight(newWeight)
             emit MetadataUpdated(field: "averageWeight", oldValue: oldWeight, newValue: newWeight.toString())
         }
         
         access(all) fun updateAverageLength(newLength: UFix64) {
-            let oldLength = NorthernPikeCoin.speciesMetadata.averageLength?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setAverageLength(newLength)
+            let oldLength = BlueMarlinCoin.speciesMetadata.averageLength?.toString() ?? "0.0"
+            BlueMarlinCoin.speciesMetadata.setAverageLength(newLength)
             emit MetadataUpdated(field: "averageLength", oldValue: oldLength, newValue: newLength.toString())
         }
         
@@ -787,36 +787,36 @@ access(all) contract NorthernPikeCoin: FungibleToken {
             pre {
                 newTier >= 1 && newTier <= 5: "Invalid rarity tier (must be 1-5)"
             }
-            let oldTier = NorthernPikeCoin.speciesMetadata.rarityTier?.toString() ?? "0"
-            NorthernPikeCoin.speciesMetadata.setRarityTier(newTier)
+            let oldTier = BlueMarlinCoin.speciesMetadata.rarityTier?.toString() ?? "0"
+            BlueMarlinCoin.speciesMetadata.setRarityTier(newTier)
             emit MetadataUpdated(field: "rarityTier", oldValue: oldTier, newValue: newTier.toString())
         }
         
         access(all) fun manuallySetFirstCatch(timestamp: UInt64, angler: Address) {
             pre {
-                NorthernPikeCoin.speciesMetadata.firstCatchDate == nil: "First catch already recorded"
+                BlueMarlinCoin.speciesMetadata.firstCatchDate == nil: "First catch already recorded"
             }
-            NorthernPikeCoin.speciesMetadata.setFirstCatchDate(timestamp)
+            BlueMarlinCoin.speciesMetadata.setFirstCatchDate(timestamp)
             emit FirstCatchRecorded(timestamp: timestamp, angler: angler)
             emit MetadataUpdated(field: "firstCatchDate", oldValue: "", newValue: timestamp.toString())
         }
         
         // FishDEX-specific metadata updates
         access(all) fun updateConservationStatus(newStatus: String) {
-            let oldStatus = NorthernPikeCoin.speciesMetadata.globalConservationStatus ?? ""
-            NorthernPikeCoin.speciesMetadata.setConservationStatus(newStatus)
+            let oldStatus = BlueMarlinCoin.speciesMetadata.globalConservationStatus ?? ""
+            BlueMarlinCoin.speciesMetadata.setConservationStatus(newStatus)
             emit MetadataUpdated(field: "globalConservationStatus", oldValue: oldStatus, newValue: newStatus)
         }
         
         access(all) fun updateNativeRegions(newRegions: [String]) {
             var oldRegionsStr = "["
-            for i, region in NorthernPikeCoin.speciesMetadata.nativeRegions {
+            for i, region in BlueMarlinCoin.speciesMetadata.nativeRegions {
                 if i > 0 { oldRegionsStr = oldRegionsStr.concat(",") }
                 oldRegionsStr = oldRegionsStr.concat(region)
             }
             oldRegionsStr = oldRegionsStr.concat("]")
             
-            NorthernPikeCoin.speciesMetadata.setNativeRegions(newRegions)
+            BlueMarlinCoin.speciesMetadata.setNativeRegions(newRegions)
             
             var newRegionsStr = "["
             for i, region in newRegions {
@@ -829,45 +829,45 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         }
         
         access(all) fun updateSeasonalPatterns(newPatterns: String) {
-            let oldPatterns = NorthernPikeCoin.speciesMetadata.seasonalPatterns ?? ""
-            NorthernPikeCoin.speciesMetadata.setSeasonalPatterns(newPatterns)
+            let oldPatterns = BlueMarlinCoin.speciesMetadata.seasonalPatterns ?? ""
+            BlueMarlinCoin.speciesMetadata.setSeasonalPatterns(newPatterns)
             emit MetadataUpdated(field: "seasonalPatterns", oldValue: oldPatterns, newValue: newPatterns)
         }
         
         access(all) fun updateRecordWeight(newRecord: UFix64) {
-            let oldRecord = NorthernPikeCoin.speciesMetadata.recordWeight?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setRecordWeight(newRecord)
+            let oldRecord = BlueMarlinCoin.speciesMetadata.recordWeight?.toString() ?? "0.0"
+            BlueMarlinCoin.speciesMetadata.setRecordWeight(newRecord)
             emit MetadataUpdated(field: "recordWeight", oldValue: oldRecord, newValue: newRecord.toString())
         }
         
         access(all) fun updateRecordLength(newRecord: UFix64) {
-            let oldRecord = NorthernPikeCoin.speciesMetadata.recordLength?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setRecordLength(newRecord)
+            let oldRecord = BlueMarlinCoin.speciesMetadata.recordLength?.toString() ?? "0.0"
+            BlueMarlinCoin.speciesMetadata.setRecordLength(newRecord)
             emit MetadataUpdated(field: "recordLength", oldValue: oldRecord, newValue: newRecord.toString())
         }
         
         // MISSING: Record location and date admin functions
         access(all) fun updateRecordWeightLocation(newLocation: String?) {
-            let oldLocation = NorthernPikeCoin.speciesMetadata.recordWeightLocation ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordWeightLocation(newLocation)
+            let oldLocation = BlueMarlinCoin.speciesMetadata.recordWeightLocation ?? ""
+            BlueMarlinCoin.speciesMetadata.setRecordWeightLocation(newLocation)
             emit MetadataUpdated(field: "recordWeightLocation", oldValue: oldLocation, newValue: newLocation ?? "")
         }
         
         access(all) fun updateRecordWeightDate(newDate: String?) {
-            let oldDate = NorthernPikeCoin.speciesMetadata.recordWeightDate ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordWeightDate(newDate)
+            let oldDate = BlueMarlinCoin.speciesMetadata.recordWeightDate ?? ""
+            BlueMarlinCoin.speciesMetadata.setRecordWeightDate(newDate)
             emit MetadataUpdated(field: "recordWeightDate", oldValue: oldDate, newValue: newDate ?? "")
         }
         
         access(all) fun updateRecordLengthLocation(newLocation: String?) {
-            let oldLocation = NorthernPikeCoin.speciesMetadata.recordLengthLocation ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordLengthLocation(newLocation)
+            let oldLocation = BlueMarlinCoin.speciesMetadata.recordLengthLocation ?? ""
+            BlueMarlinCoin.speciesMetadata.setRecordLengthLocation(newLocation)
             emit MetadataUpdated(field: "recordLengthLocation", oldValue: oldLocation, newValue: newLocation ?? "")
         }
         
         access(all) fun updateRecordLengthDate(newDate: String?) {
-            let oldDate = NorthernPikeCoin.speciesMetadata.recordLengthDate ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordLengthDate(newDate)
+            let oldDate = BlueMarlinCoin.speciesMetadata.recordLengthDate ?? ""
+            BlueMarlinCoin.speciesMetadata.setRecordLengthDate(newDate)
             emit MetadataUpdated(field: "recordLengthDate", oldValue: oldDate, newValue: newDate ?? "")
         }
         
@@ -887,76 +887,76 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         // MISSING: Community data curation approval
         access(all) fun approvePendingUpdate(index: Int) {
             pre {
-                index >= 0 && index < NorthernPikeCoin.pendingUpdates.length: "Invalid update index"
+                index >= 0 && index < BlueMarlinCoin.pendingUpdates.length: "Invalid update index"
             }
-            let update = NorthernPikeCoin.pendingUpdates.remove(at: index)
+            let update = BlueMarlinCoin.pendingUpdates.remove(at: index)
             // Apply the update based on field type
             emit MetadataUpdated(field: update.field, oldValue: "pending", newValue: update.newValue)
         }
         
         access(all) fun rejectPendingUpdate(index: Int) {
             pre {
-                index >= 0 && index < NorthernPikeCoin.pendingUpdates.length: "Invalid update index"
+                index >= 0 && index < BlueMarlinCoin.pendingUpdates.length: "Invalid update index"
             }
-            NorthernPikeCoin.pendingUpdates.remove(at: index)
+            BlueMarlinCoin.pendingUpdates.remove(at: index)
         }
         
         access(all) fun clearAllPendingUpdates() {
-            NorthernPikeCoin.pendingUpdates = []
+            BlueMarlinCoin.pendingUpdates = []
         }
         
         // ENHANCED ADMIN FUNCTIONS WITH VALIDATION
         access(all) fun updateRarityTierValidated(newTier: UInt8) {
             pre {
-                NorthernPikeCoin.validateRating(newTier): "Invalid rarity tier (must be 1-10)"
+                BlueMarlinCoin.validateRating(newTier): "Invalid rarity tier (must be 1-10)"
             }
-            let oldTier = NorthernPikeCoin.speciesMetadata.rarityTier?.toString() ?? "0"
-            NorthernPikeCoin.speciesMetadata.setRarityTier(newTier)
+            let oldTier = BlueMarlinCoin.speciesMetadata.rarityTier?.toString() ?? "0"
+            BlueMarlinCoin.speciesMetadata.setRarityTier(newTier)
             emit MetadataUpdated(field: "rarityTier", oldValue: oldTier, newValue: newTier.toString())
         }
         
         access(all) fun updateConservationStatusValidated(newStatus: String) {
             pre {
-                NorthernPikeCoin.validateConservationStatus(newStatus): "Invalid conservation status"
+                BlueMarlinCoin.validateConservationStatus(newStatus): "Invalid conservation status"
             }
-            let oldStatus = NorthernPikeCoin.speciesMetadata.globalConservationStatus ?? ""
-            NorthernPikeCoin.speciesMetadata.setConservationStatus(newStatus)
+            let oldStatus = BlueMarlinCoin.speciesMetadata.globalConservationStatus ?? ""
+            BlueMarlinCoin.speciesMetadata.setConservationStatus(newStatus)
             emit MetadataUpdated(field: "globalConservationStatus", oldValue: oldStatus, newValue: newStatus)
         }
         
         access(all) fun updateFightRatingValidated(newRating: UInt8) {
             pre {
-                NorthernPikeCoin.validateRating(newRating): "Fight rating must be 1-10"
+                BlueMarlinCoin.validateRating(newRating): "Fight rating must be 1-10"
             }
-            let oldRating = NorthernPikeCoin.speciesMetadata.fightRating?.toString() ?? "0"
-            NorthernPikeCoin.speciesMetadata.setFightRating(newRating)
+            let oldRating = BlueMarlinCoin.speciesMetadata.fightRating?.toString() ?? "0"
+            BlueMarlinCoin.speciesMetadata.setFightRating(newRating)
             emit MetadataUpdated(field: "fightRating", oldValue: oldRating, newValue: newRating.toString())
         }
         
         // TEMPORAL ADMIN FUNCTIONS
         access(all) fun archiveCurrentYear() {
-            let currentYear = NorthernPikeCoin.currentMetadataYear
-            NorthernPikeCoin.metadataHistory[currentYear] = NorthernPikeCoin.speciesMetadata
+            let currentYear = BlueMarlinCoin.currentMetadataYear
+            BlueMarlinCoin.metadataHistory[currentYear] = BlueMarlinCoin.speciesMetadata
             emit YearlyMetadataCreated(year: currentYear)
         }
         
         access(all) fun updateToNewYear(_ newYear: UInt64) {
             pre {
-                newYear > NorthernPikeCoin.currentMetadataYear: "New year must be greater than current year"
+                newYear > BlueMarlinCoin.currentMetadataYear: "New year must be greater than current year"
             }
             // Archive current year data
             self.archiveCurrentYear()
             
-            let oldYear = NorthernPikeCoin.currentMetadataYear
-            NorthernPikeCoin.currentMetadataYear = newYear
+            let oldYear = BlueMarlinCoin.currentMetadataYear
+            BlueMarlinCoin.currentMetadataYear = newYear
             emit MetadataYearUpdated(oldYear: oldYear, newYear: newYear)
         }
     }
 
     // Public functions
-    access(all) fun createEmptyVault(vaultType: Type): @NorthernPikeCoin.Vault {
+    access(all) fun createEmptyVault(vaultType: Type): @BlueMarlinCoin.Vault {
         pre {
-            vaultType == Type<@NorthernPikeCoin.Vault>(): "Vault type mismatch"
+            vaultType == Type<@BlueMarlinCoin.Vault>(): "Vault type mismatch"
         }
         return <-create Vault(balance: 0.0)
     }
@@ -1288,16 +1288,16 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         return self.totalSupply
     }
     
-    // NOTE: NorthernPike coins represent permanent historical catch records
+    // NOTE: BlueMarlin coins represent permanent historical catch records
     // No burning functions provided - total supply always equals total verified catches
     // Only natural vault destruction (via burnCallback) affects individual balances
     
     // MISSING: Token utility functions
-    access(all) view fun getVaultBalance(vaultRef: &NorthernPikeCoin.Vault): UFix64 {
+    access(all) view fun getVaultBalance(vaultRef: &BlueMarlinCoin.Vault): UFix64 {
         return vaultRef.balance
     }
     
-    access(all) view fun canWithdraw(vaultRef: &NorthernPikeCoin.Vault, amount: UFix64): Bool {
+    access(all) view fun canWithdraw(vaultRef: &BlueMarlinCoin.Vault, amount: UFix64): Bool {
         return vaultRef.isAvailableToWithdraw(amount: amount)
     }
     
@@ -1312,7 +1312,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
     
     // MISSING: Token validation
     access(all) view fun isValidVaultType(vaultType: Type): Bool {
-        return vaultType == Type<@NorthernPikeCoin.Vault>()
+        return vaultType == Type<@BlueMarlinCoin.Vault>()
     }
 
     // Contract initialization
@@ -1337,144 +1337,144 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         self.fishDEXAddress = nil
         self.isRegisteredWithFishDEX = false
         
-        // Set comprehensive species metadata for Example Fish
+        // Set comprehensive species metadata for Blue Marlin
         self.speciesMetadata = SpeciesMetadata(
             // IMMUTABLE CORE FIELDS
-            speciesCode: "ESOX_LUCIUS",
-            ticker: "ESLUC",
-            scientificName: "Esox lucius",
-            family: "Esocidae",
+            speciesCode: "MAKAIRA_NIGRICANS",
+            ticker: "MAKNIG",
+            scientificName: "Makaira nigricans",
+            family: "Istiophoridae",
             dataYear: 2024,
             
             // BASIC DESCRIPTIVE FIELDS
-            commonName: "Northern Pike",
-            habitat: "Cool freshwater lakes, rivers, weedy shallow areas",
-            averageWeight: 8.0,
-            averageLength: 26.0,
-            imageURL: "https://derby.fish/images/species/NorthernPike.jpg",
-            description: "Northern Pike are aggressive freshwater predators known for their explosive strikes and razor-sharp teeth. They are ambush hunters that lurk in weedy areas and are considered one of the most ferocious freshwater gamefish.",
+            commonName: "Blue Marlin",
+            habitat: "Tropical and subtropical oceanic waters, open ocean",
+            averageWeight: 300.0,
+            averageLength: 132.0,
+            imageURL: "https://derby.fish/images/species/BlueMarlin.jpg",
+            description: "Blue Marlin are apex oceanic predators and among the most prized billfish in the world. Known for their incredible size, speed, and fighting ability, they are the ultimate trophy fish for offshore anglers.",
             firstCatchDate: nil,
-            rarityTier: 3,
+            rarityTier: 5,
             
             // CONSERVATION & POPULATION
-            globalConservationStatus: "Least Concern",
+            globalConservationStatus: "Vulnerable",
             regionalPopulations: {
-                "Great Lakes": RegionalPopulation(
-                    populationTrend: "Stable",
-                    threats: ["Climate Change", "Habitat Loss", "Overfishing"],
-                    protectedAreas: ["Great Lakes National Marine Sanctuaries"],
+                "Atlantic Ocean": RegionalPopulation(
+                    populationTrend: "Declining",
+                    threats: ["Overfishing", "Climate Change", "Bycatch"],
+                    protectedAreas: ["Marine Protected Areas", "Billfish Conservation Areas"],
                     estimatedPopulation: nil
                 ),
-                "Canadian Shield": RegionalPopulation(
+                "Pacific Ocean": RegionalPopulation(
                     populationTrend: "Stable",
-                    threats: ["Acid Rain", "Mining Pollution", "Climate Change"],
-                    protectedAreas: ["Algonquin Provincial Park", "Quetico Provincial Park"],
+                    threats: ["Commercial Fishing", "Longline Bycatch", "Climate Change"],
+                    protectedAreas: ["Pacific Remote Islands Marine National Monument"],
                     estimatedPopulation: nil
                 ),
-                "Alaska": RegionalPopulation(
-                    populationTrend: "Stable",
-                    threats: ["Climate Change", "Habitat Modification"],
-                    protectedAreas: ["Alaska National Wildlife Refuges"],
+                "Indian Ocean": RegionalPopulation(
+                    populationTrend: "Declining",
+                    threats: ["Overfishing", "Illegal Fishing", "Ocean Warming"],
+                    protectedAreas: ["Indian Ocean Marine Protected Areas"],
                     estimatedPopulation: nil
                 )
             },
             
             // BIOLOGICAL INTELLIGENCE
-            lifespan: 25.0,
-            diet: "Fish, frogs, small mammals, waterfowl, crayfish",
-            predators: ["Muskellunge", "Larger Pike", "Humans", "Cormorants"],
-            temperatureRange: "32-75°F (optimal 50-65°F)",
-            depthRange: "0-40 feet",
-            spawningAge: 3.0,
-            spawningBehavior: "Spawns in shallow weedy areas in early spring, scatters eggs over vegetation",
-            migrationPattern: "Moves to shallow weedy areas in spring, deeper water in summer",
-            waterQualityNeeds: "pH 6.0-8.0, moderate dissolved oxygen, tolerates various conditions",
+            lifespan: 27.0,
+            diet: "Tuna, mackerel, squid, flying fish, dolphinfish, smaller billfish",
+            predators: ["Large Sharks", "Killer Whales", "Humans"],
+            temperatureRange: "68-86°F (optimal 75-82°F)",
+            depthRange: "0-3000 feet (highly migratory)",
+            spawningAge: 4.0,
+            spawningBehavior: "Spawns in warm oceanic waters, releases millions of pelagic eggs",
+            migrationPattern: "Highly migratory across ocean basins, follows warm currents and prey",
+            waterQualityNeeds: "Clean, warm saltwater with high dissolved oxygen",
             
             // GEOGRAPHIC & HABITAT
-            nativeRegions: ["Northern North America", "Europe", "Asia"],
-            currentRange: ["Northern US", "Canada", "Alaska", "Introduced to some southern states"],
-            waterTypes: ["Lake", "River", "Reservoir", "Weedy Bays"],
-            invasiveStatus: "Native (introduced outside native range)",
+            nativeRegions: ["Atlantic Ocean", "Pacific Ocean", "Indian Ocean"],
+            currentRange: ["Tropical and subtropical oceans worldwide"],
+            waterTypes: ["Open Ocean", "Pelagic", "Deep Water", "Continental Shelf"],
+            invasiveStatus: "Native",
             
             // ECONOMIC & COMMERCIAL
             regionalCommercialValue: {
-                "Great Lakes": 5.00,
-                "Minnesota": 7.00,
-                "Wisconsin": 6.00,
-                "Alaska": 4.00
+                "Hawaii": 25.00,
+                "Florida": 22.00,
+                "Cabo San Lucas": 30.00,
+                "Australia": 28.00
             },
-            tourismValue: 8,
-            ecosystemRole: "Apex Predator, Population Control",
-            culturalSignificance: "Important in northern fishing culture, respected predator",
+            tourismValue: 10,
+            ecosystemRole: "Apex Predator, Top Ocean Predator",
+            culturalSignificance: "Ultimate trophy fish, central to big game fishing culture worldwide",
             
             // ANGLING & RECREATIONAL
-            bestBaits: ["Spoons", "Spinnerbaits", "Jerkbaits", "Large minnows", "Jigs"],
-            fightRating: 8,
-            culinaryRating: 6,
-            catchDifficulty: 5,
-            seasonalAvailability: "Best in spring and fall, active year-round",
-            bestTechniques: ["Casting", "Trolling", "Jigging", "Live bait fishing", "Fly fishing"],
+            bestBaits: ["Large lures", "Live tuna", "Rigged ballyhoo", "Flying fish", "Large squid"],
+            fightRating: 10,
+            culinaryRating: 7,
+            catchDifficulty: 10,
+            seasonalAvailability: "Year-round in tropics, seasonal migrations to temperate waters",
+            bestTechniques: ["Big game trolling", "Live bait fishing", "Kite fishing", "Outrigger fishing"],
             
             // REGULATORY
             regionalRegulations: {
-                "Minnesota": RegionalRegulations(
-                    sizeLimit: 26.0,
-                    bagLimit: 3,
-                    closedSeasons: ["March 1 - May 14"],
-                    specialRegulations: "Check specific lake regulations",
-                    licenseRequired: true
-                ),
-                "Wisconsin": RegionalRegulations(
-                    sizeLimit: 26.0,
-                    bagLimit: 5,
-                    closedSeasons: ["March 1 - May 6"],
-                    specialRegulations: "Varies by water body",
-                    licenseRequired: true
-                ),
-                "Alaska": RegionalRegulations(
-                    sizeLimit: 30.0,
-                    bagLimit: 5,
+                "Atlantic": RegionalRegulations(
+                    sizeLimit: 99.0,
+                    bagLimit: 1,
                     closedSeasons: [],
-                    specialRegulations: "Check local regulations",
+                    specialRegulations: "HMS permit required, catch and release encouraged",
+                    licenseRequired: true
+                ),
+                "Pacific": RegionalRegulations(
+                    sizeLimit: nil,
+                    bagLimit: 1,
+                    closedSeasons: [],
+                    specialRegulations: "Varies by region, some areas protected",
+                    licenseRequired: true
+                ),
+                "International": RegionalRegulations(
+                    sizeLimit: nil,
+                    bagLimit: nil,
+                    closedSeasons: [],
+                    specialRegulations: "Varies by country, ICCAT regulations apply",
                     licenseRequired: true
                 )
             },
             
             // PHYSICAL & BEHAVIORAL
-            physicalDescription: "Elongated body with dark green back, light spots, chain-like markings, large mouth with sharp teeth",
-            behaviorTraits: "Ambush predator, solitary, aggressive, territorial, structure-oriented",
-            seasonalPatterns: "Spring shallow spawning, summer deeper water, fall feeding, winter dormancy",
+            physicalDescription: "Massive body with cobalt blue back, silver-white belly, prominent bill, large dorsal fin",
+            behaviorTraits: "Solitary hunters, incredible speed and strength, acrobatic jumps when hooked",
+            seasonalPatterns: "Complex oceanic migrations, follows warm water masses and baitfish",
             
             // RECORDS & ACHIEVEMENTS
-            recordWeight: 55.1,
-            recordWeightLocation: "Lake of Grefeern, Germany",
-            recordWeightDate: "October 16, 1986",
-            recordLength: 52.0,
-            recordLengthLocation: "Kettle Falls, Washington",
-            recordLengthDate: "May 7, 1992",
+            recordWeight: 1402.0,
+            recordWeightLocation: "Vitória, Brazil",
+            recordWeightDate: "February 29, 1992",
+            recordLength: 168.0,
+            recordLengthLocation: "Kona, Hawaii",
+            recordLengthDate: "May 31, 1982",
             
             // RESEARCH & SCIENTIFIC
-            researchPriority: 7,
-            geneticMarkers: "Population genetics and hybridization studies",
-            studyPrograms: ["Minnesota DNR Pike Research", "Great Lakes Fishery Commission", "Alaska Department of Fish and Game"],
+            researchPriority: 10,
+            geneticMarkers: "Population genetics studies for conservation and stock assessment",
+            studyPrograms: ["ICCAT Billfish Research", "NOAA Billfish Research", "Billfish Foundation Research"],
             
             // FLEXIBLE METADATA
             additionalMetadata: {
                 "last_updated": "2024-01-01",
                 "data_quality": "High",
                 "contributor": "DerbyFish Research Team",
-                "state_fish": "North Dakota",
-                "nickname": "Water Wolf"
+                "max_speed": "50+ mph",
+                "nickname": "Blue"
             }
         )
 
         // Set storage paths using common name format
-        self.VaultStoragePath = /storage/NorthernPikeCoinVault
-        self.VaultPublicPath = /public/NorthernPikeCoinReceiver
-        self.MinterStoragePath = /storage/NorthernPikeCoinMinter
-        self.MetadataAdminStoragePath = /storage/NorthernPikeCoinMetadataAdmin
-        self.FishDEXCoordinatorStoragePath = /storage/NorthernPikeCoinFishDEXCoordinator
-        self.FishDEXCoordinatorPublicPath = /public/NorthernPikeCoinFishDEXCoordinator
+        self.VaultStoragePath = /storage/BlueMarlinCoinVault
+        self.VaultPublicPath = /public/BlueMarlinCoinReceiver
+        self.MinterStoragePath = /storage/BlueMarlinCoinMinter
+        self.MetadataAdminStoragePath = /storage/BlueMarlinCoinMetadataAdmin
+        self.FishDEXCoordinatorStoragePath = /storage/BlueMarlinCoinFishDEXCoordinator
+        self.FishDEXCoordinatorPublicPath = /public/BlueMarlinCoinFishDEXCoordinator
 
         // Create and store admin resources
         let minter <- create Minter()
@@ -1493,7 +1493,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
 
         let vault <- create Vault(balance: self.totalSupply)
         self.account.storage.save(<-vault, to: self.VaultStoragePath)
-        let cap = self.account.capabilities.storage.issue<&NorthernPikeCoin.Vault>(self.VaultStoragePath)
+        let cap = self.account.capabilities.storage.issue<&BlueMarlinCoin.Vault>(self.VaultStoragePath)
         self.account.capabilities.publish(cap, at: self.VaultPublicPath)
     }
 }

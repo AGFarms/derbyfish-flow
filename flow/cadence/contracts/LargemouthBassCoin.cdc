@@ -4,6 +4,22 @@ import "FungibleTokenMetadataViews"
 
 access(all) contract LargemouthBassCoin: FungibleToken {
 
+    // FISHDEX INTEGRATION - Cross-contract coordination interface
+    access(all) resource interface SpeciesCoinPublic {
+        access(all) view fun getSpeciesCode(): String
+        access(all) view fun getTicker(): String
+        access(all) view fun getCommonName(): String
+        access(all) view fun getScientificName(): String
+        access(all) view fun getFamily(): String
+        access(all) view fun getTotalSupply(): UFix64
+        access(all) view fun getBasicRegistryInfo(): {String: AnyStruct}
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @LargemouthBassCoin.Vault
+    }
+
+    // FISHDEX COORDINATION - Registry management
+    access(all) var fishDEXAddress: Address?
+    access(all) var isRegisteredWithFishDEX: Bool
+
     // Regional data structures for location-specific information
     access(all) struct RegionalRegulations {
         access(all) var sizeLimit: UFix64?         // Minimum legal size in inches
@@ -43,9 +59,19 @@ access(all) contract LargemouthBassCoin: FungibleToken {
     access(all) event FirstCatchRecorded(timestamp: UInt64, angler: Address)
     access(all) event YearlyMetadataCreated(year: UInt64)
     access(all) event MetadataYearUpdated(oldYear: UInt64, newYear: UInt64)
+    access(all) event NFTAlreadyMinted(fishId: UInt64, angler: Address)
+    
+    // FISHDEX INTEGRATION EVENTS
+    access(all) event FishDEXRegistrationAttempted(fishDEXAddress: Address, speciesCode: String)
+    access(all) event FishDEXRegistrationCompleted(fishDEXAddress: Address, speciesCode: String)
+    access(all) event FishDEXAddressUpdated(oldAddress: Address?, newAddress: Address)
+    access(all) event CatchProcessedFromNFT(fishNFTId: UInt64?, angler: Address, amount: UFix64)
 
     // Total supply
     access(all) var totalSupply: UFix64
+
+    // Track which NFTs have been used for minting
+    access(all) var fishNFTRegistry: {UInt64: Bool}
 
     // Temporal metadata system - Track yearly updates
     access(all) var currentMetadataYear: UInt64
@@ -60,32 +86,13 @@ access(all) contract LargemouthBassCoin: FungibleToken {
     access(all) let VaultPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
     access(all) let MetadataAdminStoragePath: StoragePath
-
-    // BAITCOIN EXCHANGE INTEGRATION - Dual-token economy
-    access(all) var baitExchangeRate: UFix64?  // Species coin → BaitCoin conversion rate
-    
-    // COMMUNITY DATA CURATION - Simplified for future growth
-    access(all) struct DataUpdate {
-        access(all) let field: String
-        access(all) let newValue: String
-        access(all) let contributor: Address
-        access(all) let source: String
-        access(all) let timestamp: UFix64
-        
-        init(field: String, newValue: String, contributor: Address, source: String) {
-            self.field = field
-            self.newValue = newValue
-            self.contributor = contributor
-            self.source = source
-            self.timestamp = getCurrentBlock().timestamp
-        }
-    }
-    
-    access(all) var pendingUpdates: [DataUpdate]
+    access(all) let FishDEXCoordinatorStoragePath: StoragePath
+    access(all) let FishDEXCoordinatorPublicPath: PublicPath
 
     // Species metadata - HYBRID: Core fields immutable, descriptive fields mutable + REGIONAL + TEMPORAL
     access(all) struct SpeciesMetadata {
         // IMMUTABLE - Core identity fields that should never change
+        access(all) let commonName: String         // e.g., "Example Fish"
         access(all) let speciesCode: String        // e.g., "EXAMPLE_FISH"
         access(all) let ticker: String             // e.g., "EXFISH"
         access(all) let scientificName: String     // e.g., "Example fish"
@@ -93,7 +100,6 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         access(all) let dataYear: UInt64           // Year this metadata represents
         
         // MUTABLE - Descriptive fields that can be updated (NULLABLE WHERE APPROPRIATE)
-        access(all) var commonName: String         // e.g., "Example Fish"
         access(all) var habitat: String?           // e.g., "Freshwater" - nullable if unknown
         access(all) var averageWeight: UFix64?     // in pounds - nullable if unknown
         access(all) var averageLength: UFix64?     // in inches - nullable if unknown
@@ -162,7 +168,6 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         access(all) var additionalMetadata: {String: String} // Custom key-value pairs for future expansion
 
         // BASIC FIELD SETTERS
-        access(all) fun setCommonName(_ newName: String) { self.commonName = newName }
         access(all) fun setHabitat(_ newHabitat: String) { self.habitat = newHabitat }
         access(all) fun setAverageWeight(_ newWeight: UFix64) { self.averageWeight = newWeight }
         access(all) fun setAverageLength(_ newLength: UFix64) { self.averageLength = newLength }
@@ -486,10 +491,141 @@ access(all) contract LargemouthBassCoin: FungibleToken {
                         "twitter": MetadataViews.ExternalURL("https://twitter.com/derbyfish")
                     }
                 )
+            case Type<FungibleTokenMetadataViews.FTVaultData>():
+                return FungibleTokenMetadataViews.FTVaultData(
+                    storagePath: self.VaultStoragePath,
+                    receiverPath: self.VaultPublicPath,
+                    metadataPath: self.VaultPublicPath,
+                    receiverLinkedType: Type<&LargemouthBassCoin.Vault>(),
+                    metadataLinkedType: Type<&LargemouthBassCoin.Vault>(),
+                    createEmptyVaultFunction: (fun(): @{FungibleToken.Vault} {
+                        return <-LargemouthBassCoin.createEmptyVault(vaultType: Type<@LargemouthBassCoin.Vault>())
+                    })
+                )
             case Type<FungibleTokenMetadataViews.TotalSupply>():
                 return FungibleTokenMetadataViews.TotalSupply(totalSupply: self.totalSupply)
         }
         return nil
+    }
+
+    // FISHDEX COORDINATOR RESOURCE - Handles cross-contract integration
+    access(all) resource FishDEXCoordinator: SpeciesCoinPublic {
+        
+        // Interface implementation for FishDEX registry
+        access(all) view fun getSpeciesCode(): String {
+            return LargemouthBassCoin.speciesMetadata.speciesCode
+        }
+        
+        access(all) view fun getTicker(): String {
+            return LargemouthBassCoin.speciesMetadata.ticker
+        }
+        
+        access(all) view fun getCommonName(): String {
+            return LargemouthBassCoin.speciesMetadata.commonName
+        }
+        
+        access(all) view fun getScientificName(): String {
+            return LargemouthBassCoin.speciesMetadata.scientificName
+        }
+        
+        access(all) view fun getFamily(): String {
+            return LargemouthBassCoin.speciesMetadata.family
+        }
+        
+        access(all) view fun getTotalSupply(): UFix64 {
+            return LargemouthBassCoin.totalSupply
+        }
+        
+        access(all) view fun getBasicRegistryInfo(): {String: AnyStruct} {
+            return {
+                "speciesCode": self.getSpeciesCode(),
+                "ticker": self.getTicker(),
+                "commonName": self.getCommonName(),
+                "scientificName": self.getScientificName(),
+                "family": self.getFamily(),
+                "totalSupply": self.getTotalSupply(),
+                "contractAddress": LargemouthBassCoin.account.address,
+                "dataYear": LargemouthBassCoin.speciesMetadata.dataYear,
+                "conservationStatus": LargemouthBassCoin.speciesMetadata.globalConservationStatus,
+                "rarityTier": LargemouthBassCoin.speciesMetadata.rarityTier,
+                "isRegistered": LargemouthBassCoin.isRegisteredWithFishDEX
+            }
+        }
+        
+        // Process catch verification from Fish NFT contracts
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @LargemouthBassCoin.Vault {
+            // Validate fish data matches this species
+            if let fishSpeciesCode = fishData["speciesCode"] as? String {
+                assert(
+                    fishSpeciesCode == self.getSpeciesCode(),
+                    message: "Fish species code does not match this species coin"
+                )
+            }
+            
+            // Extract fish NFT ID if available
+            let fishNFTId = fishData["nftId"] as? UInt64
+            
+            // Validate NFT hasn't been redeemed before
+            if let nftId = fishNFTId {
+                assert(
+                    LargemouthBassCoin.fishNFTRegistry[nftId] == nil,
+                    message: "This NFT has already been redeemed for a coin"
+                )
+                // Record this NFT as redeemed
+                LargemouthBassCoin.fishNFTRegistry[nftId] = true
+            }
+            
+            // Auto-record first catch if this is the very first mint
+            if LargemouthBassCoin.totalSupply == 0.0 && LargemouthBassCoin.speciesMetadata.firstCatchDate == nil {
+                LargemouthBassCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+                emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
+            }
+            
+            // Mint 1 coin for verified catch
+            let amount: UFix64 = 1.0
+            LargemouthBassCoin.totalSupply = LargemouthBassCoin.totalSupply + amount
+            
+            // Create vault with the minted amount (not empty!)
+            let vault <- create Vault(balance: amount)
+            
+            // Emit events
+            emit TokensMinted(amount: amount, to: angler)
+            emit CatchProcessedFromNFT(fishNFTId: fishNFTId, angler: angler, amount: amount)
+            
+            if let nftId = fishNFTId {
+                emit CatchVerified(fishId: nftId, angler: angler, amount: amount)
+            }
+            
+            return <- vault
+        }
+        
+        // Register this species with FishDEX
+        access(all) fun registerWithFishDEX(fishDEXAddress: Address) {
+            pre {
+                !LargemouthBassCoin.isRegisteredWithFishDEX: "Already registered with FishDEX"
+            }
+            
+            emit FishDEXRegistrationAttempted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
+            
+            // Get reference to FishDEX contract
+            let fishDEXAccount = getAccount(fishDEXAddress)
+            
+            // Call FishDEX registration function
+            // Note: This will be completed when FishDEX contract is implemented
+            // For now, just update our state
+            LargemouthBassCoin.fishDEXAddress = fishDEXAddress
+            LargemouthBassCoin.isRegisteredWithFishDEX = true
+            
+            emit FishDEXRegistrationCompleted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
+        }
+        
+        // Update FishDEX address (admin only via proper access)
+        access(all) fun updateFishDEXAddress(newAddress: Address) {
+            let oldAddress = LargemouthBassCoin.fishDEXAddress
+            LargemouthBassCoin.fishDEXAddress = newAddress
+            LargemouthBassCoin.isRegisteredWithFishDEX = false // Reset registration status
+            emit FishDEXAddressUpdated(oldAddress: oldAddress, newAddress: newAddress)
+        }
     }
 
     // Vault Resource
@@ -551,12 +687,19 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @LargemouthBassCoin.Vault {
             pre {
                 amount == 1.0: "Only 1 coin per verified catch"
+                LargemouthBassCoin.fishNFTRegistry[fishId] == nil: "This NFT has already been used to mint a coin"
             }
+            
+            // Record this NFT as used
+            LargemouthBassCoin.fishNFTRegistry[fishId] = true
             
             // Auto-record first catch if this is the very first mint
             if LargemouthBassCoin.totalSupply == 0.0 && LargemouthBassCoin.speciesMetadata.firstCatchDate == nil {
                 LargemouthBassCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
+                
+                // Auto-register with FishDEX after first mint if FishDEX address is set
+                self.autoRegisterWithFishDEX()
             }
             
             LargemouthBassCoin.totalSupply = LargemouthBassCoin.totalSupply + amount
@@ -565,6 +708,26 @@ access(all) contract LargemouthBassCoin: FungibleToken {
             emit CatchVerified(fishId: fishId, angler: angler, amount: amount)
             
             return <-create Vault(balance: amount)
+        }
+        
+        // Auto-registration helper function
+        access(all) fun autoRegisterWithFishDEX() {
+            if let fishDEXAddr = LargemouthBassCoin.fishDEXAddress {
+                if !LargemouthBassCoin.isRegisteredWithFishDEX {
+                    // Get reference to FishDEX coordinator
+                    if let coordinatorRef = LargemouthBassCoin.account.capabilities.borrow<&FishDEXCoordinator>(
+                        LargemouthBassCoin.FishDEXCoordinatorPublicPath
+                    ) {
+                        coordinatorRef.registerWithFishDEX(fishDEXAddress: fishDEXAddr)
+                    }
+                }
+            }
+        }
+        
+        // Manual FishDEX registration (admin function)
+        access(all) fun registerWithFishDEXManually(fishDEXAddress: Address) {
+            LargemouthBassCoin.fishDEXAddress = fishDEXAddress
+            self.autoRegisterWithFishDEX()
         }
 
         access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: LargemouthBassCoin.Vault} {
@@ -600,12 +763,8 @@ access(all) contract LargemouthBassCoin: FungibleToken {
             emit MetadataUpdated(field: "description", oldValue: oldDescription, newValue: newDescription)
         }
         
-        access(all) fun updateCommonName(newName: String) {
-            let oldName = LargemouthBassCoin.speciesMetadata.commonName
-            LargemouthBassCoin.speciesMetadata.setCommonName(newName)
-            emit MetadataUpdated(field: "commonName", oldValue: oldName, newValue: newName)
-        }
-        
+
+            
         access(all) fun updateHabitat(newHabitat: String) {
             let oldHabitat = LargemouthBassCoin.speciesMetadata.habitat ?? ""
             LargemouthBassCoin.speciesMetadata.setHabitat(newHabitat)
@@ -741,7 +900,7 @@ access(all) contract LargemouthBassCoin: FungibleToken {
             }
             LargemouthBassCoin.pendingUpdates.remove(at: index)
         }
-
+        
         access(all) fun clearAllPendingUpdates() {
             LargemouthBassCoin.pendingUpdates = []
         }
@@ -886,6 +1045,9 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         return UInt64(self.totalSupply)
     }
 
+    // BAITCOIN EXCHANGE INTEGRATION - Dual-token economy
+    access(all) var baitExchangeRate: UFix64?  // Species coin → BaitCoin conversion rate
+    
     access(all) view fun getBaitExchangeRate(): UFix64? {
         return self.baitExchangeRate
     }
@@ -907,6 +1069,25 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         return validStatuses.contains(status)
     }
 
+    // COMMUNITY DATA CURATION - Simplified for future growth
+    access(all) struct DataUpdate {
+        access(all) let field: String
+        access(all) let newValue: String
+        access(all) let contributor: Address
+        access(all) let source: String
+        access(all) let timestamp: UFix64
+        
+        init(field: String, newValue: String, contributor: Address, source: String) {
+            self.field = field
+            self.newValue = newValue
+            self.contributor = contributor
+            self.source = source
+            self.timestamp = getCurrentBlock().timestamp
+        }
+    }
+    
+    access(all) var pendingUpdates: [DataUpdate]
+    
     access(all) fun submitDataUpdate(field: String, value: String, source: String) {
         let update = DataUpdate(
             field: field,
@@ -1073,22 +1254,43 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         return summary
     }
 
-    // MISSING: Essential token interaction functions
+    // FISHDEX INTEGRATION - Public query functions
+    access(all) view fun getFishDEXAddress(): Address? {
+        return self.fishDEXAddress
+    }
+    
+    access(all) view fun getFishDEXRegistrationStatus(): Bool {
+        return self.isRegisteredWithFishDEX
+    }
+    
+    access(all) view fun getRegistryInfo(): {String: AnyStruct} {
+        return {
+            "speciesCode": self.speciesMetadata.speciesCode,
+            "ticker": self.speciesMetadata.ticker,
+            "commonName": self.speciesMetadata.commonName,
+            "scientificName": self.speciesMetadata.scientificName,
+            "family": self.speciesMetadata.family,
+            "totalSupply": self.totalSupply,
+            "contractAddress": self.account.address,
+            "fishDEXAddress": self.fishDEXAddress,
+            "isRegistered": self.isRegisteredWithFishDEX,
+            "dataYear": self.speciesMetadata.dataYear
+        }
+    }
+    
+    // Create public capability for FishDEX coordinator (called during account setup)
+    access(all) fun createFishDEXCoordinatorCapability(): Capability<&FishDEXCoordinator> {
+        return self.account.capabilities.storage.issue<&FishDEXCoordinator>(self.FishDEXCoordinatorStoragePath)
+    }
+
+    // Essential token interaction functions
     access(all) view fun getTotalSupply(): UFix64 {
         return self.totalSupply
     }
     
-    access(all) fun burnTokens(from: @LargemouthBassCoin.Vault) {
-        // Public burn function for token holders
-        let vault <- from
-        let amount = vault.balance
-        let owner = vault.owner?.address
-        
-        self.totalSupply = self.totalSupply - amount
-        emit TokensBurned(amount: amount, from: owner)
-        
-        destroy vault
-    }
+    // NOTE: LargemouthBass coins represent permanent historical catch records
+    // No burning functions provided - total supply always equals total verified catches
+    // Only natural vault destruction (via burnCallback) affects individual balances
     
     // MISSING: Token utility functions
     access(all) view fun getVaultBalance(vaultRef: &LargemouthBassCoin.Vault): UFix64 {
@@ -1117,6 +1319,9 @@ access(all) contract LargemouthBassCoin: FungibleToken {
     init() {
         self.totalSupply = 0.0
         
+        // Initialize NFT tracking
+        self.fishNFTRegistry = {}
+        
         // Initialize temporal metadata system
         self.currentMetadataYear = 2024
         self.metadataHistory = {}
@@ -1128,114 +1333,148 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         // Initialize community curation system
         self.pendingUpdates = []
         
-        // Set comprehensive species metadata for Largemouth Bass
+        // Initialize FishDEX integration
+        self.fishDEXAddress = nil
+        self.isRegisteredWithFishDEX = false
+        
+        // Set comprehensive species metadata for Example Fish
         self.speciesMetadata = SpeciesMetadata(
             // IMMUTABLE CORE FIELDS
             speciesCode: "MICROPTERUS_SALMOIDES",
-            ticker: "LMBASS",
+            ticker: "MICSAL",
             scientificName: "Micropterus salmoides",
             family: "Centrarchidae",
             dataYear: 2024,
             
             // BASIC DESCRIPTIVE FIELDS
             commonName: "Largemouth Bass",
-            habitat: "Freshwater lakes, rivers, and reservoirs with vegetation",
-            averageWeight: 2.5,
-            averageLength: 14.0,
-            imageURL: "https://derby.fish/images/species/largemouth-bass.jpg",
-            description: "The largemouth bass is one of North America's most popular gamefish, known for its aggressive strikes and powerful fights. A member of the black bass family, it's distinguished by its large mouth extending past the eye.",
+            habitat: "Warm freshwater lakes, ponds, rivers, reservoirs with vegetation and structure",
+            averageWeight: 4.0,
+            averageLength: 18.0,
+            imageURL: "https://derby.fish/images/species/LargemouthBass.jpg",
+            description: "Largemouth Bass are America's most popular freshwater gamefish, known for their aggressive strikes and powerful fights. They are structure-oriented predators that thrive in warm waters with abundant cover and are the backbone of tournament fishing.",
             firstCatchDate: nil,
-            rarityTier: 1, // Common
+            rarityTier: 2,
             
             // CONSERVATION & POPULATION
             globalConservationStatus: "Least Concern",
             regionalPopulations: {
-                "North America": RegionalPopulation(
+                "Southeast US": RegionalPopulation(
                     populationTrend: "Stable",
-                    threats: ["Habitat Loss", "Water Pollution", "Invasive Species"],
-                    protectedAreas: ["National Wildlife Refuges", "State Parks"],
+                    threats: ["Habitat Loss", "Water Quality", "Overfishing"],
+                    protectedAreas: ["State Parks", "Wildlife Management Areas"],
+                    estimatedPopulation: nil
+                ),
+                "Great Lakes": RegionalPopulation(
+                    populationTrend: "Stable",
+                    threats: ["Climate Change", "Invasive Species", "Habitat Modification"],
+                    protectedAreas: ["Great Lakes National Marine Sanctuaries"],
+                    estimatedPopulation: nil
+                ),
+                "Southwest US": RegionalPopulation(
+                    populationTrend: "Stable",
+                    threats: ["Drought", "Water Diversions", "Temperature Changes"],
+                    protectedAreas: ["Desert Lakes", "Reservoir Systems"],
                     estimatedPopulation: nil
                 )
             },
             
             // BIOLOGICAL INTELLIGENCE
             lifespan: 16.0,
-            diet: "Fish, crayfish, frogs, insects, and small birds",
-            predators: ["Larger Fish", "Birds", "Turtles", "Otters"],
-            temperatureRange: "68-78°F",
-            depthRange: "0-60 feet",
-            spawningAge: 3.0,
-            spawningBehavior: "Males build circular nests in shallow water during spring spawning",
-            migrationPattern: "Seasonal movement between shallow and deep water",
-            waterQualityNeeds: "pH 6.5-8.5, dissolved oxygen >5mg/L",
+            diet: "Small fish, crayfish, frogs, insects, worms, small mammals",
+            predators: ["Larger bass", "Pike", "Muskie", "Birds", "Humans"],
+            temperatureRange: "55-85°F (optimal 70-80°F)",
+            depthRange: "0-40 feet",
+            spawningAge: 2.0,
+            spawningBehavior: "Males build and guard circular nests in shallow areas, fan eggs",
+            migrationPattern: "Moves between shallow and deep water based on season and temperature",
+            waterQualityNeeds: "pH 6.0-8.5, moderate dissolved oxygen, tolerates various conditions",
             
             // GEOGRAPHIC & HABITAT
-            nativeRegions: ["Eastern North America"],
-            currentRange: ["North America", "Europe", "Asia", "Africa", "South America"],
-            waterTypes: ["Lake", "River", "Reservoir", "Pond"],
-            invasiveStatus: "Native to Eastern US, Introduced elsewhere",
+            nativeRegions: ["Eastern North America", "Mississippi River Basin", "Great Lakes"],
+            currentRange: ["Continental US", "Introduced worldwide"],
+            waterTypes: ["Lake", "Pond", "River", "Reservoir", "Farm Pond"],
+            invasiveStatus: "Native (widely introduced outside native range)",
             
             // ECONOMIC & COMMERCIAL
             regionalCommercialValue: {
-                "United States": 8.50,
-                "Canada": 9.00
+                "Southeast": 0.00,
+                "Southwest": 0.00,
+                "Great Lakes": 0.00,
+                "Tournament": 100.00
             },
-            tourismValue: 10, // Extremely high
-            ecosystemRole: "Apex Predator",
-            culturalSignificance: "America's most popular gamefish, featured in countless tournaments",
+            tourismValue: 10,
+            ecosystemRole: "Top Predator (warm waters), Population Control",
+            culturalSignificance: "State fish of Georgia, Mississippi, Alabama, Florida - tournament fishing icon",
             
             // ANGLING & RECREATIONAL
-            bestBaits: ["Plastic Worms", "Spinnerbaits", "Crankbaits", "Jigs", "Topwater Lures"],
-            fightRating: 9,
+            bestBaits: ["Plastic worms", "Crankbaits", "Spinnerbaits", "Jigs", "Topwater lures"],
+            fightRating: 8,
             culinaryRating: 7,
             catchDifficulty: 5,
-            seasonalAvailability: "Best in spring and fall, active year-round in warmer climates",
-            bestTechniques: ["Casting", "Flipping", "Trolling", "Topwater"],
+            seasonalAvailability: "Year-round, best in spring and fall",
+            bestTechniques: ["Casting", "Flipping", "Pitching", "Topwater", "Carolina rig"],
             
             // REGULATORY
             regionalRegulations: {
-                "United States": RegionalRegulations(
-                    sizeLimit: 12.0, // Varies by state
-                    bagLimit: 5, // Typical limit
-                    closedSeasons: [], // Usually open year-round
-                    specialRegulations: "Varies by state and water body",
+                "Texas": RegionalRegulations(
+                    sizeLimit: 14.0,
+                    bagLimit: 5,
+                    closedSeasons: [],
+                    specialRegulations: "No closed season",
+                    licenseRequired: true
+                ),
+                "California": RegionalRegulations(
+                    sizeLimit: 12.0,
+                    bagLimit: 5,
+                    closedSeasons: [],
+                    specialRegulations: "No closed season",
+                    licenseRequired: true
+                ),
+                "Florida": RegionalRegulations(
+                    sizeLimit: 12.0,
+                    bagLimit: 5,
+                    closedSeasons: [],
+                    specialRegulations: "No closed season",
                     licenseRequired: true
                 )
             },
             
             // PHYSICAL & BEHAVIORAL
-            physicalDescription: "Dark green back fading to light green sides and white belly, dark lateral line, jaw extends past eye",
-            behaviorTraits: "Ambush predator, structure-oriented, aggressive feeder",
-            seasonalPatterns: "Spawn in spring, move to deeper water in summer, feed heavily in fall",
+            physicalDescription: "Large mouth extending past the eye, dark green back with light belly, lateral line stripe",
+            behaviorTraits: "Ambush predator, structure-oriented, territorial during spawn, aggressive feeder",
+            seasonalPatterns: "Shallow spawning in spring, deep structure in summer, fall feeding, winter dormancy",
             
             // RECORDS & ACHIEVEMENTS
-            recordWeight: 22.5, // George Perry's 1932 record
+            recordWeight: 22.25,
             recordWeightLocation: "Montgomery Lake, Georgia",
             recordWeightDate: "June 2, 1932",
-            recordLength: 29.5, // Separate length record
+            recordLength: 29.5,
             recordLengthLocation: "Lake Biwa, Japan",
             recordLengthDate: "July 2, 2009",
             
             // RESEARCH & SCIENTIFIC
-            researchPriority: 8,
-            geneticMarkers: "Microsatellite DNA markers available for population studies",
-            studyPrograms: ["BASS Research Foundation", "FWS Sport Fish Restoration"],
+            researchPriority: 9,
+            geneticMarkers: "Extensive genetic studies for tournament and management purposes",
+            studyPrograms: ["Bass Anglers Sportsman Society", "American Sportfishing Association", "State Wildlife Agencies"],
             
             // FLEXIBLE METADATA
             additionalMetadata: {
                 "last_updated": "2024-01-01",
-                "data_quality": "Excellent",
+                "data_quality": "High",
                 "contributor": "DerbyFish Research Team",
-                "tournament_species": "true",
-                "state_fish": "Alabama, Florida, Georgia, Mississippi, Tennessee"
+                "state_fish": "Georgia",
+                "nickname": "Bucketmouth"
             }
         )
 
-        // Set storage paths using species name format
-        self.VaultStoragePath = StoragePath(identifier: "LargemouthBassCoinVault")!
-        self.VaultPublicPath = PublicPath(identifier: "LargemouthBassCoinReceiver")!
-        self.MinterStoragePath = StoragePath(identifier: "LargemouthBassCoinMinter")!
-        self.MetadataAdminStoragePath = StoragePath(identifier: "LargemouthBassCoinMetadataAdmin")!
+        // Set storage paths using common name format
+        self.VaultStoragePath = /storage/LargemouthBassCoinVault
+        self.VaultPublicPath = /public/LargemouthBassCoinReceiver
+        self.MinterStoragePath = /storage/LargemouthBassCoinMinter
+        self.MetadataAdminStoragePath = /storage/LargemouthBassCoinMetadataAdmin
+        self.FishDEXCoordinatorStoragePath = /storage/LargemouthBassCoinFishDEXCoordinator
+        self.FishDEXCoordinatorPublicPath = /public/LargemouthBassCoinFishDEXCoordinator
 
         // Create and store admin resources
         let minter <- create Minter()
@@ -1243,5 +1482,18 @@ access(all) contract LargemouthBassCoin: FungibleToken {
         
         let metadataAdmin <- create MetadataAdmin()
         self.account.storage.save(<-metadataAdmin, to: self.MetadataAdminStoragePath)
+        
+        // Create and store FishDEX coordinator
+        let fishDEXCoordinator <- create FishDEXCoordinator()
+        self.account.storage.save(<-fishDEXCoordinator, to: self.FishDEXCoordinatorStoragePath)
+        
+        // Create public capability for FishDEX coordinator
+        let coordinatorCapability = self.account.capabilities.storage.issue<&FishDEXCoordinator>(self.FishDEXCoordinatorStoragePath)
+        self.account.capabilities.publish(coordinatorCapability, at: self.FishDEXCoordinatorPublicPath)
+
+        let vault <- create Vault(balance: self.totalSupply)
+        self.account.storage.save(<-vault, to: self.VaultStoragePath)
+        let cap = self.account.capabilities.storage.issue<&LargemouthBassCoin.Vault>(self.VaultStoragePath)
+        self.account.capabilities.publish(cap, at: self.VaultPublicPath)
     }
 }

@@ -2,7 +2,7 @@ import "FungibleToken"
 import "MetadataViews"
 import "FungibleTokenMetadataViews"
 
-access(all) contract NorthernPikeCoin: FungibleToken {
+access(all) contract AtlanticTarponCoin: FungibleToken {
 
     // FISHDEX INTEGRATION - Cross-contract coordination interface
     access(all) resource interface SpeciesCoinPublic {
@@ -13,7 +13,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         access(all) view fun getFamily(): String
         access(all) view fun getTotalSupply(): UFix64
         access(all) view fun getBasicRegistryInfo(): {String: AnyStruct}
-        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @NorthernPikeCoin.Vault
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @AtlanticTarponCoin.Vault
     }
 
     // FISHDEX COORDINATION - Registry management
@@ -496,10 +496,10 @@ access(all) contract NorthernPikeCoin: FungibleToken {
                     storagePath: self.VaultStoragePath,
                     receiverPath: self.VaultPublicPath,
                     metadataPath: self.VaultPublicPath,
-                    receiverLinkedType: Type<&NorthernPikeCoin.Vault>(),
-                    metadataLinkedType: Type<&NorthernPikeCoin.Vault>(),
+                    receiverLinkedType: Type<&AtlanticTarponCoin.Vault>(),
+                    metadataLinkedType: Type<&AtlanticTarponCoin.Vault>(),
                     createEmptyVaultFunction: (fun(): @{FungibleToken.Vault} {
-                        return <-NorthernPikeCoin.createEmptyVault(vaultType: Type<@NorthernPikeCoin.Vault>())
+                        return <-AtlanticTarponCoin.createEmptyVault(vaultType: Type<@AtlanticTarponCoin.Vault>())
                     })
                 )
             case Type<FungibleTokenMetadataViews.TotalSupply>():
@@ -513,27 +513,27 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         
         // Interface implementation for FishDEX registry
         access(all) view fun getSpeciesCode(): String {
-            return NorthernPikeCoin.speciesMetadata.speciesCode
+            return AtlanticTarponCoin.speciesMetadata.speciesCode
         }
         
         access(all) view fun getTicker(): String {
-            return NorthernPikeCoin.speciesMetadata.ticker
+            return AtlanticTarponCoin.speciesMetadata.ticker
         }
         
         access(all) view fun getCommonName(): String {
-            return NorthernPikeCoin.speciesMetadata.commonName
+            return AtlanticTarponCoin.speciesMetadata.commonName
         }
         
         access(all) view fun getScientificName(): String {
-            return NorthernPikeCoin.speciesMetadata.scientificName
+            return AtlanticTarponCoin.speciesMetadata.scientificName
         }
         
         access(all) view fun getFamily(): String {
-            return NorthernPikeCoin.speciesMetadata.family
+            return AtlanticTarponCoin.speciesMetadata.family
         }
         
         access(all) view fun getTotalSupply(): UFix64 {
-            return NorthernPikeCoin.totalSupply
+            return AtlanticTarponCoin.totalSupply
         }
         
         access(all) view fun getBasicRegistryInfo(): {String: AnyStruct} {
@@ -544,16 +544,16 @@ access(all) contract NorthernPikeCoin: FungibleToken {
                 "scientificName": self.getScientificName(),
                 "family": self.getFamily(),
                 "totalSupply": self.getTotalSupply(),
-                "contractAddress": NorthernPikeCoin.account.address,
-                "dataYear": NorthernPikeCoin.speciesMetadata.dataYear,
-                "conservationStatus": NorthernPikeCoin.speciesMetadata.globalConservationStatus,
-                "rarityTier": NorthernPikeCoin.speciesMetadata.rarityTier,
-                "isRegistered": NorthernPikeCoin.isRegisteredWithFishDEX
+                "contractAddress": AtlanticTarponCoin.account.address,
+                "dataYear": AtlanticTarponCoin.speciesMetadata.dataYear,
+                "conservationStatus": AtlanticTarponCoin.speciesMetadata.globalConservationStatus,
+                "rarityTier": AtlanticTarponCoin.speciesMetadata.rarityTier,
+                "isRegistered": AtlanticTarponCoin.isRegisteredWithFishDEX
             }
         }
         
         // Process catch verification from Fish NFT contracts
-        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @NorthernPikeCoin.Vault {
+        access(all) fun redeemCatchNFT(fishData: {String: AnyStruct}, angler: Address): @AtlanticTarponCoin.Vault {
             // Validate fish data matches this species
             if let fishSpeciesCode = fishData["speciesCode"] as? String {
                 assert(
@@ -568,22 +568,22 @@ access(all) contract NorthernPikeCoin: FungibleToken {
             // Validate NFT hasn't been redeemed before
             if let nftId = fishNFTId {
                 assert(
-                    NorthernPikeCoin.fishNFTRegistry[nftId] == nil,
+                    AtlanticTarponCoin.fishNFTRegistry[nftId] == nil,
                     message: "This NFT has already been redeemed for a coin"
                 )
                 // Record this NFT as redeemed
-                NorthernPikeCoin.fishNFTRegistry[nftId] = true
+                AtlanticTarponCoin.fishNFTRegistry[nftId] = true
             }
             
             // Auto-record first catch if this is the very first mint
-            if NorthernPikeCoin.totalSupply == 0.0 && NorthernPikeCoin.speciesMetadata.firstCatchDate == nil {
-                NorthernPikeCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+            if AtlanticTarponCoin.totalSupply == 0.0 && AtlanticTarponCoin.speciesMetadata.firstCatchDate == nil {
+                AtlanticTarponCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
             }
             
             // Mint 1 coin for verified catch
             let amount: UFix64 = 1.0
-            NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply + amount
+            AtlanticTarponCoin.totalSupply = AtlanticTarponCoin.totalSupply + amount
             
             // Create vault with the minted amount (not empty!)
             let vault <- create Vault(balance: amount)
@@ -602,7 +602,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         // Register this species with FishDEX
         access(all) fun registerWithFishDEX(fishDEXAddress: Address) {
             pre {
-                !NorthernPikeCoin.isRegisteredWithFishDEX: "Already registered with FishDEX"
+                !AtlanticTarponCoin.isRegisteredWithFishDEX: "Already registered with FishDEX"
             }
             
             emit FishDEXRegistrationAttempted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
@@ -613,17 +613,17 @@ access(all) contract NorthernPikeCoin: FungibleToken {
             // Call FishDEX registration function
             // Note: This will be completed when FishDEX contract is implemented
             // For now, just update our state
-            NorthernPikeCoin.fishDEXAddress = fishDEXAddress
-            NorthernPikeCoin.isRegisteredWithFishDEX = true
+            AtlanticTarponCoin.fishDEXAddress = fishDEXAddress
+            AtlanticTarponCoin.isRegisteredWithFishDEX = true
             
             emit FishDEXRegistrationCompleted(fishDEXAddress: fishDEXAddress, speciesCode: self.getSpeciesCode())
         }
         
         // Update FishDEX address (admin only via proper access)
         access(all) fun updateFishDEXAddress(newAddress: Address) {
-            let oldAddress = NorthernPikeCoin.fishDEXAddress
-            NorthernPikeCoin.fishDEXAddress = newAddress
-            NorthernPikeCoin.isRegisteredWithFishDEX = false // Reset registration status
+            let oldAddress = AtlanticTarponCoin.fishDEXAddress
+            AtlanticTarponCoin.fishDEXAddress = newAddress
+            AtlanticTarponCoin.isRegisteredWithFishDEX = false // Reset registration status
             emit FishDEXAddressUpdated(oldAddress: oldAddress, newAddress: newAddress)
         }
     }
@@ -638,45 +638,45 @@ access(all) contract NorthernPikeCoin: FungibleToken {
 
         access(contract) fun burnCallback() {
             if self.balance > 0.0 {
-                NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply - self.balance
+                AtlanticTarponCoin.totalSupply = AtlanticTarponCoin.totalSupply - self.balance
                 emit TokensBurned(amount: self.balance, from: self.owner?.address)
             }
             self.balance = 0.0
         }
 
         access(all) view fun getViews(): [Type] {
-            return NorthernPikeCoin.getContractViews(resourceType: nil)
+            return AtlanticTarponCoin.getContractViews(resourceType: nil)
         }
 
         access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return NorthernPikeCoin.resolveContractView(resourceType: nil, viewType: view)
+            return AtlanticTarponCoin.resolveContractView(resourceType: nil, viewType: view)
         }
 
         access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            return {Type<@NorthernPikeCoin.Vault>(): true}
+            return {Type<@AtlanticTarponCoin.Vault>(): true}
         }
 
         access(all) view fun isSupportedVaultType(type: Type): Bool {
-            return type == Type<@NorthernPikeCoin.Vault>()
+            return type == Type<@AtlanticTarponCoin.Vault>()
         }
 
         access(all) view fun isAvailableToWithdraw(amount: UFix64): Bool {
             return amount <= self.balance
         }
 
-        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @NorthernPikeCoin.Vault {
+        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @AtlanticTarponCoin.Vault {
             self.balance = self.balance - amount
             return <-create Vault(balance: amount)
         }
 
         access(all) fun deposit(from: @{FungibleToken.Vault}) {
-            let vault <- from as! @NorthernPikeCoin.Vault
+            let vault <- from as! @AtlanticTarponCoin.Vault
             self.balance = self.balance + vault.balance
             vault.balance = 0.0
             destroy vault
         }
 
-        access(all) fun createEmptyVault(): @NorthernPikeCoin.Vault {
+        access(all) fun createEmptyVault(): @AtlanticTarponCoin.Vault {
             return <-create Vault(balance: 0.0)
         }
     }
@@ -684,25 +684,25 @@ access(all) contract NorthernPikeCoin: FungibleToken {
     // Minter Resource - Admin only
     access(all) resource Minter {
         
-        access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @NorthernPikeCoin.Vault {
+        access(all) fun mintForCatch(amount: UFix64, fishId: UInt64, angler: Address): @AtlanticTarponCoin.Vault {
             pre {
                 amount == 1.0: "Only 1 coin per verified catch"
-                NorthernPikeCoin.fishNFTRegistry[fishId] == nil: "This NFT has already been used to mint a coin"
+                AtlanticTarponCoin.fishNFTRegistry[fishId] == nil: "This NFT has already been used to mint a coin"
             }
             
             // Record this NFT as used
-            NorthernPikeCoin.fishNFTRegistry[fishId] = true
+            AtlanticTarponCoin.fishNFTRegistry[fishId] = true
             
             // Auto-record first catch if this is the very first mint
-            if NorthernPikeCoin.totalSupply == 0.0 && NorthernPikeCoin.speciesMetadata.firstCatchDate == nil {
-                NorthernPikeCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
+            if AtlanticTarponCoin.totalSupply == 0.0 && AtlanticTarponCoin.speciesMetadata.firstCatchDate == nil {
+                AtlanticTarponCoin.speciesMetadata.setFirstCatchDate(UInt64(getCurrentBlock().timestamp))
                 emit FirstCatchRecorded(timestamp: UInt64(getCurrentBlock().timestamp), angler: angler)
                 
                 // Auto-register with FishDEX after first mint if FishDEX address is set
                 self.autoRegisterWithFishDEX()
             }
             
-            NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply + amount
+            AtlanticTarponCoin.totalSupply = AtlanticTarponCoin.totalSupply + amount
             
             emit TokensMinted(amount: amount, to: angler)
             emit CatchVerified(fishId: fishId, angler: angler, amount: amount)
@@ -712,11 +712,11 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         
         // Auto-registration helper function
         access(all) fun autoRegisterWithFishDEX() {
-            if let fishDEXAddr = NorthernPikeCoin.fishDEXAddress {
-                if !NorthernPikeCoin.isRegisteredWithFishDEX {
+            if let fishDEXAddr = AtlanticTarponCoin.fishDEXAddress {
+                if !AtlanticTarponCoin.isRegisteredWithFishDEX {
                     // Get reference to FishDEX coordinator
-                    if let coordinatorRef = NorthernPikeCoin.account.capabilities.borrow<&FishDEXCoordinator>(
-                        NorthernPikeCoin.FishDEXCoordinatorPublicPath
+                    if let coordinatorRef = AtlanticTarponCoin.account.capabilities.borrow<&FishDEXCoordinator>(
+                        AtlanticTarponCoin.FishDEXCoordinatorPublicPath
                     ) {
                         coordinatorRef.registerWithFishDEX(fishDEXAddress: fishDEXAddr)
                     }
@@ -726,16 +726,16 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         
         // Manual FishDEX registration (admin function)
         access(all) fun registerWithFishDEXManually(fishDEXAddress: Address) {
-            NorthernPikeCoin.fishDEXAddress = fishDEXAddress
+            AtlanticTarponCoin.fishDEXAddress = fishDEXAddress
             self.autoRegisterWithFishDEX()
         }
 
-        access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: NorthernPikeCoin.Vault} {
-            let vaults: @{Address: NorthernPikeCoin.Vault} <- {}
+        access(all) fun mintBatch(recipients: {Address: UFix64}): @{Address: AtlanticTarponCoin.Vault} {
+            let vaults: @{Address: AtlanticTarponCoin.Vault} <- {}
             
             for recipient in recipients.keys {
                 let amount = recipients[recipient]!
-                NorthernPikeCoin.totalSupply = NorthernPikeCoin.totalSupply + amount
+                AtlanticTarponCoin.totalSupply = AtlanticTarponCoin.totalSupply + amount
                 
                 let vault <- create Vault(balance: amount)
                 let oldVault <- vaults[recipient] <- vault
@@ -752,34 +752,34 @@ access(all) contract NorthernPikeCoin: FungibleToken {
     access(all) resource MetadataAdmin {
         
         access(all) fun updateImageURL(newURL: String) {
-            let oldURL = NorthernPikeCoin.speciesMetadata.imageURL ?? ""
-            NorthernPikeCoin.speciesMetadata.setImageURL(newURL)
+            let oldURL = AtlanticTarponCoin.speciesMetadata.imageURL ?? ""
+            AtlanticTarponCoin.speciesMetadata.setImageURL(newURL)
             emit MetadataUpdated(field: "imageURL", oldValue: oldURL, newValue: newURL)
         }
         
         access(all) fun updateDescription(newDescription: String) {
-            let oldDescription = NorthernPikeCoin.speciesMetadata.description
-            NorthernPikeCoin.speciesMetadata.setDescription(newDescription)
+            let oldDescription = AtlanticTarponCoin.speciesMetadata.description
+            AtlanticTarponCoin.speciesMetadata.setDescription(newDescription)
             emit MetadataUpdated(field: "description", oldValue: oldDescription, newValue: newDescription)
         }
         
 
             
         access(all) fun updateHabitat(newHabitat: String) {
-            let oldHabitat = NorthernPikeCoin.speciesMetadata.habitat ?? ""
-            NorthernPikeCoin.speciesMetadata.setHabitat(newHabitat)
+            let oldHabitat = AtlanticTarponCoin.speciesMetadata.habitat ?? ""
+            AtlanticTarponCoin.speciesMetadata.setHabitat(newHabitat)
             emit MetadataUpdated(field: "habitat", oldValue: oldHabitat, newValue: newHabitat)
         }
         
         access(all) fun updateAverageWeight(newWeight: UFix64) {
-            let oldWeight = NorthernPikeCoin.speciesMetadata.averageWeight?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setAverageWeight(newWeight)
+            let oldWeight = AtlanticTarponCoin.speciesMetadata.averageWeight?.toString() ?? "0.0"
+            AtlanticTarponCoin.speciesMetadata.setAverageWeight(newWeight)
             emit MetadataUpdated(field: "averageWeight", oldValue: oldWeight, newValue: newWeight.toString())
         }
         
         access(all) fun updateAverageLength(newLength: UFix64) {
-            let oldLength = NorthernPikeCoin.speciesMetadata.averageLength?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setAverageLength(newLength)
+            let oldLength = AtlanticTarponCoin.speciesMetadata.averageLength?.toString() ?? "0.0"
+            AtlanticTarponCoin.speciesMetadata.setAverageLength(newLength)
             emit MetadataUpdated(field: "averageLength", oldValue: oldLength, newValue: newLength.toString())
         }
         
@@ -787,36 +787,36 @@ access(all) contract NorthernPikeCoin: FungibleToken {
             pre {
                 newTier >= 1 && newTier <= 5: "Invalid rarity tier (must be 1-5)"
             }
-            let oldTier = NorthernPikeCoin.speciesMetadata.rarityTier?.toString() ?? "0"
-            NorthernPikeCoin.speciesMetadata.setRarityTier(newTier)
+            let oldTier = AtlanticTarponCoin.speciesMetadata.rarityTier?.toString() ?? "0"
+            AtlanticTarponCoin.speciesMetadata.setRarityTier(newTier)
             emit MetadataUpdated(field: "rarityTier", oldValue: oldTier, newValue: newTier.toString())
         }
         
         access(all) fun manuallySetFirstCatch(timestamp: UInt64, angler: Address) {
             pre {
-                NorthernPikeCoin.speciesMetadata.firstCatchDate == nil: "First catch already recorded"
+                AtlanticTarponCoin.speciesMetadata.firstCatchDate == nil: "First catch already recorded"
             }
-            NorthernPikeCoin.speciesMetadata.setFirstCatchDate(timestamp)
+            AtlanticTarponCoin.speciesMetadata.setFirstCatchDate(timestamp)
             emit FirstCatchRecorded(timestamp: timestamp, angler: angler)
             emit MetadataUpdated(field: "firstCatchDate", oldValue: "", newValue: timestamp.toString())
         }
         
         // FishDEX-specific metadata updates
         access(all) fun updateConservationStatus(newStatus: String) {
-            let oldStatus = NorthernPikeCoin.speciesMetadata.globalConservationStatus ?? ""
-            NorthernPikeCoin.speciesMetadata.setConservationStatus(newStatus)
+            let oldStatus = AtlanticTarponCoin.speciesMetadata.globalConservationStatus ?? ""
+            AtlanticTarponCoin.speciesMetadata.setConservationStatus(newStatus)
             emit MetadataUpdated(field: "globalConservationStatus", oldValue: oldStatus, newValue: newStatus)
         }
         
         access(all) fun updateNativeRegions(newRegions: [String]) {
             var oldRegionsStr = "["
-            for i, region in NorthernPikeCoin.speciesMetadata.nativeRegions {
+            for i, region in AtlanticTarponCoin.speciesMetadata.nativeRegions {
                 if i > 0 { oldRegionsStr = oldRegionsStr.concat(",") }
                 oldRegionsStr = oldRegionsStr.concat(region)
             }
             oldRegionsStr = oldRegionsStr.concat("]")
             
-            NorthernPikeCoin.speciesMetadata.setNativeRegions(newRegions)
+            AtlanticTarponCoin.speciesMetadata.setNativeRegions(newRegions)
             
             var newRegionsStr = "["
             for i, region in newRegions {
@@ -829,45 +829,45 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         }
         
         access(all) fun updateSeasonalPatterns(newPatterns: String) {
-            let oldPatterns = NorthernPikeCoin.speciesMetadata.seasonalPatterns ?? ""
-            NorthernPikeCoin.speciesMetadata.setSeasonalPatterns(newPatterns)
+            let oldPatterns = AtlanticTarponCoin.speciesMetadata.seasonalPatterns ?? ""
+            AtlanticTarponCoin.speciesMetadata.setSeasonalPatterns(newPatterns)
             emit MetadataUpdated(field: "seasonalPatterns", oldValue: oldPatterns, newValue: newPatterns)
         }
         
         access(all) fun updateRecordWeight(newRecord: UFix64) {
-            let oldRecord = NorthernPikeCoin.speciesMetadata.recordWeight?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setRecordWeight(newRecord)
+            let oldRecord = AtlanticTarponCoin.speciesMetadata.recordWeight?.toString() ?? "0.0"
+            AtlanticTarponCoin.speciesMetadata.setRecordWeight(newRecord)
             emit MetadataUpdated(field: "recordWeight", oldValue: oldRecord, newValue: newRecord.toString())
         }
         
         access(all) fun updateRecordLength(newRecord: UFix64) {
-            let oldRecord = NorthernPikeCoin.speciesMetadata.recordLength?.toString() ?? "0.0"
-            NorthernPikeCoin.speciesMetadata.setRecordLength(newRecord)
+            let oldRecord = AtlanticTarponCoin.speciesMetadata.recordLength?.toString() ?? "0.0"
+            AtlanticTarponCoin.speciesMetadata.setRecordLength(newRecord)
             emit MetadataUpdated(field: "recordLength", oldValue: oldRecord, newValue: newRecord.toString())
         }
         
         // MISSING: Record location and date admin functions
         access(all) fun updateRecordWeightLocation(newLocation: String?) {
-            let oldLocation = NorthernPikeCoin.speciesMetadata.recordWeightLocation ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordWeightLocation(newLocation)
+            let oldLocation = AtlanticTarponCoin.speciesMetadata.recordWeightLocation ?? ""
+            AtlanticTarponCoin.speciesMetadata.setRecordWeightLocation(newLocation)
             emit MetadataUpdated(field: "recordWeightLocation", oldValue: oldLocation, newValue: newLocation ?? "")
         }
         
         access(all) fun updateRecordWeightDate(newDate: String?) {
-            let oldDate = NorthernPikeCoin.speciesMetadata.recordWeightDate ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordWeightDate(newDate)
+            let oldDate = AtlanticTarponCoin.speciesMetadata.recordWeightDate ?? ""
+            AtlanticTarponCoin.speciesMetadata.setRecordWeightDate(newDate)
             emit MetadataUpdated(field: "recordWeightDate", oldValue: oldDate, newValue: newDate ?? "")
         }
         
         access(all) fun updateRecordLengthLocation(newLocation: String?) {
-            let oldLocation = NorthernPikeCoin.speciesMetadata.recordLengthLocation ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordLengthLocation(newLocation)
+            let oldLocation = AtlanticTarponCoin.speciesMetadata.recordLengthLocation ?? ""
+            AtlanticTarponCoin.speciesMetadata.setRecordLengthLocation(newLocation)
             emit MetadataUpdated(field: "recordLengthLocation", oldValue: oldLocation, newValue: newLocation ?? "")
         }
         
         access(all) fun updateRecordLengthDate(newDate: String?) {
-            let oldDate = NorthernPikeCoin.speciesMetadata.recordLengthDate ?? ""
-            NorthernPikeCoin.speciesMetadata.setRecordLengthDate(newDate)
+            let oldDate = AtlanticTarponCoin.speciesMetadata.recordLengthDate ?? ""
+            AtlanticTarponCoin.speciesMetadata.setRecordLengthDate(newDate)
             emit MetadataUpdated(field: "recordLengthDate", oldValue: oldDate, newValue: newDate ?? "")
         }
         
@@ -887,76 +887,76 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         // MISSING: Community data curation approval
         access(all) fun approvePendingUpdate(index: Int) {
             pre {
-                index >= 0 && index < NorthernPikeCoin.pendingUpdates.length: "Invalid update index"
+                index >= 0 && index < AtlanticTarponCoin.pendingUpdates.length: "Invalid update index"
             }
-            let update = NorthernPikeCoin.pendingUpdates.remove(at: index)
+            let update = AtlanticTarponCoin.pendingUpdates.remove(at: index)
             // Apply the update based on field type
             emit MetadataUpdated(field: update.field, oldValue: "pending", newValue: update.newValue)
         }
         
         access(all) fun rejectPendingUpdate(index: Int) {
             pre {
-                index >= 0 && index < NorthernPikeCoin.pendingUpdates.length: "Invalid update index"
+                index >= 0 && index < AtlanticTarponCoin.pendingUpdates.length: "Invalid update index"
             }
-            NorthernPikeCoin.pendingUpdates.remove(at: index)
+            AtlanticTarponCoin.pendingUpdates.remove(at: index)
         }
         
         access(all) fun clearAllPendingUpdates() {
-            NorthernPikeCoin.pendingUpdates = []
+            AtlanticTarponCoin.pendingUpdates = []
         }
         
         // ENHANCED ADMIN FUNCTIONS WITH VALIDATION
         access(all) fun updateRarityTierValidated(newTier: UInt8) {
             pre {
-                NorthernPikeCoin.validateRating(newTier): "Invalid rarity tier (must be 1-10)"
+                AtlanticTarponCoin.validateRating(newTier): "Invalid rarity tier (must be 1-10)"
             }
-            let oldTier = NorthernPikeCoin.speciesMetadata.rarityTier?.toString() ?? "0"
-            NorthernPikeCoin.speciesMetadata.setRarityTier(newTier)
+            let oldTier = AtlanticTarponCoin.speciesMetadata.rarityTier?.toString() ?? "0"
+            AtlanticTarponCoin.speciesMetadata.setRarityTier(newTier)
             emit MetadataUpdated(field: "rarityTier", oldValue: oldTier, newValue: newTier.toString())
         }
         
         access(all) fun updateConservationStatusValidated(newStatus: String) {
             pre {
-                NorthernPikeCoin.validateConservationStatus(newStatus): "Invalid conservation status"
+                AtlanticTarponCoin.validateConservationStatus(newStatus): "Invalid conservation status"
             }
-            let oldStatus = NorthernPikeCoin.speciesMetadata.globalConservationStatus ?? ""
-            NorthernPikeCoin.speciesMetadata.setConservationStatus(newStatus)
+            let oldStatus = AtlanticTarponCoin.speciesMetadata.globalConservationStatus ?? ""
+            AtlanticTarponCoin.speciesMetadata.setConservationStatus(newStatus)
             emit MetadataUpdated(field: "globalConservationStatus", oldValue: oldStatus, newValue: newStatus)
         }
         
         access(all) fun updateFightRatingValidated(newRating: UInt8) {
             pre {
-                NorthernPikeCoin.validateRating(newRating): "Fight rating must be 1-10"
+                AtlanticTarponCoin.validateRating(newRating): "Fight rating must be 1-10"
             }
-            let oldRating = NorthernPikeCoin.speciesMetadata.fightRating?.toString() ?? "0"
-            NorthernPikeCoin.speciesMetadata.setFightRating(newRating)
+            let oldRating = AtlanticTarponCoin.speciesMetadata.fightRating?.toString() ?? "0"
+            AtlanticTarponCoin.speciesMetadata.setFightRating(newRating)
             emit MetadataUpdated(field: "fightRating", oldValue: oldRating, newValue: newRating.toString())
         }
         
         // TEMPORAL ADMIN FUNCTIONS
         access(all) fun archiveCurrentYear() {
-            let currentYear = NorthernPikeCoin.currentMetadataYear
-            NorthernPikeCoin.metadataHistory[currentYear] = NorthernPikeCoin.speciesMetadata
+            let currentYear = AtlanticTarponCoin.currentMetadataYear
+            AtlanticTarponCoin.metadataHistory[currentYear] = AtlanticTarponCoin.speciesMetadata
             emit YearlyMetadataCreated(year: currentYear)
         }
         
         access(all) fun updateToNewYear(_ newYear: UInt64) {
             pre {
-                newYear > NorthernPikeCoin.currentMetadataYear: "New year must be greater than current year"
+                newYear > AtlanticTarponCoin.currentMetadataYear: "New year must be greater than current year"
             }
             // Archive current year data
             self.archiveCurrentYear()
             
-            let oldYear = NorthernPikeCoin.currentMetadataYear
-            NorthernPikeCoin.currentMetadataYear = newYear
+            let oldYear = AtlanticTarponCoin.currentMetadataYear
+            AtlanticTarponCoin.currentMetadataYear = newYear
             emit MetadataYearUpdated(oldYear: oldYear, newYear: newYear)
         }
     }
 
     // Public functions
-    access(all) fun createEmptyVault(vaultType: Type): @NorthernPikeCoin.Vault {
+    access(all) fun createEmptyVault(vaultType: Type): @AtlanticTarponCoin.Vault {
         pre {
-            vaultType == Type<@NorthernPikeCoin.Vault>(): "Vault type mismatch"
+            vaultType == Type<@AtlanticTarponCoin.Vault>(): "Vault type mismatch"
         }
         return <-create Vault(balance: 0.0)
     }
@@ -1288,16 +1288,16 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         return self.totalSupply
     }
     
-    // NOTE: NorthernPike coins represent permanent historical catch records
+    // NOTE: AtlanticTarpon coins represent permanent historical catch records
     // No burning functions provided - total supply always equals total verified catches
     // Only natural vault destruction (via burnCallback) affects individual balances
     
     // MISSING: Token utility functions
-    access(all) view fun getVaultBalance(vaultRef: &NorthernPikeCoin.Vault): UFix64 {
+    access(all) view fun getVaultBalance(vaultRef: &AtlanticTarponCoin.Vault): UFix64 {
         return vaultRef.balance
     }
     
-    access(all) view fun canWithdraw(vaultRef: &NorthernPikeCoin.Vault, amount: UFix64): Bool {
+    access(all) view fun canWithdraw(vaultRef: &AtlanticTarponCoin.Vault, amount: UFix64): Bool {
         return vaultRef.isAvailableToWithdraw(amount: amount)
     }
     
@@ -1312,7 +1312,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
     
     // MISSING: Token validation
     access(all) view fun isValidVaultType(vaultType: Type): Bool {
-        return vaultType == Type<@NorthernPikeCoin.Vault>()
+        return vaultType == Type<@AtlanticTarponCoin.Vault>()
     }
 
     // Contract initialization
@@ -1340,141 +1340,141 @@ access(all) contract NorthernPikeCoin: FungibleToken {
         // Set comprehensive species metadata for Example Fish
         self.speciesMetadata = SpeciesMetadata(
             // IMMUTABLE CORE FIELDS
-            speciesCode: "ESOX_LUCIUS",
-            ticker: "ESLUC",
-            scientificName: "Esox lucius",
-            family: "Esocidae",
+            speciesCode: "MEGALOPS_ATLANTICUS",
+            ticker: "MEGATL",
+            scientificName: "Megalops atlanticus",
+            family: "Megalopidae",
             dataYear: 2024,
             
             // BASIC DESCRIPTIVE FIELDS
-            commonName: "Northern Pike",
-            habitat: "Cool freshwater lakes, rivers, weedy shallow areas",
-            averageWeight: 8.0,
-            averageLength: 26.0,
-            imageURL: "https://derby.fish/images/species/NorthernPike.jpg",
-            description: "Northern Pike are aggressive freshwater predators known for their explosive strikes and razor-sharp teeth. They are ambush hunters that lurk in weedy areas and are considered one of the most ferocious freshwater gamefish.",
+            commonName: "Atlantic Tarpon",
+            habitat: "Coastal saltwater, estuaries, mangroves, some freshwater",
+            averageWeight: 125.0,
+            averageLength: 72.0,
+            imageURL: "https://derby.fish/images/species/AtlanticTarpon.jpg",
+            description: "Atlantic Tarpon are legendary gamefish known as the 'Silver King' for their incredible size, acrobatic jumps, and massive silver scales. They are primarily a catch-and-release species, prized for their fighting ability rather than table fare.",
             firstCatchDate: nil,
-            rarityTier: 3,
+            rarityTier: 4,
             
             // CONSERVATION & POPULATION
-            globalConservationStatus: "Least Concern",
+            globalConservationStatus: "Vulnerable",
             regionalPopulations: {
-                "Great Lakes": RegionalPopulation(
-                    populationTrend: "Stable",
-                    threats: ["Climate Change", "Habitat Loss", "Overfishing"],
-                    protectedAreas: ["Great Lakes National Marine Sanctuaries"],
+                "Gulf of Mexico": RegionalPopulation(
+                    populationTrend: "Declining",
+                    threats: ["Overfishing", "Habitat Loss", "Climate Change"],
+                    protectedAreas: ["Marine Protected Areas", "Coastal Reserves"],
                     estimatedPopulation: nil
                 ),
-                "Canadian Shield": RegionalPopulation(
-                    populationTrend: "Stable",
-                    threats: ["Acid Rain", "Mining Pollution", "Climate Change"],
-                    protectedAreas: ["Algonquin Provincial Park", "Quetico Provincial Park"],
+                "Caribbean": RegionalPopulation(
+                    populationTrend: "Declining",
+                    threats: ["Coastal Development", "Pollution", "Overfishing"],
+                    protectedAreas: ["Caribbean Marine Protected Areas"],
                     estimatedPopulation: nil
                 ),
-                "Alaska": RegionalPopulation(
+                "Florida Atlantic": RegionalPopulation(
                     populationTrend: "Stable",
-                    threats: ["Climate Change", "Habitat Modification"],
-                    protectedAreas: ["Alaska National Wildlife Refuges"],
+                    threats: ["Development", "Water Quality", "Boat Traffic"],
+                    protectedAreas: ["Everglades National Park", "Florida Keys Marine Sanctuaries"],
                     estimatedPopulation: nil
                 )
             },
             
             // BIOLOGICAL INTELLIGENCE
-            lifespan: 25.0,
-            diet: "Fish, frogs, small mammals, waterfowl, crayfish",
-            predators: ["Muskellunge", "Larger Pike", "Humans", "Cormorants"],
-            temperatureRange: "32-75°F (optimal 50-65°F)",
-            depthRange: "0-40 feet",
-            spawningAge: 3.0,
-            spawningBehavior: "Spawns in shallow weedy areas in early spring, scatters eggs over vegetation",
-            migrationPattern: "Moves to shallow weedy areas in spring, deeper water in summer",
-            waterQualityNeeds: "pH 6.0-8.0, moderate dissolved oxygen, tolerates various conditions",
+            lifespan: 80.0,
+            diet: "Mullet, pinfish, sardines, anchovies, shrimp, crabs",
+            predators: ["Large Sharks", "Humans"],
+            temperatureRange: "70-85°F (optimal 78-82°F)",
+            depthRange: "0-100 feet",
+            spawningAge: 12.0,
+            spawningBehavior: "Spawns offshore in deep water, releases millions of pelagic eggs",
+            migrationPattern: "Highly migratory, follows warm water masses and baitfish schools",
+            waterQualityNeeds: "Warm saltwater, can tolerate some freshwater, needs good dissolved oxygen",
             
             // GEOGRAPHIC & HABITAT
-            nativeRegions: ["Northern North America", "Europe", "Asia"],
-            currentRange: ["Northern US", "Canada", "Alaska", "Introduced to some southern states"],
-            waterTypes: ["Lake", "River", "Reservoir", "Weedy Bays"],
-            invasiveStatus: "Native (introduced outside native range)",
+            nativeRegions: ["Atlantic Ocean", "Gulf of Mexico", "Caribbean Sea"],
+            currentRange: ["Western Atlantic", "Eastern Pacific", "Indo-Pacific"],
+            waterTypes: ["Coastal", "Estuarine", "Mangrove", "Nearshore"],
+            invasiveStatus: "Native",
             
             // ECONOMIC & COMMERCIAL
             regionalCommercialValue: {
-                "Great Lakes": 5.00,
-                "Minnesota": 7.00,
-                "Wisconsin": 6.00,
-                "Alaska": 4.00
+                "Florida": 0.00,
+                "Gulf Coast": 0.00,
+                "Caribbean": 5.00,
+                "Costa Rica": 0.00
             },
-            tourismValue: 8,
-            ecosystemRole: "Apex Predator, Population Control",
-            culturalSignificance: "Important in northern fishing culture, respected predator",
+            tourismValue: 10,
+            ecosystemRole: "Apex Predator, Key Coastal Species",
+            culturalSignificance: "Iconic gamefish, central to sport fishing tourism, important to coastal communities",
             
             // ANGLING & RECREATIONAL
-            bestBaits: ["Spoons", "Spinnerbaits", "Jerkbaits", "Large minnows", "Jigs"],
-            fightRating: 8,
-            culinaryRating: 6,
-            catchDifficulty: 5,
-            seasonalAvailability: "Best in spring and fall, active year-round",
-            bestTechniques: ["Casting", "Trolling", "Jigging", "Live bait fishing", "Fly fishing"],
+            bestBaits: ["Live mullet", "Crabs", "Shrimp", "Pinfish", "Sardines"],
+            fightRating: 10,
+            culinaryRating: 2,
+            catchDifficulty: 9,
+            seasonalAvailability: "Year-round in tropics, seasonal migrations to temperate waters",
+            bestTechniques: ["Live bait fishing", "Sight fishing", "Fly fishing", "Trolling", "Casting"],
             
             // REGULATORY
             regionalRegulations: {
-                "Minnesota": RegionalRegulations(
-                    sizeLimit: 26.0,
-                    bagLimit: 3,
-                    closedSeasons: ["March 1 - May 14"],
-                    specialRegulations: "Check specific lake regulations",
-                    licenseRequired: true
-                ),
-                "Wisconsin": RegionalRegulations(
-                    sizeLimit: 26.0,
-                    bagLimit: 5,
-                    closedSeasons: ["March 1 - May 6"],
-                    specialRegulations: "Varies by water body",
-                    licenseRequired: true
-                ),
-                "Alaska": RegionalRegulations(
-                    sizeLimit: 30.0,
-                    bagLimit: 5,
+                "Florida": RegionalRegulations(
+                    sizeLimit: 40.0,
+                    bagLimit: 2,
                     closedSeasons: [],
-                    specialRegulations: "Check local regulations",
+                    specialRegulations: "Catch and release encouraged, no harvest in many areas",
+                    licenseRequired: true
+                ),
+                "Texas": RegionalRegulations(
+                    sizeLimit: nil,
+                    bagLimit: 1,
+                    closedSeasons: [],
+                    specialRegulations: "Catch and release only in some areas",
+                    licenseRequired: true
+                ),
+                "Caribbean": RegionalRegulations(
+                    sizeLimit: nil,
+                    bagLimit: nil,
+                    closedSeasons: [],
+                    specialRegulations: "Varies by country, some have total protection",
                     licenseRequired: true
                 )
             },
             
             // PHYSICAL & BEHAVIORAL
-            physicalDescription: "Elongated body with dark green back, light spots, chain-like markings, large mouth with sharp teeth",
-            behaviorTraits: "Ambush predator, solitary, aggressive, territorial, structure-oriented",
-            seasonalPatterns: "Spring shallow spawning, summer deeper water, fall feeding, winter dormancy",
+            physicalDescription: "Massive silver body with enormous scales, deeply forked tail, upturned mouth, can reach 8 feet",
+            behaviorTraits: "Extraordinary jumpers, can leap 10+ feet, roll and shake to throw hooks, surface feeders",
+            seasonalPatterns: "Migrate to spawning areas, follow baitfish schools, more active at dawn/dusk",
             
             // RECORDS & ACHIEVEMENTS
-            recordWeight: 55.1,
-            recordWeightLocation: "Lake of Grefeern, Germany",
-            recordWeightDate: "October 16, 1986",
-            recordLength: 52.0,
-            recordLengthLocation: "Kettle Falls, Washington",
-            recordLengthDate: "May 7, 1992",
+            recordWeight: 286.0,
+            recordWeightLocation: "Lake Maracaibo, Venezuela",
+            recordWeightDate: "March 20, 1956",
+            recordLength: 102.0,
+            recordLengthLocation: "Key West, Florida",
+            recordLengthDate: "May 18, 2001",
             
             // RESEARCH & SCIENTIFIC
-            researchPriority: 7,
-            geneticMarkers: "Population genetics and hybridization studies",
-            studyPrograms: ["Minnesota DNR Pike Research", "Great Lakes Fishery Commission", "Alaska Department of Fish and Game"],
+            researchPriority: 9,
+            geneticMarkers: "Population genetics studies for conservation management",
+            studyPrograms: ["AtlanticTarpon Research Program", "Bonefish AtlanticTarpon Trust", "NOAA Fisheries Research"],
             
             // FLEXIBLE METADATA
             additionalMetadata: {
                 "last_updated": "2024-01-01",
                 "data_quality": "High",
                 "contributor": "DerbyFish Research Team",
-                "state_fish": "North Dakota",
-                "nickname": "Water Wolf"
+                "max_jump_height": "10+ feet",
+                "nickname": "Silver King"
             }
         )
 
         // Set storage paths using common name format
-        self.VaultStoragePath = /storage/NorthernPikeCoinVault
-        self.VaultPublicPath = /public/NorthernPikeCoinReceiver
-        self.MinterStoragePath = /storage/NorthernPikeCoinMinter
-        self.MetadataAdminStoragePath = /storage/NorthernPikeCoinMetadataAdmin
-        self.FishDEXCoordinatorStoragePath = /storage/NorthernPikeCoinFishDEXCoordinator
-        self.FishDEXCoordinatorPublicPath = /public/NorthernPikeCoinFishDEXCoordinator
+        self.VaultStoragePath = /storage/AtlanticTarponCoinVault
+        self.VaultPublicPath = /public/AtlanticTarponCoinReceiver
+        self.MinterStoragePath = /storage/AtlanticTarponCoinMinter
+        self.MetadataAdminStoragePath = /storage/AtlanticTarponCoinMetadataAdmin
+        self.FishDEXCoordinatorStoragePath = /storage/AtlanticTarponCoinFishDEXCoordinator
+        self.FishDEXCoordinatorPublicPath = /public/AtlanticTarponCoinFishDEXCoordinator
 
         // Create and store admin resources
         let minter <- create Minter()
@@ -1493,7 +1493,7 @@ access(all) contract NorthernPikeCoin: FungibleToken {
 
         let vault <- create Vault(balance: self.totalSupply)
         self.account.storage.save(<-vault, to: self.VaultStoragePath)
-        let cap = self.account.capabilities.storage.issue<&NorthernPikeCoin.Vault>(self.VaultStoragePath)
+        let cap = self.account.capabilities.storage.issue<&AtlanticTarponCoin.Vault>(self.VaultStoragePath)
         self.account.capabilities.publish(cap, at: self.VaultPublicPath)
     }
 }
