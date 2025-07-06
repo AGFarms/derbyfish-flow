@@ -88,6 +88,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"SpeckledTroutCoin": {
+			"source": "cadence/contracts/SpeckledTroutCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"SpottedBassCoin": {
 			"source": "cadence/contracts/SpottedBassCoin.cdc",
 			"aliases": {
