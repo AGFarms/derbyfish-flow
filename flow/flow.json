@@ -344,6 +344,13 @@
 		"mainnet": {
 			"mainnet-agfarms": [
 				"WalleyeCoin",
+				"BlueMarlinCoin",
+				"MuskellungeCoin",
+				"NorthernPikeCoin",
+				"RedfishCoin",
+				"SailfishCoin",
+				"SalmonCoin",
+				"SmallmouthBassCoin",
 				
 				"FishNFT",
 				"BaitCoin",
