@@ -7,6 +7,12 @@
 				"testnet": "86ef213d1c3a2b94"
 			}
 		},
+		"BlueCatfishCoin": {
+			"source": "cadence/contracts/BlueCatfishCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"CrappieCoin": {
 			"source": "cadence/contracts/CrappieCoin.cdc",
 			"aliases": {
