@@ -46,6 +46,12 @@
 			}
 		},
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
+		"MahiMahiCoin": {
+			"source": "cadence/contracts/MahiMahiCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"MarlinCoin": {
 			"source": "cadence/contracts/MarlinCoin.cdc",
 			"aliases": {
