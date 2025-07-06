@@ -153,6 +153,32 @@ flow scripts execute cadence/scripts/get_fish_card_by_id.cdc \
   ]'
 ```
 
+### 7. Transfer FishCards Between Accounts
+
+```bash
+# First ensure the recipient has a FishCard collection set up
+flow transactions send cadence/transactions/setup_fish_card_collection.cdc --signer test-acct-2
+
+# Transfer a FishCard from test-acct to recipient-acct
+flow transactions send cadence/transactions/transfer_fish_card.cdc \
+  --args-json '[
+    {"type": "Address", "value": "0xf3fcd2c1a78f5eee"},
+    {"type": "UInt64", "value": "1"}
+  ]' \
+  --signer test-acct
+
+# Verify the transfer
+flow scripts execute cadence/scripts/get_fish_card_ids.cdc \
+  --args-json '[{"type": "Address", "value": "0xf3fcd2c1a78f5eee"}]'
+
+# Check specific FishCard details
+flow scripts execute cadence/scripts/get_fish_card_by_id.cdc \
+  --args-json '[
+    {"type": "Address", "value": "0xf3fcd2c1a78f5eee"},
+    {"type": "UInt64", "value": "1"}
+  ]'
+```
+
 ## System Architecture
 
 ### Simplified Design
@@ -202,6 +228,7 @@ flow scripts execute cadence/scripts/get_fish_card_by_id.cdc \
 | `enable_fish_cards.cdc` | ✅ Working | Enable fish card minting for FishNFT |
 | `commit_fish_card.cdc` | ✅ Working | Commit FishCard mint with user salt |
 | `reveal_fish_card.cdc` | ✅ Working | Reveal and mint FishCard using receipt |
+| `transfer_fish_card.cdc` | ✅ Working | Transfer FishCard between accounts |
 
 ## Error Handling
 
