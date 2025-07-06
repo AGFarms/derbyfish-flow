@@ -82,6 +82,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"SailfishCoin": {
+			"source": "cadence/contracts/SailfishCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"SalmonCoin": {
 			"source": "cadence/contracts/SalmonCoin.cdc",
 			"aliases": {
