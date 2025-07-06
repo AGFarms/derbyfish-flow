@@ -7,6 +7,12 @@
 				"testnet": "86ef213d1c3a2b94"
 			}
 		},
+		"CrappieCoin": {
+			"source": "cadence/contracts/CrappieCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
 		"FishCardNFT": {
 			"source": "cadence/contracts/FishCardNFT.cdc",
