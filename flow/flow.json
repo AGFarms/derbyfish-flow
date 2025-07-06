@@ -46,6 +46,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"SpottedBassCoin": {
+			"source": "cadence/contracts/SpottedBassCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"WalleyeCoin": {
 			"source": "cadence/contracts/WalleyeCoin.cdc",
 			"aliases": {
