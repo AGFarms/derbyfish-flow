@@ -34,6 +34,12 @@
 			}
 		},
 		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
+		"NorthernPikeCoin": {
+			"source": "cadence/contracts/NorthernPikeCoin.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"RandomConsumer": {
 			"source": "cadence/contracts/RandomConsumer.cdc",
 			"aliases": {
