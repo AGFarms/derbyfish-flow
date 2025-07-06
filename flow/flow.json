@@ -343,7 +343,11 @@
 		},
 		"mainnet": {
 			"mainnet-agfarms": [
-				"WalleyeCoin",
+								"WalleyeCoin",
+				"BlueCatfishCoin",
+				"CrappieCoin",
+				"LargemouthBassCoin",
+				"MahiMahiCoin",
 				"BlueMarlinCoin",
 				"MuskellungeCoin",
 				"NorthernPikeCoin",
@@ -358,7 +362,8 @@
 				"AtlanticTarponCoin",
 				"RainbowTroutCoin",
 				"BluefinTunaCoin",
-				
+				"WahooCoin",
+	
 				"FishNFT",
 				"BaitCoin",
 				"Xorshift128plus"
