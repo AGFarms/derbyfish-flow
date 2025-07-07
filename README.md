@@ -1,8 +1,20 @@
 ## DerbyFish Flow Tokenomics & Architecture
 
+### Context
+
+DerbyFish is a sportsfishing platform designed to be the ultimate fishing hub for America's 70 million anglers. With over 1,000 active users and growing rapidly, we host continuous fishing derbies and tournaments. Our mission is to future-proof DerbyFish in the consumer fishing market by building a tokenomics ecosystem backed by verified real-world fish catches. During this hackathon, we implemented the core tokenomics system of DerbyFish, where every digital asset is directly supported by actual fish catches converted into NFTs. The system described below represents our fresh hackathon implementation.
+
 ### Overview
 
-DerbyFish creates the closest thing to real-life Pokémon through verified fish catching. The tokenomics is built on actual fish catches verified by the DerbyFish sanctioning body, creating a unique ecosystem where real-world fishing translates into digital assets.
+DerbyFish tokenomy operates through a verified catch-to-token conversion system:
+
+1. Verified catch → Non-transferable Fish NFT with immutable public data (species, size, location) and private metadata (conditions, techniques)
+2. Fish NFT redemption → Mints 1:1 species-specific fungible token (e.g., BassCoin), permanently locks NFT
+3. Species tokens function as index (containing species data) and tradeable asset with supply capped by verified catches
+4. Third parties mint FishCards (tradeable NFTs) from Fish NFTs through commit-reveal randomization, original angler receives royalties
+5. USDC-backed BaitCoin facilitates species token liquidity pools and marketplace transactions
+
+This creates a self-sustaining ecosystem where catch verification drives token supply, species rarity determines value, and privacy-preserving metadata randomization enables secondary markets.
 
 **Core System Components**:
 
