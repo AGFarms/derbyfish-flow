@@ -298,7 +298,6 @@
 				"index": 0,
 				"signatureAlgorithm": "ECDSA_secp256k1",
 				"hashAlgorithm": "SHA2_256",
-				"privateKey": "0719a7196b0bccf51af9798446ffec15aabe051bf84126218af0b9a07ff7a8f8"
 			}
 		}
 	},
