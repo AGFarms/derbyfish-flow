@@ -1,5 +1,12 @@
 ## DerbyFish Flow Tokenomics & Architecture
 
+### Links:
+
+- **Live Website**: [derby.fish](https://derby.fish)
+- **Demo Video**: [YouTube Demo](https://youtu.be/Xu32JWJTACc)
+- **Mainnet Deployment**: [FlowScan Account](https://www.flowscan.io/account/0x44100f14f70e3f78)
+
+
 ### Context
 
 DerbyFish is a sportsfishing platform designed to be the ultimate fishing hub for America's 70 million anglers. With over 1,000 active users and growing rapidly, we host continuous fishing derbies and tournaments. Our mission is to future-proof DerbyFish in the consumer fishing market by building a tokenomics ecosystem backed by verified real-world fish catches. During this hackathon, we implemented the core tokenomics system of DerbyFish, where every digital asset is directly supported by actual fish catches converted into NFTs. The system described below represents our fresh hackathon implementation.
