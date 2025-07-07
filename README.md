@@ -23,6 +23,19 @@ This creates a self-sustaining ecosystem where catch verification drives token s
 * **FishCards**: Tradeable NFT trading cards with randomized metadata reveals and royalties to original anglers
 * **Bait**: A 1:1 USDC-backed stablecoin for marketplace transactions, merchant integrations, and liquidity pools between species coins and BaitCoin
 
+### Vision & Implementation
+
+**The FishDEX Concept**: Think of it as the Pokédex, CoinMarketCap, and OpenSea having a baby - but for real fish. The FishDEX serves as both a comprehensive fish species index and decentralized exchange where verified catches drive token supply and trading.
+
+**Hackathon Implementation**: During PLGenesis Hackathon, we built a fully functional tokenomy on Flow mainnet where all users receive custodial Flow wallets, Fish NFT Collections, and Species Coin Vaults. The system processes real fish submissions through DerbyFish's BHRV virtual verification process.
+
+**Live System Flow**:
+1. **Fish & Species Coin Minting**: Anglers submit catches → DerbyFish sanctioning body verifies → Fish NFT minted with public core data and private catch metadata → Angler can redeem 1:1 species coin from Fish NFT
+2. **Fish Card Trading**: Fish catchers enable card minting → Others purchase cards → Random 50/50 coin toss on each private data field creates rarity tiers → Trade cards like Pokémon with original angler earning royalties
+3. **FishDEX Trading**: Verified anglers redeem species coins for BaitCoin → Liquidity pools enable species coin trading → Market-driven valuation based on catch rarity
+
+**Current Deployment**: Every Walleye submission becomes a Fish NFT on mainnet, including the record 26.25" catch from WalleyeFest 2025. FishCards are live and functional in contracts, ready for frontend integration. The FishDEX displays all on-chain species information and trading data.
+
 ### The Real Fish Catching Experience
 
 When an angler catches a fish and it gets verified by DerbyFish's sanctioning body, they receive a **Fish NFT** - a permanent, non-transferable digital asset that represents their actual catch. This NFT contains both public core information and private metadata fields:
