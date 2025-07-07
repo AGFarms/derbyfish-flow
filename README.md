@@ -5,6 +5,10 @@
 - **Live Website**: [derby.fish](https://derby.fish)
 - **Demo Video**: [YouTube Demo](https://youtu.be/Xu32JWJTACc)
 - **Mainnet Deployment**: [FlowScan Account](https://www.flowscan.io/account/0x44100f14f70e3f78)
+- **Gianyrox on X**: [@Gianyrox](https://x.com/Gianyrox)
+- **DerbyFish on X**: [@derby_fish](https://x.com/derby_fish)
+
+
 
 
 ### Context
