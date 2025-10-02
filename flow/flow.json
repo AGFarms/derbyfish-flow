@@ -3,168 +3,21 @@
 		"BaitCoin": {
 			"source": "cadence/contracts/BaitCoin.cdc",
 			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "86ef213d1c3a2b94",
-				"mainnet": "44100f14f70e3f78"
+				"testing": "0000000000000007"
 			}
 		},
-		"BlueCatfishCoin": {
-			"source": "cadence/contracts/BlueCatfishCoin.cdc",
+		"Counter": {
+			"source": "cadence/contracts/Counter.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
 		},
-		"CrappieCoin": {
-			"source": "cadence/contracts/CrappieCoin.cdc",
+		"USDF": {
+			"source": "mainnet://1e4aa0b87d10b141.EVMVMBridgedToken_2aabea2058b5ac2d339b163c6ab6f2b6d53aabed",
 			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"ExampleFishCoin": "cadence/contracts/ExampleFishCoin.cdc",
-		"FishCardNFT": {
-			"source": "cadence/contracts/FishCardNFT.cdc",
-			"aliases": {
-				"testing": "0000000000000007",
-				"mainnet": "44100f14f70e3f78"
-			}
-		},
-		"FishCardnFT2": {
-			"source": "cadence/contracts/FishCardnFT2.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"FishNFT": {
-			"source": "cadence/contracts/FishNFT.cdc",
-			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "86ef213d1c3a2b94",
-				"mainnet": "44100f14f70e3f78"
-			}
-		},
-		"Fishdex": {
-			"source": "cadence/contracts/Fishdex.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"LargemouthBassCoin": "cadence/contracts/LargemouthBassCoin.cdc",
-		"MahiMahiCoin": {
-			"source": "cadence/contracts/MahiMahiCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"BlueMarlinCoin": {
-			"source": "cadence/contracts/BlueMarlinCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"MuskellungeCoin": {
-			"source": "cadence/contracts/MuskellungeCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"NorthernPikeCoin": {
-			"source": "cadence/contracts/NorthernPikeCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"RandomConsumer": {
-			"source": "cadence/contracts/RandomConsumer.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"RedfishCoin": {
-			"source": "cadence/contracts/RedfishCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SailfishCoin": {
-			"source": "cadence/contracts/SailfishCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SalmonCoin": {
-			"source": "cadence/contracts/SalmonCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SmallmouthBassCoin": {
-			"source": "cadence/contracts/SmallmouthBassCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SnookCoin": {
-			"source": "cadence/contracts/SnookCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SpeckledTroutCoin": {
-			"source": "cadence/contracts/SpeckledTroutCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"SpottedBassCoin": {
-			"source": "cadence/contracts/SpottedBassCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"StripedBassCoin": {
-			"source": "cadence/contracts/StripedBassCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"AtlanticTarponCoin": {
-			"source": "cadence/contracts/AtlanticTarponCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"RainbowTroutCoin": {
-			"source": "cadence/contracts/RainbowTroutCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"BluefinTunaCoin": {
-			"source": "cadence/contracts/BluefinTunaCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"WahooCoin": {
-			"source": "cadence/contracts/WahooCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"WalleyeCoin": {
-			"source": "cadence/contracts/WalleyeCoin.cdc",
-			"aliases": {
-				"testing": "0000000000000007",
-				"testnet": "86ef213d1c3a2b94",
-				"mainnet": "44100f14f70e3f78"
-			}
-		},
-		"Xorshift128plus": {
-			"source": "cadence/contracts/Xorshift128plus.cdc",
-			"aliases": {
-				"mainnet": "45caec600164c9e6",
-				"testing": "0000000000000007",
-				"testnet": "ed24dbe901028c5c"
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "1e4aa0b87d10b141",
+				"testnet": "9a0766d93b6608b7"
 			}
 		}
 	},
@@ -178,13 +31,20 @@
 				"testnet": "9a0766d93b6608b7"
 			}
 		},
-		"FUSD": {
-			"source": "mainnet://3c5959b568896393.FUSD",
-			"hash": "d248c7cc68e1b452d0069e80741fba47b401a585c1b65ec6d421d530f745ebbb",
+		"EVM": {
+			"source": "mainnet://e467b9dd11fa00df.EVM",
+			"hash": "df2065d3eebc1e690e0b52a3f293bdf6c22780c7a9e7ef48a708a651b87abdf0",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "3c5959b568896393",
-				"testnet": "e223d8a629e49c68"
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"FlowEVMBridgeHandlerInterfaces": {
+			"source": "mainnet://1e4aa0b87d10b141.FlowEVMBridgeHandlerInterfaces",
+			"hash": "7e0e28eb8fb30595249384cb8c7a44eae3884700d0a6c3139240c0d19e4dc173",
+			"aliases": {
+				"mainnet": "1e4aa0b87d10b141"
 			}
 		},
 		"FlowToken": {
@@ -216,7 +76,7 @@
 		},
 		"MetadataViews": {
 			"source": "mainnet://1d7e57aa55817448.MetadataViews",
-			"hash": "10a239cc26e825077de6c8b424409ae173e78e8391df62750b6ba19ffd048f51",
+			"hash": "9032f46909e729d26722cbfcee87265e4f81cd2912e936669c0e6b510d007e81",
 			"aliases": {
 				"emulator": "f8d6e0586b0a20c7",
 				"mainnet": "1d7e57aa55817448",
@@ -232,14 +92,10 @@
 				"testnet": "631e88ae7f1d7c20"
 			}
 		},
-		"RandomBeaconHistory": {
-			"source": "mainnet://e467b9dd11fa00df.RandomBeaconHistory",
-			"hash": "fe7f11c46dd54446bd60d88015ffe5057d7245c4b77374e11db2adf0a8156167",
-			"aliases": {
-				"emulator": "f8d6e0586b0a20c7",
-				"mainnet": "e467b9dd11fa00df",
-				"testnet": "8c5303eaa26202d6"
-			}
+		"USDF": {
+			"source": "mainnet://1e4aa0b87d10b141.EVMVMBridgedToken_2aabea2058b5ac2d339b163c6ab6f2b6d53aabed",
+			"hash": "d248c7cc68e1b452d0069e80741fba47b401a585c1b65ec6d421d530f745ebbb",
+			"aliases": {}
 		},
 		"ViewResolver": {
 			"source": "mainnet://1d7e57aa55817448.ViewResolver",
@@ -258,44 +114,31 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {
-		"anthony": {
-			"address": "15770cd6ad1b0299",
-			"key": {
-				"type": "file",
-				"location": "anthony.pkey"
-			}
+		"e1": {
+			"address": "179b6b1cb6755e31",
+			"key": "9f999c2a8003903485d3435207f780cc92075b025253be6a724a49ac576d434b"
 		},
 		"emulator-account": {
 			"address": "f8d6e0586b0a20c7",
-			"key": "59d2f5c528cb4f690003b38f50363fe5488615a8969bd11869bac7f16877fc57"
-		},
-		"test-acct": {
-			"address": "179b6b1cb6755e31",
-			"key": "bf2067161ca5fda4f9e9b737311e0b4fae08f769fdc4e1f570e43f595c52d37e"
-		},
-		"test-acct-2": {
-			"address": "f3fcd2c1a78f5eee",
-			"key": "6ceea497c40e44bbe36fcec1a86ae59dbe1eb1ab0e97c98a05fc52565f5a16a7"
-		},
-		"testnet-account": {
-			"address": "86ef213d1c3a2b94",
 			"key": {
 				"type": "file",
-				"location": "testnet-account.pkey"
+				"location": "emulator-account.pkey"
 			}
 		},
-		"testnet-user": {
-			"address": "7149e49f728573b0",
+		"m1": {
+			"address": "44100f14f70e3f78",
 			"key": {
 				"type": "file",
-				"location": "testnet-user.pkey"
+				"location": "m1.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA2_256"
 			}
 		},
 		"mainnet-agfarms": {
-			"address": "44100f14f70e3f78",
+			"address": "ed2202de80195438",
 			"key": {
-				"type": "hex",
-				"index": 0,
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
 				"signatureAlgorithm": "ECDSA_secp256k1",
 				"hashAlgorithm": "SHA2_256"
 			}
@@ -304,67 +147,12 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
-				"BaitCoin",
-				"FUSD",
-				"ExampleFishCoin",
-				"WalleyeCoin",
-				"BlueCatfishCoin",
-				"CrappieCoin",
-				"LargemouthBassCoin",
-				"MahiMahiCoin",
-				"BlueMarlinCoin",
-				"MuskellungeCoin",
-				"NorthernPikeCoin",
-				"RedfishCoin",
-				"SailfishCoin",
-				"SalmonCoin",
-				"SmallmouthBassCoin",
-				"SnookCoin",
-				"SpeckledTroutCoin",
-				"SpottedBassCoin",
-				"StripedBassCoin",
-				"AtlanticTarponCoin",
-				"RainbowTroutCoin",
-				"BluefinTunaCoin",
-				"WahooCoin",
-				"FishNFT",
-				"Fishdex",
-				"Xorshift128plus"
-			]
-		},
-		"testnet": {
-			"testnet-account": [
-				"WalleyeCoin",
-				"FishNFT",
-				"FishCardNFT",
 				"BaitCoin"
 			]
 		},
 		"mainnet": {
 			"mainnet-agfarms": [
-				"WalleyeCoin",
-				"BlueCatfishCoin",
-				"CrappieCoin",
-				"LargemouthBassCoin",
-				"MahiMahiCoin",
-				"BlueMarlinCoin",
-				"MuskellungeCoin",
-				"NorthernPikeCoin",
-				"RedfishCoin",
-				"SailfishCoin",
-				"SalmonCoin",
-				"SmallmouthBassCoin",
-				"SnookCoin",
-				"SpeckledTroutCoin",
-				"SpottedBassCoin",
-				"StripedBassCoin",
-				"AtlanticTarponCoin",
-				"RainbowTroutCoin",
-				"BluefinTunaCoin",
-				"WahooCoin",
-				"FishNFT",
-				"BaitCoin",
-				"Xorshift128plus"
+				"BaitCoin"
 			]
 		}
 	}

@@ -1,62 +1,300 @@
 import "FungibleToken"
-import "MetadataViews"
 import "FungibleTokenMetadataViews"
-import "FUSD"
+import "MetadataViews"
+import "ViewResolver"
+// Note: USDF is an EVM bridged token at address 0x1e4aa0b87d10b141
+// We'll interact with it through the FungibleToken interface
 
 access(all) contract BaitCoin: FungibleToken {
 
-    /// The event that is emitted when new tokens are minted
-    access(all) event TokensMinted(amount: UFix64, type: String)
-
-    /// The event that is emitted when FUSD is swapped for BaitCoin
-    access(all) event FUSDSwappedForBaitCoin(fusdAmount: UFix64, baitCoinAmount: UFix64, account: Address)
-
-    /// The event that is emitted when BaitCoin is swapped for FUSD
-    access(all) event BaitCoinSwappedForFUSD(baitCoinAmount: UFix64, fusdAmount: UFix64, account: Address)
-
-    /// Total supply of BaitCoins in existence
+    // Token metadata
+    access(all) let name: String
+    access(all) let symbol: String
+    access(all) let decimals: UInt8
+    access(all) var logoUrl: String
+    access(all) var metadata: String
+    
+    // Total supply tracking
     access(all) var totalSupply: UFix64
 
-    /// Storage and Public Paths
+    // Storage paths
     access(all) let VaultStoragePath: StoragePath
     access(all) let VaultPublicPath: PublicPath
     access(all) let ReceiverPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
+    access(all) let USDCVaultStoragePath: StoragePath
 
+    // Events
+    access(all) event TokensInitialized(initialSupply: UFix64)
+    access(all) event USDFToBaitSwap(user: Address, usdfAmount: UFix64, baitAmount: UFix64)
+    access(all) event BaitToUSDFSwap(user: Address, baitAmount: UFix64, usdfAmount: UFix64)
+    access(all) event LogoUrlUpdated(newLogoUrl: String)
+    access(all) event MetadataUpdated(newMetadata: String)
+    
+    // Minter resource for minting tokens
+    access(all) resource Minter {
+        access(all) fun mintTokens(amount: UFix64): @{FungibleToken.Vault} {
+            BaitCoin.totalSupply = BaitCoin.totalSupply + amount
+            return <-create Vault(balance: amount)
+        }
+    }
+
+    // Admin resource for minting/burning and admin management
+    access(all) resource Admin {
+        access(all) fun mintBait(amount: UFix64, recipient: Address) {
+            BaitCoin.totalSupply = BaitCoin.totalSupply + amount
+            
+            let recipientAccount = getAccount(recipient)
+            let receiver = recipientAccount.capabilities.get<&{FungibleToken.Receiver}>(BaitCoin.ReceiverPublicPath)
+                .borrow() ?? panic("Could not borrow receiver reference")
+            
+            let tempVault <- create Vault(balance: amount)
+            receiver.deposit(from: <-tempVault)
+        }
+        
+        access(all) fun burnBait(amount: UFix64, from: Address) {
+            // Note: This function requires the transaction to have proper authorization
+            // to withdraw from the target account. The actual burning should be done
+            // in the transaction that calls this function.
+            panic("This function should be called from a transaction with proper authorization")
+        }
+        
+        access(all) fun setLogoUrl(newLogoUrl: String) {
+            BaitCoin.logoUrl = newLogoUrl
+            emit LogoUrlUpdated(newLogoUrl: newLogoUrl)
+        }
+        
+        access(all) fun setMetadata(newMetadata: String) {
+            BaitCoin.metadata = newMetadata
+            emit MetadataUpdated(newMetadata: newMetadata)
+        }
+    }
+    
+    // Admin management resource
+    access(all) resource AdminManager {
+        // Note: These functions require proper authorization and should be called from transactions
+        // that have the necessary capabilities
+        access(all) fun addAdmin(adminAddress: Address, adminCapability: Capability<&BaitCoin.Admin>) {
+            // This function should be called from a transaction with proper authorization
+            // The transaction signer must have the capability to publish at the target account
+            panic("This function should be called from a transaction with proper authorization")
+        }
+        
+        access(all) fun removeAdmin(adminAddress: Address) {
+            // This function should be called from a transaction with proper authorization
+            // The transaction signer must have the capability to unpublish at the target account
+            panic("This function should be called from a transaction with proper authorization")
+        }
+    }
+    
+    // Main vault resource
+    access(all) resource Vault: FungibleToken.Vault, ViewResolver.Resolver {
+        access(all) var balance: UFix64
+
+        init(balance: UFix64) {
+            self.balance = balance
+        }
+
+        access(all) view fun getViews(): [Type] {
+            return [
+                Type<FungibleTokenMetadataViews.FTDisplay>(),
+                Type<FungibleTokenMetadataViews.FTVaultData>()
+            ]
+        }
+
+        access(all) fun resolveView(_ view: Type): AnyStruct? {
+            switch view {
+                case Type<FungibleTokenMetadataViews.FTDisplay>():
+                    let media = MetadataViews.Media(
+                        file: MetadataViews.HTTPFile(url: BaitCoin.logoUrl),
+                        mediaType: "image/png"
+                    )
+                    return FungibleTokenMetadataViews.FTDisplay(
+                        name: BaitCoin.name,
+                        symbol: BaitCoin.symbol,
+                        description: BaitCoin.metadata,
+                        externalURL: MetadataViews.ExternalURL("https://derby.fish"),
+                        logos: MetadataViews.Medias([media]),
+                        socials: {
+                            "website": MetadataViews.ExternalURL("https://derby.fish/bait-coin-logo.png"),
+                            "twitter": MetadataViews.ExternalURL("https://twitter.com/derby_fish")
+                        }
+                    )
+                case Type<FungibleTokenMetadataViews.FTVaultData>():
+                    return FungibleTokenMetadataViews.FTVaultData(
+                        storagePath: BaitCoin.VaultStoragePath,
+                        receiverPath: BaitCoin.VaultPublicPath,
+                        metadataPath: BaitCoin.VaultPublicPath,
+                        receiverLinkedType: Type<&BaitCoin.Vault>(),
+                        metadataLinkedType: Type<&BaitCoin.Vault>(),
+                        createEmptyVaultFunction: (fun(): @{FungibleToken.Vault} {
+                            return <-BaitCoin.createEmptyVault(vaultType: Type<@BaitCoin.Vault>())
+                        })
+                    )
+            }
+            return nil
+        }
+
+        access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
+            return {Type<@BaitCoin.Vault>(): true}
+        }
+
+        access(all) view fun isSupportedVaultType(type: Type): Bool {
+            return type == Type<@BaitCoin.Vault>()
+        }
+
+        access(all) view fun isAvailableToWithdraw(amount: UFix64): Bool {
+            return amount <= self.balance
+        }
+
+        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @BaitCoin.Vault {
+            pre {
+                amount <= self.balance: "Amount withdrawn must be less than or equal to the balance of the Vault"
+            }
+            self.balance = self.balance - amount
+            return <-create Vault(balance: amount)
+        }
+
+        access(all) fun deposit(from: @{FungibleToken.Vault}) {
+            let vault <- from as! @BaitCoin.Vault
+            self.balance = self.balance + vault.balance
+            vault.balance = 0.0
+            destroy vault
+        }
+
+        access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
+            return <-create Vault(balance: 0.0)
+        }
+
+        access(all) fun createEmptyVaultWithType(vaultType: Type): @{FungibleToken.Vault} {
+        pre {
+            vaultType == Type<@BaitCoin.Vault>(): "Vault type mismatch"
+        }
+        return <-create Vault(balance: 0.0)
+    }
+
+
+    }
+
+    access(all) fun swapUSDFToBait(usdfVault: @{FungibleToken.Vault}, userAddress: Address): @{FungibleToken.Vault} {
+        let usdfAmount = (usdfVault).balance
+        
+        if usdfAmount <= 0.0 {
+            panic("Amount must be greater than zero")
+        }
+        
+        // Get the user's BAIT vault
+        let userAccount = getAccount(userAddress)
+        log("Attempting to get BAIT receiver for user: ".concat(userAddress.toString()))
+        log("Looking for receiver at path: ".concat(BaitCoin.ReceiverPublicPath.toString()))
+        
+        let receiverCapability = userAccount.capabilities.get<&{FungibleToken.Receiver}>(BaitCoin.ReceiverPublicPath)
+        if receiverCapability != nil {
+            log("Receiver capability found: true")
+        } else {
+            log("Receiver capability found: false")
+        }
+        
+        let baitReceiver = receiverCapability
+            .borrow() ?? panic("Could not borrow BAIT receiver reference. Please run setup_vault.cdc first to create your BAIT vault.")
+        
+        // Deposit USDF to contract's vault for future BAIT to USDF swaps
+        // Store the USDF in the original EVM vault path
+        let contractUSDFVault = BaitCoin.account.storage.borrow<&{FungibleToken.Vault}>(from: /storage/EVMVMBridgedToken_2aabea2058b5ac2d339b163c6ab6f2b6d53aabedVault)
+        if contractUSDFVault == nil {
+            // Create the USDF vault if it doesn't exist by saving the incoming vault
+            BaitCoin.account.storage.save(<-usdfVault, to: /storage/EVMVMBridgedToken_2aabea2058b5ac2d339b163c6ab6f2b6d53aabedVault)
+        } else {
+            // Deposit to existing vault
+            contractUSDFVault!.deposit(from: <-usdfVault)
+        }
+        
+        // Mint equivalent amount of BAIT
+        BaitCoin.totalSupply = BaitCoin.totalSupply + usdfAmount
+        let baitVault <- create Vault(balance: usdfAmount)
+        
+        // Send BAIT to user
+        baitReceiver.deposit(from: <-baitVault)
+        
+        emit USDFToBaitSwap(user: userAddress, usdfAmount: usdfAmount, baitAmount: usdfAmount)
+        
+        // Return empty vault for transaction completion
+        return <-create Vault(balance: 0.0)
+    }
+    
+    access(all) fun swapBaitToUSDF(baitVault: @{FungibleToken.Vault}, userAddress: Address): @{FungibleToken.Vault} {
+        let baitAmount = (baitVault).balance
+        
+        if baitAmount <= 0.0 {
+            panic("Amount must be greater than zero")
+        }
+        
+        // Get the user's USDF vault
+        let userAccount = getAccount(userAddress)
+        let usdfReceiverCapability = userAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/usdfReceiver)
+        let usdfReceiver = usdfReceiverCapability
+            .borrow() ?? panic("Could not borrow USDF receiver reference. Please run createAllVault.cdc first to create your USDF vault.")
+        
+        // Burn the BAIT tokens (reduce total supply)
+        BaitCoin.totalSupply = BaitCoin.totalSupply - baitAmount
+        destroy baitVault
+        
+        // Withdraw equivalent USDF from contract's vault
+        let contractUSDFVault = BaitCoin.account.storage.borrow<auth(FungibleToken.Withdraw) &{FungibleToken.Vault}>(from: /storage/EVMVMBridgedToken_2aabea2058b5ac2d339b163c6ab6f2b6d53aabedVault)
+            ?? panic("Could not borrow contract USDF vault")
+        
+        let usdfVault <- contractUSDFVault.withdraw(amount: baitAmount)
+        
+        // Send USDF to user
+        usdfReceiver.deposit(from: <-usdfVault)
+        
+        emit BaitToUSDFSwap(user: userAddress, baitAmount: baitAmount, usdfAmount: baitAmount)
+        
+        // Return empty vault for transaction completion
+        return <-create Vault(balance: 0.0)
+    }
+    
+    
+    access(all) fun getTokenInfo(): {String: String} {
+        return {
+            "name": self.name,
+            "symbol": self.symbol,
+            "logoUrl": self.logoUrl,
+            "metadata": self.metadata,
+            "totalSupply": self.totalSupply.toString(),
+            "decimals": self.decimals.toString()
+        }
+    }
+    
+    // FungibleTokenMetadataViews.Resolver implementation
+    access(all) fun getViews(): [Type] {
+        return [Type<FungibleTokenMetadataViews.FTView>()]
+    }
+    
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
         return [
-            Type<FungibleTokenMetadataViews.FTView>(),
             Type<FungibleTokenMetadataViews.FTDisplay>(),
             Type<FungibleTokenMetadataViews.FTVaultData>(),
             Type<FungibleTokenMetadataViews.TotalSupply>()
         ]
     }
-
+    
     access(all) fun resolveContractView(resourceType: Type?, viewType: Type): AnyStruct? {
         switch viewType {
-            case Type<FungibleTokenMetadataViews.FTView>():
-                return FungibleTokenMetadataViews.FTView(
-                    ftDisplay: self.resolveContractView(resourceType: nil, viewType: Type<FungibleTokenMetadataViews.FTDisplay>()) as! FungibleTokenMetadataViews.FTDisplay?,
-                    ftVaultData: self.resolveContractView(resourceType: nil, viewType: Type<FungibleTokenMetadataViews.FTVaultData>()) as! FungibleTokenMetadataViews.FTVaultData?
-                )
             case Type<FungibleTokenMetadataViews.FTDisplay>():
                 let media = MetadataViews.Media(
-                        file: MetadataViews.HTTPFile(
-                        // Change this to your own SVG image
-                        url: "https://assets.website-files.com/5f6294c0c7a8cdd643b1c820/5f6294c0c7a8cda55cb1c936_Flow_Wordmark.svg"
-                    ),
-                    mediaType: "image/svg+xml"
+                    file: MetadataViews.HTTPFile(url: self.logoUrl),
+                    mediaType: "image/png"
                 )
-                let medias = MetadataViews.Medias([media])
                 return FungibleTokenMetadataViews.FTDisplay(
-                    // Change these to represent your own token
-                    name: "BaitCoin",
-                    symbol: "BAIT",
-                    description: "BaitCoin is the primary currency for the DerbyFish ecosystem.",
-                    externalURL: MetadataViews.ExternalURL("https://derbyfish.example.com"),
-                    logos: medias,
+                    name: self.name,
+                    symbol: self.symbol,
+                    description: self.metadata,
+                    externalURL: MetadataViews.ExternalURL("https://derby.fish"),
+                    logos: MetadataViews.Medias([media]),
                     socials: {
-                        "twitter": MetadataViews.ExternalURL("https://twitter.com/derbyfish")
+                        "website": MetadataViews.ExternalURL("https://derby.fish/bait-coin-logo.png"),
+                        "twitter": MetadataViews.ExternalURL("https://twitter.com/derby_fish")
                     }
                 )
             case Type<FungibleTokenMetadataViews.FTVaultData>():
@@ -71,165 +309,73 @@ access(all) contract BaitCoin: FungibleToken {
                     })
                 )
             case Type<FungibleTokenMetadataViews.TotalSupply>():
-                return FungibleTokenMetadataViews.TotalSupply(
-                    totalSupply: BaitCoin.totalSupply
-                )
+                return FungibleTokenMetadataViews.TotalSupply(totalSupply: self.totalSupply)
         }
         return nil
     }
-
-    access(all) resource Vault: FungibleToken.Vault {
-
-        /// The total balance of this vault
-        access(all) var balance: UFix64
-
-        // initialize the balance at resource creation time
-        init(balance: UFix64) {
-            self.balance = balance
-        }
-
-        /// Called when a fungible token is burned via the `Burner.burn()` method
-        access(contract) fun burnCallback() {
-            if self.balance > 0.0 {
-                BaitCoin.totalSupply = BaitCoin.totalSupply - self.balance
-            }
-            self.balance = 0.0
-        }
-
-        access(all) view fun getViews(): [Type] {
-            return BaitCoin.getContractViews(resourceType: nil)
-        }
-
-        access(all) fun resolveView(_ view: Type): AnyStruct? {
-            return BaitCoin.resolveContractView(resourceType: nil, viewType: view)
-        }
-
-        access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
-            let supportedTypes: {Type: Bool} = {}
-            supportedTypes[self.getType()] = true
-            return supportedTypes
-        }
-
-        access(all) view fun isSupportedVaultType(type: Type): Bool {
-            return self.getSupportedVaultTypes()[type] ?? false
-        }
-
-        access(all) view fun isAvailableToWithdraw(amount: UFix64): Bool {
-            return amount <= self.balance
-        }
-
-        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @BaitCoin.Vault {
-            self.balance = self.balance - amount
-            return <-create Vault(balance: amount)
-        }
-
-        access(all) fun deposit(from: @{FungibleToken.Vault}) {
-            let vault <- from as! @BaitCoin.Vault
-            self.balance = self.balance + vault.balance
-            vault.balance = 0.0
-            destroy vault
-        }
-
-        access(all) fun createEmptyVault(): @BaitCoin.Vault {
-            return <-create Vault(balance: 0.0)
-        }
-    }
-
-    access(all) resource Minter {
-        /// Internal minting function - only accessible within this resource
-        access(self) fun mintTokensInternal(amount: UFix64): @BaitCoin.Vault {
-            BaitCoin.totalSupply = BaitCoin.totalSupply + amount
-            let vault <-create Vault(balance: amount)
-            emit TokensMinted(amount: amount, type: vault.getType().identifier)
-            return <-vault
-        }
+    
+    access(all) fun getSupportedVaultTypes(): [Type] {
+        return [Type<@BaitCoin.Vault>()]
     }
 
     access(all) fun createEmptyVault(vaultType: Type): @BaitCoin.Vault {
-        return <- create Vault(balance: 0.0)
+        return <-create Vault(balance: 0.0)
     }
-
-    /// Get the FUSD balance stored in the contract
-    access(all) fun getContractFUSDBalance(): UFix64 {
-        let fusdVault = self.account.storage.borrow<&FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
-            ?? panic("Could not borrow contract FUSD vault")
-        return fusdVault.balance
+    
+    // Admin function to burn tokens and reduce total supply
+    access(all) fun burnTokens(amount: UFix64) {
+        self.totalSupply = self.totalSupply - amount
     }
-
-    /// Public swap function: FUSD for BaitCoin
-    access(all) fun swapFUSDForBaitCoin(from: @FUSD.Vault, recipient: Address) {
-        let fusdAmount = from.balance
+    
+    // Admin function to withdraw USDF from contract
+    access(all) fun withdrawUSDF(amount: UFix64, recipient: Address) {
+        let contractUSDFVault = BaitCoin.account.storage.borrow<auth(FungibleToken.Withdraw) &{FungibleToken.Vault}>(from: /storage/EVMVMBridgedToken_2aabea2058b5ac2d339b163c6ab6f2b6d53aabedVault)
+            ?? panic("Could not borrow contract USDF vault")
         
-        // Get reference to contract's FUSD vault and deposit received FUSD
-        let contractFUSDVault = self.account.storage.borrow<&FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
-            ?? panic("Could not borrow reference to contract's FUSD vault")
-        contractFUSDVault.deposit(from: <-from)
-
-        // Mint equivalent BaitCoin internally
-        self.totalSupply = self.totalSupply + fusdAmount
-        let newBaitCoin <- create Vault(balance: fusdAmount)
-        emit TokensMinted(amount: fusdAmount, type: newBaitCoin.getType().identifier)
+        let usdfVault <- contractUSDFVault.withdraw(amount: amount)
         
-        // Get recipient's BaitCoin receiver
-        let recipientReceiver = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(self.VaultPublicPath)
-            ?? panic("Could not borrow receiver capability for recipient")
+        let recipientAccount = getAccount(recipient)
+        let receiver = recipientAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/usdfReceiver)
+            .borrow() ?? panic("Could not borrow recipient's USDF receiver reference")
         
-        // Deposit BaitCoin to recipient
-        recipientReceiver.deposit(from: <-newBaitCoin)
-        
-        emit FUSDSwappedForBaitCoin(fusdAmount: fusdAmount, baitCoinAmount: fusdAmount, account: recipient)
+        receiver.deposit(from: <-usdfVault)
     }
-
-    /// Public swap function: BaitCoin for FUSD
-    access(all) fun swapBaitCoinForFUSD(from: @BaitCoin.Vault, recipient: Address) {
-        let baitCoinAmount = from.balance
-        
-        // Burn the received BaitCoin
-        self.totalSupply = self.totalSupply - baitCoinAmount
-        destroy from
-        
-        // Get reference to contract's FUSD vault and withdraw equivalent FUSD
-        let contractFUSDVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &FUSD.Vault>(from: /storage/BaitCoinFUSDVault)
-            ?? panic("Could not borrow reference to contract's FUSD vault")
-        
-        let fusdToSend <- contractFUSDVault.withdraw(amount: baitCoinAmount)
-        
-        // Get recipient's FUSD receiver
-        let recipientReceiver = getAccount(recipient).capabilities.borrow<&{FungibleToken.Receiver}>(/public/fusdReceiver)
-            ?? panic("Could not borrow FUSD receiver capability for recipient")
-        
-        // Deposit FUSD to recipient
-        recipientReceiver.deposit(from: <-fusdToSend)
-        
-        emit BaitCoinSwappedForFUSD(baitCoinAmount: baitCoinAmount, fusdAmount: baitCoinAmount, account: recipient)
-    }
-
+    
+    // Initialize the contract
     init() {
+        self.name = "BAIT Coin"
+        self.symbol = "BAIT"
+        self.decimals = 8
+        self.logoUrl = "https://derby.fish/bait-coin-logo.png"
+        self.metadata = "BAIT COIN - A 1:1 pegged USDF token for the DerbyFish (https://derby.fish) ecosystem."
         self.totalSupply = 0.0
 
-        self.VaultStoragePath = /storage/BaitCoinVault
-        self.VaultPublicPath = /public/BaitCoinVault
-        self.ReceiverPublicPath = /public/BaitCoinReceiver
-        self.MinterStoragePath = /storage/BaitCoinMinter
+        // Set storage paths
+        self.VaultStoragePath = /storage/baitCoinVault
+        self.VaultPublicPath = /public/baitCoinVault
+        self.ReceiverPublicPath = /public/baitCoinReceiver
+        self.MinterStoragePath = /storage/baitCoinMinter
+        self.USDCVaultStoragePath = /storage/baitCoinUSDCVault
 
-        // Create the Vault with the total supply of tokens and save it in storage
-        //
-        let vault <- create Vault(balance: self.totalSupply)
-        emit TokensMinted(amount: vault.balance, type: vault.getType().identifier)
-        self.account.storage.save(<-vault, to: self.VaultStoragePath)
-
-        // Create a public capability to the stored Vault that exposes
-        // the `deposit` method and getAcceptedTypes method through the `Receiver` interface
-        // and the `balance` method through the `Balance` interface
-        //
-        let BaitCoinCap = self.account.capabilities.storage.issue<&BaitCoin.Vault>(self.VaultStoragePath)
-        self.account.capabilities.publish(BaitCoinCap, at: self.VaultPublicPath)
-
-        // Create a FUSD vault for the contract to store received FUSD
-        let fusdVault <- FUSD.createEmptyVault(vaultType: Type<@FUSD.Vault>())
-        self.account.storage.save(<-fusdVault, to: /storage/BaitCoinFUSDVault)
-
+        // Create and store the minter resource
         let minter <- create Minter()
         self.account.storage.save(<-minter, to: self.MinterStoragePath)
+
+        // Create and store the admin resource
+        let admin <- create Admin()
+        self.account.storage.save(<-admin, to: /storage/baitCoinAdmin)
+        let adminCapability = self.account.capabilities.storage.issue<&BaitCoin.Admin>(/storage/baitCoinAdmin)
+        self.account.capabilities.publish(adminCapability, at: /public/baitCoinAdmin)
+        
+        // Create and store the admin manager resource
+        let adminManager <- create AdminManager()
+        self.account.storage.save(<-adminManager, to: /storage/baitCoinAdminManager)
+        let adminManagerCapability = self.account.capabilities.storage.issue<&BaitCoin.AdminManager>(/storage/baitCoinAdminManager)
+        self.account.capabilities.publish(adminManagerCapability, at: /public/baitCoinAdminManager)
+        
+        // Note: USDF vault will be created when first USDF tokens are received
+        // The vault will be created dynamically in the swap functions
+        
+        emit TokensInitialized(initialSupply: self.totalSupply)
     }
 }
