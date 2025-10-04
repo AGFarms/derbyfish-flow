@@ -139,9 +139,22 @@
 			"key": {
 				"type": "file",
 				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"derbyfish": {
+			"address": "823640ec5e100cc4",
+			"key": {
+				"type": "file",
+				"location": "derbyfish.pkey",
 				"signatureAlgorithm": "ECDSA_secp256k1",
 				"hashAlgorithm": "SHA2_256"
 			}
+		},
+		"test": {
+			"address": "707efe31dd949d3b",
+			"key": "b9aadf6dfecf08beb95f11641a14eb8d5d37fcc6f1c0e4ae74a30821c3ff9e15"
 		}
 	},
 	"deployments": {

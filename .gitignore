@@ -1,3 +1,8 @@
 .env
 flow/*.pkey
 flow/imports/*
+venv/
+__pycache__/
+.vscode/
+schema.sql
+flow/accounts/pkeys/
