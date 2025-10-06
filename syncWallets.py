@@ -21,6 +21,8 @@ from pathlib import Path
 from datetime import datetime
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -40,13 +42,18 @@ class WalletSyncer:
         self.pkeys_dir = self.accounts_dir / "pkeys"
         self.production_file = self.accounts_dir / "flow-production.json"
         
-        # Statistics
+        # Statistics (thread-safe)
         self.total_wallets = 0
         self.synced_wallets = 0
         self.missing_pkeys = 0
         self.corrupted_wallets = 0
         self.algorithm_updates = 0
         self.algorithm_errors = 0
+        self.vaults_created = 0
+        self.vault_creation_errors = 0
+        
+        # Thread locks for statistics
+        self.stats_lock = threading.Lock()
         
     def get_supabase_client(self):
         """Initialize and return Supabase client with service role"""
@@ -104,27 +111,49 @@ class WalletSyncer:
     def check_wallet_signature_algorithm(self, flow_address):
         """Check the signature algorithm for a wallet on the Flow blockchain"""
         try:
-            # Run flow accounts get command
+            # Ensure address has 0x prefix
+            if not flow_address.startswith('0x'):
+                flow_address = '0x' + flow_address
+            
+            # Run flow accounts get command from the flow directory
             cmd = [
                 'flow', 'accounts', 'get', flow_address,
                 '--network', NETWORK,
                 '--format', 'json'
             ]
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            # Run from the flow directory to ensure proper config
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=self.flow_dir)
             
             if result.returncode != 0:
                 print(f"⚠️  Error checking algorithm for {flow_address}: {result.stderr}")
+                print(f"Command output: {result.stdout}")
                 return None, None
             
             # Parse JSON output
-            account_data = json.loads(result.stdout)
+            try:
+                account_data = json.loads(result.stdout)
+            except json.JSONDecodeError as e:
+                print(f"⚠️  Error parsing JSON for {flow_address}: {e}")
+                print(f"Raw output: {result.stdout}")
+                return None, None
+            except Exception as e:
+                print(f"⚠️  Unexpected error parsing output for {flow_address}: {e}")
+                print(f"Raw output: {result.stdout}")
+                return None, None
             
             # Extract signature algorithm info from the first key
             if 'keys' in account_data and len(account_data['keys']) > 0:
-                key = account_data['keys'][0]
-                signature_algo = key.get('signatureAlgorithm', '')
-                hash_algo = key.get('hashAlgorithm', '')
+                # The keys field is now an array of strings (public keys), not objects
+                # We need to get the key details separately
+                key_public_key = account_data['keys'][0]
+                
+                # For now, we'll use defaults since the Flow CLI format has changed
+                # In the future, we might need to use a different command to get key details
+                signature_algo = "ECDSA_P256"  # Default to P256
+                hash_algo = "SHA3_256"  # Default to SHA3_256
+                
+                print(f"🔍 Key found: {key_public_key[:20]}... (using defaults for algorithm)")
                 
                 # Convert Flow CLI format to our config format
                 if signature_algo == 'ECDSA_P256':
@@ -153,6 +182,47 @@ class WalletSyncer:
         except Exception as e:
             print(f"⚠️  Error checking algorithm for {flow_address}: {e}")
             return None, None
+    
+    def create_bait_vault(self, flow_address, auth_id):
+        """Create BaitCoin vault for a wallet using createAllVault.cdc transaction"""
+        try:
+            print(f"🔍 Creating vault for address: {flow_address}, auth_id: {auth_id}")
+            
+            # Use the target address as signer to create vault in its storage
+            # Use mainent-agfarms as payer for transaction fees
+            transaction_path = "cadence/transactions/createAllVault.cdc"
+            cmd = [
+                'flow', 'transactions', 'send', transaction_path,
+                '--args-json', f'[{{"type": "Address", "value": "0x{flow_address}"}}]',
+                '--signer', flow_address,  # Signer (target address)
+                '--payer', 'mainent-agfarms',  # Payer for fees
+                '--network', NETWORK,
+                '-f', 'accounts/flow-production.json',  # Load accounts from production file
+                '-f', './flow.json'  # Use current directory for flow.json
+            ]
+            
+            print(f"🔍 DEBUG: Running command: {' '.join(cmd)}")
+            print(f"🔍 DEBUG: Working directory: {self.flow_dir}")
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=self.flow_dir)
+            
+            print(f"🔍 DEBUG: Return code: {result.returncode}")
+            print(f"🔍 DEBUG: Stdout: {result.stdout}")
+            print(f"🔍 DEBUG: Stderr: {result.stderr}")
+            
+            if result.returncode != 0:
+                print(f"❌ Error creating vault for {auth_id} ({flow_address}): {result.stderr}")
+                return False
+            
+            print(f"✓ Created BaitCoin vault for {auth_id} ({flow_address})")
+            return True
+                
+        except subprocess.TimeoutExpired:
+            print(f"⚠️  Timeout creating vault for {auth_id} ({flow_address})")
+            return False
+        except Exception as e:
+            print(f"❌ Error creating vault for {auth_id} ({flow_address}): {e}")
+            return False
     
     def validate_wallet_data(self, wallet):
         """Validate that wallet has all required fields"""
@@ -188,14 +258,9 @@ class WalletSyncer:
     def update_wallet_algorithm_in_database(self, auth_id, signature_algorithm, hash_algorithm):
         """Update wallet signature algorithm information in the database"""
         try:
-            # First, check if the columns exist, if not, add them
-            self.ensure_algorithm_columns_exist()
-            
-            # Update the wallet record
+            # Only update signature_algorithm for now since other columns don't exist
             result = self.supabase.table('wallet').update({
-                'signature_algorithm': signature_algorithm,
-                'hash_algorithm': hash_algorithm,
-                'last_algorithm_check': datetime.now().isoformat()
+                'signature_algorithm': signature_algorithm
             }).eq('auth_id', auth_id).execute()
             
             if result.data:
@@ -231,51 +296,40 @@ class WalletSyncer:
         else:
             return {"accounts": {}}
     
-    def create_production_config(self, wallets):
-        """Create flow-production.json from wallet data"""
-        production_config = {
-            "accounts": {}
-        }
+    def process_wallet(self, wallet):
+        """Process a single wallet (thread-safe)"""
+        auth_id = wallet['auth_id']
         
-        for wallet in wallets:
-            auth_id = wallet['auth_id']
-            
+        try:
             # Validate wallet data
             if not self.validate_wallet_data(wallet):
-                self.corrupted_wallets += 1
-                continue
+                with self.stats_lock:
+                    self.corrupted_wallets += 1
+                return None
             
             # Check if pkey file exists
             if not self.check_pkey_file_exists(auth_id):
                 print(f"⚠️  Missing pkey file for {auth_id}, creating it...")
                 if not self.create_pkey_file(auth_id, wallet['flow_private_key']):
-                    self.missing_pkeys += 1
-                    continue
+                    with self.stats_lock:
+                        self.missing_pkeys += 1
+                    return None
             
-            # Get signature algorithm from database or check on blockchain
-            signature_algorithm = wallet.get('signature_algorithm')
-            hash_algorithm = wallet.get('hash_algorithm')
+            # Get signature algorithm from database or use defaults
+            signature_algorithm = wallet.get('signature_algorithm', 'ECDSA_P256')
+            hash_algorithm = wallet.get('hash_algorithm', 'SHA3_256')
             
-            # If not in database, check on blockchain
-            if not signature_algorithm or not hash_algorithm:
-                print(f"🔍 Checking signature algorithm for {auth_id} ({wallet['flow_address']})...")
-                sig_algo, hash_algo = self.check_wallet_signature_algorithm(wallet['flow_address'])
-                
-                if sig_algo and hash_algo:
-                    signature_algorithm = sig_algo
-                    hash_algorithm = hash_algo
-                    
-                    # Update database with the correct algorithms
-                    if self.update_wallet_algorithm_in_database(auth_id, signature_algorithm, hash_algorithm):
-                        self.algorithm_updates += 1
-                else:
-                    print(f"⚠️  Could not determine algorithm for {auth_id}, using defaults")
-                    signature_algorithm = "ECDSA_P256"  # Default to P256
-                    hash_algorithm = "SHA3_256"  # Default to SHA3_256
-                    self.algorithm_errors += 1
+            # Create BaitCoin vault for the wallet
+            print(f"🔍 Creating BaitCoin vault for {auth_id} ({wallet['flow_address']})...")
+            if self.create_bait_vault(wallet['flow_address'], auth_id):
+                with self.stats_lock:
+                    self.vaults_created += 1
+            else:
+                with self.stats_lock:
+                    self.vault_creation_errors += 1
             
-            # Add to production config
-            production_config["accounts"][auth_id] = {
+            # Return wallet config for production file
+            wallet_config = {
                 "address": wallet['flow_address'],
                 "key": {
                     "type": "file",
@@ -285,7 +339,44 @@ class WalletSyncer:
                 }
             }
             
-            self.synced_wallets += 1
+            with self.stats_lock:
+                self.synced_wallets += 1
+            
+            return {auth_id: wallet_config}
+            
+        except Exception as e:
+            print(f"❌ Error processing wallet {auth_id}: {e}")
+            with self.stats_lock:
+                self.corrupted_wallets += 1
+            return None
+
+    def create_production_config(self, wallets):
+        """Create flow-production.json from wallet data using threading"""
+        production_config = {
+            "accounts": {}
+        }
+        
+        print(f"🚀 Processing {len(wallets)} wallets with threading...")
+        
+        # Use ThreadPoolExecutor for parallel processing
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            # Submit all wallet processing tasks
+            future_to_wallet = {
+                executor.submit(self.process_wallet, wallet): wallet 
+                for wallet in wallets
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_wallet):
+                wallet = future_to_wallet[future]
+                try:
+                    result = future.result()
+                    if result:
+                        production_config["accounts"].update(result)
+                except Exception as e:
+                    print(f"❌ Error processing wallet {wallet.get('auth_id', 'unknown')}: {e}")
+                    with self.stats_lock:
+                        self.corrupted_wallets += 1
         
         return production_config
     
@@ -349,6 +440,9 @@ class WalletSyncer:
             print("Error: flow directory not found. Please run this script from the project root.")
             sys.exit(1)
         
+        # Flow CLI commands will run from the flow directory explicitly
+        print(f"📁 Flow CLI commands will run from: {self.flow_dir}")
+        
         # Initialize Supabase client
         self.supabase = self.get_supabase_client()
         if not self.supabase:
@@ -385,6 +479,8 @@ class WalletSyncer:
         print(f"- Missing pkey files (created): {self.missing_pkeys}")
         print(f"- Algorithm updates: {self.algorithm_updates}")
         print(f"- Algorithm errors: {self.algorithm_errors}")
+        print(f"- BaitCoin vaults created: {self.vaults_created}")
+        print(f"- Vault creation errors: {self.vault_creation_errors}")
         print(f"- Production config saved to: {self.production_file}")
         
         if self.synced_wallets == 0:
