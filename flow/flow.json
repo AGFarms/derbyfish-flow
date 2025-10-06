@@ -143,6 +143,78 @@
 				"hashAlgorithm": "SHA2_256"
 			}
 		},
+		"mainnet-agfarms-1": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-2": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-3": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-4": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-5": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-6": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-7": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
+		"mainnet-agfarms-8": {
+			"address": "ed2202de80195438",
+			"key": {
+				"type": "file",
+				"location": "mainnet-agfarms.pkey",
+				"signatureAlgorithm": "ECDSA_secp256k1", 
+				"hashAlgorithm": "SHA2_256"
+			}
+		},
 		"derbyfish": {
 			"address": "823640ec5e100cc4",
 			"key": {

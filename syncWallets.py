@@ -15,7 +15,6 @@ Usage:
 import json
 import os
 import sys
-import subprocess
 import re
 from pathlib import Path
 from datetime import datetime
@@ -23,6 +22,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork, FlowResult
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,6 +42,16 @@ class WalletSyncer:
         self.pkeys_dir = self.accounts_dir / "pkeys"
         self.production_file = self.accounts_dir / "flow-production.json"
         
+        # Initialize Flow wrapper
+        self.flow_wrapper = FlowWrapper(FlowConfig(
+            network=FlowNetwork.MAINNET,
+            flow_dir=self.flow_dir,
+            timeout=60,
+            max_retries=3,
+            rate_limit_delay=0.2,
+            json_output=True
+        ))
+        
         # Statistics (thread-safe)
         self.total_wallets = 0
         self.synced_wallets = 0
@@ -51,9 +61,71 @@ class WalletSyncer:
         self.algorithm_errors = 0
         self.vaults_created = 0
         self.vault_creation_errors = 0
+        self.vaults_already_exist = 0
+        self.vault_check_errors = 0
+        self.flow_balance_checks = 0
+        self.flow_funding_needed = 0
+        self.flow_funding_success = 0
+        self.flow_funding_errors = 0
         
         # Thread locks for statistics
         self.stats_lock = threading.Lock()
+        
+        # Account assignment for threading (1 account per thread)
+        self.funder_accounts = [
+            "mainnet-agfarms", "mainnet-agfarms-1", "mainnet-agfarms-2", 
+            "mainnet-agfarms-3", "mainnet-agfarms-4", "mainnet-agfarms-5",
+            "mainnet-agfarms-6", "mainnet-agfarms-7", "mainnet-agfarms-8"
+        ]
+        self.thread_accounts = {}  # Will store thread_id -> account mapping
+        self.thread_lock = threading.Lock()
+        
+        # Global rate limiting (IP-based) - Flow RPC limits
+        self.last_script_request_time = 0  # For ExecuteScript (5 RPS limit)
+        self.last_transaction_request_time = 0  # For SendTransaction (50 RPS limit)
+        self.script_request_interval = 0.2  # 200ms between script requests (5 RPS = 1 per 200ms)
+        self.transaction_request_interval = 0.02  # 20ms between transaction requests (50 RPS = 1 per 20ms)
+        self.rate_limit_lock = threading.Lock()
+    
+    def get_thread_account(self, thread_id):
+        """Get the dedicated account for a specific thread"""
+        with self.thread_lock:
+            if thread_id not in self.thread_accounts:
+                # Assign next available account to this thread
+                account_index = len(self.thread_accounts) % len(self.funder_accounts)
+                self.thread_accounts[thread_id] = self.funder_accounts[account_index]
+                print(f"🔑 Assigned account {self.thread_accounts[thread_id]} to thread {thread_id}")
+            return self.thread_accounts[thread_id]
+    
+    def rate_limit_script_request(self):
+        """Rate limit for ExecuteScript requests (5 RPS limit)"""
+        import time
+        with self.rate_limit_lock:
+            current_time = time.time()
+            time_since_last = current_time - self.last_script_request_time
+            
+            if time_since_last < self.script_request_interval:
+                sleep_time = self.script_request_interval - time_since_last
+                thread_id = threading.current_thread().ident
+                print(f"⏳ Script rate limiting: sleeping {sleep_time:.3f}s (Thread: {thread_id})")
+                time.sleep(sleep_time)
+            
+            self.last_script_request_time = time.time()
+    
+    def rate_limit_transaction_request(self):
+        """Rate limit for SendTransaction requests (50 RPS limit)"""
+        import time
+        with self.rate_limit_lock:
+            current_time = time.time()
+            time_since_last = current_time - self.last_transaction_request_time
+            
+            if time_since_last < self.transaction_request_interval:
+                sleep_time = self.transaction_request_interval - time_since_last
+                thread_id = threading.current_thread().ident
+                print(f"⏳ Transaction rate limiting: sleeping {sleep_time:.3f}s (Thread: {thread_id})")
+                time.sleep(sleep_time)
+            
+            self.last_transaction_request_time = time.time()
         
     def get_supabase_client(self):
         """Initialize and return Supabase client with service role"""
@@ -115,38 +187,18 @@ class WalletSyncer:
             if not flow_address.startswith('0x'):
                 flow_address = '0x' + flow_address
             
-            # Run flow accounts get command from the flow directory
-            cmd = [
-                'flow', 'accounts', 'get', flow_address,
-                '--network', NETWORK,
-                '--format', 'json'
-            ]
+            # Use Flow wrapper to get account information
+            result = self.flow_wrapper.get_account(flow_address, timeout=30)
             
-            # Run from the flow directory to ensure proper config
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=self.flow_dir)
-            
-            if result.returncode != 0:
-                print(f"⚠️  Error checking algorithm for {flow_address}: {result.stderr}")
-                print(f"Command output: {result.stdout}")
-                return None, None
-            
-            # Parse JSON output
-            try:
-                account_data = json.loads(result.stdout)
-            except json.JSONDecodeError as e:
-                print(f"⚠️  Error parsing JSON for {flow_address}: {e}")
-                print(f"Raw output: {result.stdout}")
-                return None, None
-            except Exception as e:
-                print(f"⚠️  Unexpected error parsing output for {flow_address}: {e}")
-                print(f"Raw output: {result.stdout}")
+            if not result.success:
+                print(f"⚠️  Error checking algorithm for {flow_address}: {result.error_message}")
                 return None, None
             
             # Extract signature algorithm info from the first key
-            if 'keys' in account_data and len(account_data['keys']) > 0:
+            if result.data and 'keys' in result.data and len(result.data['keys']) > 0:
                 # The keys field is now an array of strings (public keys), not objects
                 # We need to get the key details separately
-                key_public_key = account_data['keys'][0]
+                key_public_key = result.data['keys'][0]
                 
                 # For now, we'll use defaults since the Flow CLI format has changed
                 # In the future, we might need to use a different command to get key details
@@ -173,53 +225,190 @@ class WalletSyncer:
                 print(f"⚠️  No keys found for address {flow_address}")
                 return None, None
                 
-        except subprocess.TimeoutExpired:
-            print(f"⚠️  Timeout checking algorithm for {flow_address}")
-            return None, None
-        except json.JSONDecodeError as e:
-            print(f"⚠️  Error parsing JSON for {flow_address}: {e}")
-            return None, None
         except Exception as e:
             print(f"⚠️  Error checking algorithm for {flow_address}: {e}")
             return None, None
     
-    def create_bait_vault(self, flow_address, auth_id):
+    def check_flow_balance(self, flow_address):
+        """Check FLOW balance for a wallet using checkFlowBalance.cdc script"""
+        try:
+            # Ensure address has 0x prefix
+            if not flow_address.startswith('0x'):
+                flow_address = '0x' + flow_address
+            
+            # Use Flow wrapper to execute script
+            result = self.flow_wrapper.execute_script(
+                script_path="cadence/scripts/checkFlowBalance.cdc",
+                args=[flow_address],
+                timeout=30
+            )
+            
+            if not result.success:
+                # Check if it's a rate limit error
+                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                    thread_id = threading.current_thread().ident
+                    print(f"⚠️  Rate limited checking FLOW balance for {flow_address}")
+                    print(f"   📋 Full error: {result.error_message.strip()}")
+                    print(f"   🔍 Command: {result.command}")
+                    print(f"   🧵 Thread ID: {thread_id}")
+                    return None
+                print(f"⚠️  Error checking FLOW balance for {flow_address}: {result.error_message}")
+                return None
+            
+            # Parse JSON output
+            try:
+                balance_data = result.data
+                
+                # The script returns a dictionary with key-value pairs
+                if "value" in balance_data and isinstance(balance_data["value"], list):
+                    # Find the FLOW_Balance entry in the value array
+                    for item in balance_data["value"]:
+                        if (isinstance(item, dict) and 
+                            "key" in item and "value" in item and
+                            item["key"].get("value") == "FLOW_Balance"):
+                            balance_str = item["value"].get("value", "0.0")
+                            balance = float(balance_str)
+                            return balance
+                    
+                    # If FLOW_Balance not found, return 0
+                    print(f"FLOW_Balance not found in response for {flow_address}")
+                    return 0.0
+                else:
+                    print(f"Unexpected response format for {flow_address}: {balance_data}")
+                    return None
+                    
+            except (ValueError, KeyError, TypeError) as e:
+                print(f"Error parsing FLOW balance result for {flow_address}: {e}")
+                return None
+            
+        except Exception as e:
+            print(f"⚠️  Error checking FLOW balance for {flow_address}: {e}")
+            return None
+    
+    def fund_wallet_with_flow(self, flow_address, amount=0.1, thread_id=None):
+        """Fund a wallet with FLOW tokens using fundWallet.cdc transaction"""
+        try:
+            # Get thread-specific funder account
+            if thread_id is None:
+                thread_id = threading.current_thread().ident
+            funder_account = self.get_thread_account(thread_id)
+            
+            # Ensure address has 0x prefix
+            if not flow_address.startswith('0x'):
+                flow_address = '0x' + flow_address
+            
+            print(f"🔍 DEBUG: Funding {flow_address} with {amount} FLOW")
+            print(f"🔍 DEBUG: Using account: {funder_account}")
+            
+            # Use Flow wrapper to send transaction
+            result = self.flow_wrapper.send_transaction(
+                transaction_path="cadence/transactions/fundWallet.cdc",
+                args=[flow_address, str(amount)],
+                signer=funder_account,
+                timeout=60
+            )
+            
+            print(f"🔍 DEBUG: Return code: {0 if result.success else 1}")
+            print(f"🔍 DEBUG: Stdout: {result.raw_output}")
+            print(f"🔍 DEBUG: Stderr: {result.error_message}")
+            
+            if not result.success:
+                # Check if it's a rate limit error
+                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                    print(f"⚠️  Rate limited funding {flow_address} with {amount} FLOW")
+                    print(f"   📋 Full error: {result.error_message.strip()}")
+                    print(f"   🔍 Command: {result.command}")
+                    print(f"   🔑 Using account: {funder_account}")
+                else:
+                    print(f"❌ Error funding {flow_address} with {amount} FLOW: {result.error_message}")
+                return False
+            
+            if result.transaction_id:
+                print(f"✓ Funded {flow_address} with {amount} FLOW (Transaction: {result.transaction_id})")
+            else:
+                print(f"✓ Funded {flow_address} with {amount} FLOW")
+            
+            return True
+                
+        except Exception as e:
+            print(f"❌ Error funding {flow_address} with {amount} FLOW: {e}")
+            return False
+    
+    def check_bait_vault_exists(self, flow_address):
+        """Check if BaitCoin vault exists for a wallet using checkBaitBalance.cdc script"""
+        try:
+            # Ensure address has 0x prefix
+            if not flow_address.startswith('0x'):
+                flow_address = '0x' + flow_address
+            
+            # Use Flow wrapper to execute script
+            result = self.flow_wrapper.execute_script(
+                script_path="cadence/scripts/checkBaitBalance.cdc",
+                args=[flow_address],
+                timeout=30
+            )
+            
+            if result.success:
+                # Script executed successfully, vault exists (even if balance is 0)
+                return True
+            else:
+                # Check if error is about vault not existing
+                if "Could not borrow BAIT vault reference" in result.error_message:
+                    return False
+                # Check if it's a rate limit error
+                elif "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                    thread_id = threading.current_thread().ident
+                    print(f"⚠️  Rate limited checking vault for {flow_address}")
+                    print(f"   📋 Full error: {result.error_message.strip()}")
+                    print(f"   🔍 Command: {result.command}")
+                    print(f"   🧵 Thread ID: {thread_id}")
+                    return None
+                else:
+                    # Some other error occurred
+                    print(f"⚠️  Error checking vault for {flow_address}: {result.error_message}")
+                    return None
+                    
+        except Exception as e:
+            print(f"⚠️  Error checking vault for {flow_address}: {e}")
+            return None
+    
+    def create_bait_vault(self, flow_address, auth_id, thread_id=None):
         """Create BaitCoin vault for a wallet using createAllVault.cdc transaction"""
         try:
+            # Get thread-specific payer account
+            if thread_id is None:
+                thread_id = threading.current_thread().ident
+            payer_account = self.get_thread_account(thread_id)
+            
             print(f"🔍 Creating vault for address: {flow_address}, auth_id: {auth_id}")
             
-            # Use the target address as signer to create vault in its storage
-            # Use mainent-agfarms as payer for transaction fees
-            transaction_path = "cadence/transactions/createAllVault.cdc"
-            cmd = [
-                'flow', 'transactions', 'send', transaction_path,
-                '--args-json', f'[{{"type": "Address", "value": "0x{flow_address}"}}]',
-                '--signer', flow_address,  # Signer (target address)
-                '--payer', 'mainent-agfarms',  # Payer for fees
-                '--network', NETWORK,
-                '-f', 'accounts/flow-production.json',  # Load accounts from production file
-                '-f', './flow.json'  # Use current directory for flow.json
-            ]
+            # Use Flow wrapper to send transaction
+            result = self.flow_wrapper.send_transaction(
+                transaction_path="cadence/transactions/createAllVault.cdc",
+                args=[f'0x{flow_address}'],
+                signer=flow_address,  # Signer (target address)
+                payer=payer_account,  # Rotating payer for fees
+                timeout=60
+            )
             
-            print(f"🔍 DEBUG: Running command: {' '.join(cmd)}")
-            print(f"🔍 DEBUG: Working directory: {self.flow_dir}")
+            print(f"🔍 DEBUG: Return code: {0 if result.success else 1}")
+            print(f"🔍 DEBUG: Stdout: {result.raw_output}")
+            print(f"🔍 DEBUG: Stderr: {result.error_message}")
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=self.flow_dir)
-            
-            print(f"🔍 DEBUG: Return code: {result.returncode}")
-            print(f"🔍 DEBUG: Stdout: {result.stdout}")
-            print(f"🔍 DEBUG: Stderr: {result.stderr}")
-            
-            if result.returncode != 0:
-                print(f"❌ Error creating vault for {auth_id} ({flow_address}): {result.stderr}")
+            if not result.success:
+                # Check if it's a rate limit error
+                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                    print(f"⚠️  Rate limited creating vault for {auth_id} ({flow_address})")
+                    print(f"   📋 Full error: {result.error_message.strip()}")
+                    print(f"   🔍 Command: {result.command}")
+                    print(f"   🔑 Using payer: {payer_account}")
+                else:
+                    print(f"❌ Error creating vault for {auth_id} ({flow_address}): {result.error_message}")
                 return False
             
             print(f"✓ Created BaitCoin vault for {auth_id} ({flow_address})")
             return True
                 
-        except subprocess.TimeoutExpired:
-            print(f"⚠️  Timeout creating vault for {auth_id} ({flow_address})")
-            return False
         except Exception as e:
             print(f"❌ Error creating vault for {auth_id} ({flow_address}): {e}")
             return False
@@ -299,6 +488,7 @@ class WalletSyncer:
     def process_wallet(self, wallet):
         """Process a single wallet (thread-safe)"""
         auth_id = wallet['auth_id']
+        thread_id = threading.current_thread().ident
         
         try:
             # Validate wallet data
@@ -319,14 +509,57 @@ class WalletSyncer:
             signature_algorithm = wallet.get('signature_algorithm', 'ECDSA_P256')
             hash_algorithm = wallet.get('hash_algorithm', 'SHA3_256')
             
-            # Create BaitCoin vault for the wallet
-            print(f"🔍 Creating BaitCoin vault for {auth_id} ({wallet['flow_address']})...")
-            if self.create_bait_vault(wallet['flow_address'], auth_id):
-                with self.stats_lock:
-                    self.vaults_created += 1
+            # Check FLOW balance first
+            print(f"🔍 Checking FLOW balance for {auth_id} ({wallet['flow_address']})...")
+            flow_balance = self.check_flow_balance(wallet['flow_address'])
+            
+            with self.stats_lock:
+                self.flow_balance_checks += 1
+            
+            if flow_balance is not None:
+                print(f"💰 FLOW balance: {flow_balance} FLOW")
+                
+                # Check if funding is needed (below 0.075 FLOW)
+                if flow_balance < 0.075:
+                    print(f"💸 FLOW balance below 0.075, funding with 0.1 FLOW...")
+                    with self.stats_lock:
+                        self.flow_funding_needed += 1
+                    
+                    if self.fund_wallet_with_flow(wallet['flow_address'], 0.1, thread_id):
+                        with self.stats_lock:
+                            self.flow_funding_success += 1
+                        print(f"✓ Successfully funded {auth_id} with 0.1 FLOW")
+                    else:
+                        with self.stats_lock:
+                            self.flow_funding_errors += 1
+                        print(f"❌ Failed to fund {auth_id} with FLOW")
+                else:
+                    print(f"✅ FLOW balance sufficient ({flow_balance} FLOW)")
             else:
+                print(f"⚠️  Could not check FLOW balance for {auth_id}")
+            
+            # Check if BaitCoin vault already exists
+            print(f"🔍 Checking if BaitCoin vault exists for {auth_id} ({wallet['flow_address']})...")
+            vault_exists = self.check_bait_vault_exists(wallet['flow_address'])
+            
+            if vault_exists is True:
+                print(f"✓ BaitCoin vault already exists for {auth_id} ({wallet['flow_address']})")
                 with self.stats_lock:
-                    self.vault_creation_errors += 1
+                    self.vaults_already_exist += 1
+            elif vault_exists is False:
+                # Vault doesn't exist, create it
+                print(f"🔍 Creating BaitCoin vault for {auth_id} ({wallet['flow_address']})...")
+                if self.create_bait_vault(wallet['flow_address'], auth_id, thread_id):
+                    with self.stats_lock:
+                        self.vaults_created += 1
+                else:
+                    with self.stats_lock:
+                        self.vault_creation_errors += 1
+            else:
+                # Error checking vault existence
+                print(f"⚠️  Could not check vault existence for {auth_id} ({wallet['flow_address']})")
+                with self.stats_lock:
+                    self.vault_check_errors += 1
             
             # Return wallet config for production file
             wallet_config = {
@@ -357,9 +590,13 @@ class WalletSyncer:
         }
         
         print(f"🚀 Processing {len(wallets)} wallets with threading...")
+        print(f"🔄 Using {len(self.funder_accounts)} dedicated accounts (1 per thread)")
+        print(f"⏳ Script rate limiting: {self.script_request_interval}s between ExecuteScript requests (5 RPS limit)")
+        print(f"⏳ Transaction rate limiting: {self.transaction_request_interval}s between SendTransaction requests (50 RPS limit)")
+        print(f"🧵 Using 2 threads to respect Flow network rate limits")
         
-        # Use ThreadPoolExecutor for parallel processing
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        # Use ThreadPoolExecutor for parallel processing (reduced to 2 workers to respect IP rate limits)
+        with ThreadPoolExecutor(max_workers=2) as executor:
             # Submit all wallet processing tasks
             future_to_wallet = {
                 executor.submit(self.process_wallet, wallet): wallet 
@@ -479,9 +716,27 @@ class WalletSyncer:
         print(f"- Missing pkey files (created): {self.missing_pkeys}")
         print(f"- Algorithm updates: {self.algorithm_updates}")
         print(f"- Algorithm errors: {self.algorithm_errors}")
+        print(f"- FLOW balance checks: {self.flow_balance_checks}")
+        print(f"- FLOW funding needed: {self.flow_funding_needed}")
+        print(f"- FLOW funding successful: {self.flow_funding_success}")
+        print(f"- FLOW funding errors: {self.flow_funding_errors}")
+        print(f"- BaitCoin vaults already exist: {self.vaults_already_exist}")
         print(f"- BaitCoin vaults created: {self.vaults_created}")
         print(f"- Vault creation errors: {self.vault_creation_errors}")
+        print(f"- Vault check errors: {self.vault_check_errors}")
         print(f"- Production config saved to: {self.production_file}")
+        
+        # Print Flow wrapper metrics
+        flow_metrics = self.flow_wrapper.get_metrics()
+        print(f"\n📊 Flow CLI Operations Summary:")
+        print(f"- Total operations: {flow_metrics['total_operations']}")
+        print(f"- Successful operations: {flow_metrics['successful_operations']}")
+        print(f"- Failed operations: {flow_metrics['failed_operations']}")
+        print(f"- Success rate: {flow_metrics['success_rate_percent']}%")
+        print(f"- Average execution time: {flow_metrics['average_execution_time']}s")
+        print(f"- Total retries: {flow_metrics['total_retries']}")
+        print(f"- Rate limited operations: {flow_metrics['rate_limited_operations']}")
+        print(f"- Timeout operations: {flow_metrics['timeout_operations']}")
         
         if self.synced_wallets == 0:
             print("⚠️  No wallets were successfully synced!")

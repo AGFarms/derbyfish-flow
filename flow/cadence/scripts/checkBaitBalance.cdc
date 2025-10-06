@@ -1,39 +1,16 @@
-import "BaitCoin"
 import "FungibleToken"
+import "BaitCoin"
 
-// Script to check BAIT balance for an address
-access(all) fun main(address: Address): {String: String} {
+access(all) fun main(address: Address): UFix64 {
     let account = getAccount(address)
-    let results: {String: String} = {}
     
-    // Get the BAIT vault capability
+    // Get the BAIT vault capability from the correct path
     let baitVault = account.capabilities.get<&BaitCoin.Vault>(/public/baitCoinReceiver)
     
     if baitVault == nil {
-        results["BAIT_Vault_Exists"] = "false"
-        results["BAIT_Balance"] = "0.0"
-        results["Status"] = "No BAIT vault found. Run createAllVault.cdc first."
-    } else {
-        results["BAIT_Vault_Exists"] = "true"
-        
-        // Get the balance
-        let balance = baitVault.borrow()?.balance ?? 0.0
-        results["BAIT_Balance"] = balance.toString()
-        
-        // Additional information
-        results["Address"] = address.toString()
-        results["Vault_Path"] = "/storage/baitCoinVault"
-        results["Public_Path"] = "/public/baitCoinReceiver"
-        
-        if balance == 0.0 {
-            results["Status"] = "BAIT vault is empty"
-        } else {
-            results["Status"] = "BAIT vault has tokens"
-        }
-        
-        // Check if capability is properly published
-        results["Capability_Published"] = "true"
+        panic("Could not get BAIT vault capability for account ".concat(address.toString()).concat(". Make sure the account has a BAIT vault set up properly."))
     }
     
-    return results
+    // Borrow the vault and get the balance
+    return baitVault.borrow()?.balance ?? panic("Could not borrow BAIT vault reference for account ".concat(address.toString()))
 }

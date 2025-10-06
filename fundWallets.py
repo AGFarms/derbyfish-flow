@@ -12,7 +12,6 @@ Usage:
     python3 fundWallets.py
 """
 
-import subprocess
 import json
 import os
 import sys
@@ -25,6 +24,7 @@ from pathlib import Path
 from datetime import datetime
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from flow_wrapper import FlowWrapper, FlowConfig, FlowNetwork, FlowResult
 
 # Load environment variables from .env file
 load_dotenv()
@@ -48,10 +48,19 @@ class FlowWalletDaemon:
         self.running = True
         self.supabase = None
         self.flow_dir = Path("flow")
-        self.flow_binary = None
         self.lock = threading.Lock()  # Thread safety lock
         self.transaction_queue = queue.Queue()  # Queue for sequential transaction processing
         self.transaction_worker = None  # Single worker thread for transactions
+        
+        # Initialize Flow wrapper
+        self.flow_wrapper = FlowWrapper(FlowConfig(
+            network=FlowNetwork.MAINNET,
+            flow_dir=self.flow_dir,
+            timeout=60,
+            max_retries=3,
+            rate_limit_delay=0.02,  # 20ms for 50 RPS limit
+            json_output=True
+        ))
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -83,21 +92,8 @@ class FlowWalletDaemon:
             return None
     
     def get_flow_binary(self):
-        """Get the Flow CLI binary path"""
-        if self.flow_binary:
-            return self.flow_binary
-            
-        try:
-            result = subprocess.run(['which', 'flow'], capture_output=True, text=True)
-            if result.returncode == 0:
-                self.flow_binary = result.stdout.strip()
-                return self.flow_binary
-            else:
-                print("Error: Flow CLI not found. Please install Flow CLI.")
-                return None
-        except Exception as e:
-            print(f"Error finding Flow CLI: {e}")
-            return None
+        """Get the Flow CLI binary path (now handled by Flow wrapper)"""
+        return self.flow_wrapper.flow_binary
     
     def get_all_wallets(self):
         """Get all wallets from the wallet table with pagination"""
@@ -132,34 +128,24 @@ class FlowWalletDaemon:
     def check_flow_balance(self, address):
         """Check Flow token balance for an address using dedicated script"""
         try:
-            flow_binary = self.get_flow_binary()
-            if not flow_binary:
-                return None
-            
-            # Use the dedicated checkFlowBalance.cdc script
-            script_path = "cadence/scripts/checkFlowBalance.cdc"
-            
-            cmd = f"{flow_binary} scripts execute {script_path} {address} --network {NETWORK} -o json"
-            result = subprocess.run(
-                cmd,
-                cwd=self.flow_dir,
-                capture_output=True,
-                text=True,
-                shell=True,
+            # Use Flow wrapper to execute script
+            result = self.flow_wrapper.execute_script(
+                script_path="cadence/scripts/checkFlowBalance.cdc",
+                args=[address],
                 timeout=30
             )
             
-            if result.returncode != 0:
+            if not result.success:
                 # Check if it's a rate limit error
-                if "rate limited" in result.stderr.lower():
+                if "rate limited" in result.error_message.lower():
                     print(f"⚠️  Rate limited for {address}, will retry later")
                     return None
-                print(f"Error checking balance for {address}: {result.stderr}")
+                print(f"Error checking balance for {address}: {result.error_message}")
                 return None
             
             # Parse the JSON result
             try:
-                balance_data = json.loads(result.stdout.strip())
+                balance_data = result.data
                 
                 # The script returns a dictionary with a "value" array containing key-value pairs
                 if "value" in balance_data and isinstance(balance_data["value"], list):
@@ -191,38 +177,9 @@ class FlowWalletDaemon:
     def wait_for_transaction_seal(self, tx_id):
         """Wait for a transaction to be sealed"""
         try:
-            flow_binary = self.get_flow_binary()
-            if not flow_binary:
-                return False
-            
-            start_time = time.time()
-            while time.time() - start_time < TRANSACTION_TIMEOUT:
-                cmd = f"{flow_binary} transactions get {tx_id} --network {NETWORK} -o json"
-                result = subprocess.run(
-                    cmd,
-                    cwd=self.flow_dir,
-                    capture_output=True,
-                    text=True,
-                    shell=True,
-                    timeout=30
-                )
-                
-                if result.returncode == 0:
-                    try:
-                        tx_data = json.loads(result.stdout.strip())
-                        status = tx_data.get("status", "")
-                        if status == "SEALED":
-                            return True
-                        elif status == "FAILED":
-                            print(f"Transaction {tx_id} failed")
-                            return False
-                    except (ValueError, KeyError):
-                        pass
-                
-                time.sleep(5)  # Wait 5 seconds before checking again
-            
-            print(f"Transaction {tx_id} timed out after {TRANSACTION_TIMEOUT} seconds")
-            return False
+            # Use Flow wrapper to wait for transaction seal
+            result = self.flow_wrapper.wait_for_transaction_seal(tx_id, timeout=TRANSACTION_TIMEOUT)
+            return result.success
             
         except Exception as e:
             print(f"Error waiting for transaction seal: {e}")
@@ -282,54 +239,33 @@ class FlowWalletDaemon:
     def fund_wallet(self, to_address, amount):
         """Fund a wallet with Flow tokens using dedicated transaction"""
         try:
-            flow_binary = self.get_flow_binary()
-            if not flow_binary:
-                return False
-            
-            # Use the dedicated fundWallet.cdc transaction
-            tx_path = "cadence/transactions/fundWallet.cdc"
-            
-            # Execute transaction
-            cmd = f"{flow_binary} transactions send {tx_path} 0x{to_address} {amount} --signer {FUNDER_ACCOUNT} --network {NETWORK}"
-            
-            result = subprocess.run(
-                cmd,
-                cwd=self.flow_dir,
-                capture_output=True,
-                text=True,
-                shell=True,
+            # Use Flow wrapper to send transaction
+            result = self.flow_wrapper.send_transaction(
+                transaction_path="cadence/transactions/fundWallet.cdc",
+                args=[f'0x{to_address}', str(amount)],
+                signer=FUNDER_ACCOUNT,
                 timeout=60
             )
             
-            if result.returncode != 0:
+            if not result.success:
                 # Check for sequence number errors
-                if "sequence number" in result.stderr.lower():
+                if "sequence number" in result.error_message.lower():
                     print(f"⚠️  Sequence number error for {to_address}, will retry later")
                     return False
-                print(f"Error funding wallet {to_address}: {result.stderr}")
+                print(f"Error funding wallet {to_address}: {result.error_message}")
                 return False
             
-            # Extract transaction ID from output
-            tx_id = None
-            for line in result.stdout.split('\n'):
-                if 'Transaction ID:' in line:
-                    # Extract the ID from "Transaction ID: 3c3ab2bcfacf3e10f9d5d0fcbf6fcba53ab19df51ff7a09c0d245d8d3137048a"
-                    parts = line.split(':')
-                    if len(parts) > 1:
-                        tx_id = parts[1].strip()
-                        break
-            
-            if not tx_id:
+            if not result.transaction_id:
                 print(f"Could not extract transaction ID for {to_address}")
                 return False
             
-            print(f"🔄 Transaction {tx_id} sent for {to_address}, waiting for seal...")
+            print(f"🔄 Transaction {result.transaction_id} sent for {to_address}, waiting for seal...")
             
             # Wait for transaction to seal
-            if not self.wait_for_transaction_seal(tx_id):
+            if not self.wait_for_transaction_seal(result.transaction_id):
                 return False
             
-            print(f"✓ Transaction {tx_id} sealed for {to_address}")
+            print(f"✓ Transaction {result.transaction_id} sealed for {to_address}")
             return True
             
         except Exception as e:
@@ -449,6 +385,19 @@ class FlowWalletDaemon:
         if failed_wallets:
             print(f"- Failed wallets: {len(failed_wallets)}")
             print(f"- Failed wallet IDs: {failed_wallets[:10]}{'...' if len(failed_wallets) > 10 else ''}")
+        
+        # Print Flow wrapper metrics
+        flow_metrics = self.flow_wrapper.get_metrics()
+        print(f"\n📊 Flow CLI Operations Summary:")
+        print(f"- Total operations: {flow_metrics['total_operations']}")
+        print(f"- Successful operations: {flow_metrics['successful_operations']}")
+        print(f"- Failed operations: {flow_metrics['failed_operations']}")
+        print(f"- Success rate: {flow_metrics['success_rate_percent']}%")
+        print(f"- Average execution time: {flow_metrics['average_execution_time']}s")
+        print(f"- Total retries: {flow_metrics['total_retries']}")
+        print(f"- Rate limited operations: {flow_metrics['rate_limited_operations']}")
+        print(f"- Timeout operations: {flow_metrics['timeout_operations']}")
+        
         print(f"- Next check in {CHECK_INTERVAL} seconds")
     
     def run(self):
