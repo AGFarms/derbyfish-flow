@@ -171,6 +171,48 @@ def get_wallet_address(wallet_details):
     # Try both possible address fields from the wallet table
     return wallet_details.get('address') or wallet_details.get('flow_address')
 
+def get_wallet_id_by_address(address):
+    """Get wallet ID by Flow address from Supabase"""
+    if not supabase:
+        print("Supabase client not initialized")
+        return None
+    
+    try:
+        # Remove 0x prefix if present
+        clean_address = address.replace('0x', '') if address.startswith('0x') else address
+        response = supabase.table('wallet').select('id').eq('flow_address', clean_address).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0]['id']
+        else:
+            print(f"No wallet found for address {address}")
+            return None
+    except Exception as e:
+        print(f"Error fetching wallet ID by address: {e}")
+        return None
+
+def get_or_create_admin_wallet():
+    """Get admin wallet from the database (assumes it exists from migration)"""
+    admin_wallet_id = '77ef3a77-19e8-49d9-bcc7-f89872378622'  # Fixed admin wallet ID from migration
+    
+    if not supabase:
+        print("Supabase client not initialized")
+        return None
+    
+    try:
+        # Verify the admin wallet exists
+        response = supabase.table('wallet').select('id, flow_address').eq('id', admin_wallet_id).execute()
+        if response.data and len(response.data) > 0:
+            wallet_data = response.data[0]
+            print(f"Found admin wallet: {wallet_data['id']} with address {wallet_data['flow_address']}")
+            return wallet_data['id']
+        else:
+            print(f"Admin wallet not found in database. Please run migration 004_add_admin_wallet.sql")
+            return None
+            
+    except Exception as e:
+        print(f"Error getting admin wallet: {e}")
+        return None
+
 def log_authenticated_user(user_payload, wallet_details):
     """Log authenticated user and wallet details"""
     user_id = user_payload.get('sub', 'unknown')
@@ -648,11 +690,24 @@ def admin_mint_bait():
     if not to_address:
         return jsonify({'error': 'to_address parameter is required'}), 400
     
-    # Use Node adapter for transaction execution
+    # Get wallet IDs for transaction logging
+    admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet
+    recipient_wallet_id = get_wallet_id_by_address(to_address)
+    
+    print(f"=== WALLET IDS FOR TRANSACTION LOGGING ===")
+    print(f"Admin wallet ID: {admin_wallet_id}")
+    print(f"Recipient wallet ID: {recipient_wallet_id}")
+    print(f"Authorizer wallet IDs: {[admin_wallet_id] if admin_wallet_id else None}")
+    print("==========================================")
+    
+    # Use Node adapter for transaction execution with wallet IDs
     result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/adminMintBait.cdc',
         args=[to_address, amount],
-        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
+        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'},
+        proposer_wallet_id=admin_wallet_id,
+        payer_wallet_id=admin_wallet_id,
+        authorizer_wallet_ids=[admin_wallet_id] if admin_wallet_id else None
     )
     
     return jsonify({
@@ -723,11 +778,19 @@ def send_bait():
     print(f"Transaction Args: [{to_address}, {amount}]")
     print("=====================================")
     
-    # Use Node adapter for transaction execution
+    # Get wallet IDs for transaction logging
+    sender_wallet_id = request.wallet_details.get('id') if request.wallet_details else None
+    recipient_wallet_id = get_wallet_id_by_address(to_address)
+    admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet for payer
+    
+    # Use Node adapter for transaction execution with wallet IDs
     result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount],
-        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'}
+        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
+        proposer_wallet_id=sender_wallet_id,
+        payer_wallet_id=admin_wallet_id,
+        authorizer_wallet_ids=[sender_wallet_id] if sender_wallet_id else None
     )
     
     print(f"=== PYTHON APP SEND BAIT RESULT ===")

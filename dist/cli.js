@@ -28,10 +28,11 @@ async function main() {
         if (command === 'execute-script') {
             const scriptPath = payload.scriptPath;
             const scriptArgs = payload.args || [];
+            const proposerWalletId = payload.proposerWalletId;
             console.log(`Executing script: ${scriptPath} with args: ${JSON.stringify(scriptArgs)}`);
-            const result = await wrapper.executeScript(scriptPath, scriptArgs);
+            const result = await wrapper.executeScript(scriptPath, scriptArgs, proposerWalletId);
             console.log(`Script execution result: ${JSON.stringify(result, null, 2)}`);
-            print({ success: result.success, data: result.data, errorMessage: result.errorMessage });
+            print({ success: result.success, data: result.data, errorMessage: result.errorMessage, transactionId: result.transactionId });
             return;
         }
         if (command === 'send-transaction') {
@@ -39,17 +40,21 @@ async function main() {
             const txArgs = payload.args || [];
             const roles = payload.roles || {};
             const privateKeys = payload.privateKeys || {};
+            const proposerWalletId = payload.proposerWalletId;
+            const payerWalletId = payload.payerWalletId;
+            const authorizerWalletIds = payload.authorizerWalletIds;
             console.log(`Sending transaction: ${transactionPath} with args: ${JSON.stringify(txArgs)} and roles: ${JSON.stringify(roles)}`);
             if (Object.keys(privateKeys).length > 0) {
                 console.log(`Using private keys for accounts: ${Object.keys(privateKeys).join(', ')}`);
             }
-            const result = await wrapper.sendTransaction(transactionPath, txArgs, roles, privateKeys);
+            const result = await wrapper.sendTransaction(transactionPath, txArgs, roles, privateKeys, proposerWalletId, payerWalletId, authorizerWalletIds);
             console.log(`Transaction execution result: ${JSON.stringify(result, null, 2)}`);
             print({
                 success: result.success,
                 transactionId: result.transactionId,
                 data: result.data,
-                errorMessage: result.errorMessage
+                errorMessage: result.errorMessage,
+                dbTransactionId: result.dbTransactionId
             });
             return;
         }

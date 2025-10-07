@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  derbyfish-flow-api:
+    build: .
+    container_name: derbyfish-flow-api
+    ports:
+      - "5000:5000"
+    environment:
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      
+      # Admin Configuration
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      
+      # Flask Configuration
+      - FLASK_ENV=production
+      - PYTHONPATH=/app/src/python
+    volumes:
+      # Mount flow directory for persistent data (optional)
+      - ./flow:/app/flow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - derbyfish-network
+
+networks:
+  derbyfish-network:
+    driver: bridge

@@ -5,6 +5,7 @@ import { ec as EC } from 'elliptic';
 import nodeCrypto from 'crypto';
 import * as fcl from '@onflow/fcl';
 import { FlowNetwork, FlowResultOptions } from './types';
+import { transactionLogger, Transaction } from './supabase';
 
 export class FlowResult {
     success: boolean;
@@ -234,7 +235,7 @@ export class FlowWrapper {
         };
     }
 
-    async executeScript(scriptPath: string, args: any[] = []) {
+    async executeScript(scriptPath: string, args: any[] = [], proposerWalletId?: string) {
         console.log('=== FLOW SCRIPT EXECUTION ===');
         console.log(`Script Path: ${scriptPath}`);
         console.log(`Full Path: ${path.isAbsolute(scriptPath) ? scriptPath : path.join(this.config.flowDir, scriptPath)}`);
@@ -242,6 +243,7 @@ export class FlowWrapper {
         console.log(`Network: ${this.config.network}`);
         console.log(`Flow Directory: ${this.config.flowDir}`);
         
+        const startTime = Date.now();
         const fullPath = path.isAbsolute(scriptPath) ? scriptPath : path.join(this.config.flowDir, scriptPath);
         const code = await fs.readFile(fullPath, 'utf8');
         
@@ -257,20 +259,81 @@ export class FlowWrapper {
         
         console.log(`FCL Arguments: ${JSON.stringify(fclArgs, null, 2)}`);
         
+        // Create transaction record
+        const transactionData: Partial<Transaction> = {
+            transaction_type: 'script',
+            status: 'pending',
+            proposer_wallet_id: proposerWalletId,
+            script_path: scriptPath,
+            arguments: args,
+            network: this.config.network,
+            logs: [{
+                level: 'info',
+                message: 'Script execution started',
+                timestamp: new Date().toISOString()
+            }]
+        };
+        
+        const transaction = await transactionLogger.createTransaction(transactionData);
+        
         try {
             const data = await (fcl as any).query({ cadence: code, args: fclArgs });
+            const executionTime = Date.now() - startTime;
+            
             console.log(`Script Execution Result: ${JSON.stringify(data, null, 2)}`);
             console.log('=== SCRIPT EXECUTION COMPLETED ===');
-            return { success: true, data };
+            
+            // Update transaction record with success
+            if (transaction) {
+                await transactionLogger.updateTransaction(transaction.id!, {
+                    status: 'executed',
+                    result_data: data,
+                    execution_time_ms: executionTime,
+                    logs: [
+                        ...(transaction.logs || []),
+                        {
+                            level: 'info',
+                            message: 'Script execution completed successfully',
+                            timestamp: new Date().toISOString(),
+                            execution_time_ms: executionTime
+                        }
+                    ]
+                });
+            }
+            
+            return { success: true, data, transactionId: transaction?.id };
         } catch (error: any) {
+            const executionTime = Date.now() - startTime;
+            
             console.error(`Script Execution Error: ${error.message}`);
             console.error(`Error Stack: ${error.stack}`);
             console.log('=== SCRIPT EXECUTION FAILED ===');
-            return { success: false, errorMessage: error.message, data: null };
+            
+            // Update transaction record with failure
+            if (transaction) {
+                await transactionLogger.updateTransaction(transaction.id!, {
+                    status: 'failed',
+                    error_message: error.message,
+                    execution_time_ms: executionTime,
+                    logs: [
+                        ...(transaction.logs || []),
+                        {
+                            level: 'error',
+                            message: 'Script execution failed',
+                            error: error.message,
+                            stack: error.stack,
+                            timestamp: new Date().toISOString(),
+                            execution_time_ms: executionTime
+                        }
+                    ]
+                });
+            }
+            
+            return { success: false, errorMessage: error.message, data: null, transactionId: transaction?.id };
         }
     }
 
-    async sendTransaction(transactionPath: string, args: any[] = [], roles: { proposer?: any; payer?: any; authorizer?: any | any[] } = {}, privateKeys: any = {}) {
+    async sendTransaction(transactionPath: string, args: any[] = [], roles: { proposer?: any; payer?: any; authorizer?: any | any[] } = {}, privateKeys: any = {}, proposerWalletId?: string, payerWalletId?: string, authorizerWalletIds?: string[]) {
         console.log('=== FLOW TRANSACTION EXECUTION ===');
         console.log(`Transaction Path: ${transactionPath}`);
         console.log(`Full Path: ${path.isAbsolute(transactionPath) ? transactionPath : path.join(this.config.flowDir, transactionPath)}`);
@@ -278,6 +341,8 @@ export class FlowWrapper {
         console.log(`Roles: ${JSON.stringify(roles, null, 2)}`);
         console.log(`Network: ${this.config.network}`);
         console.log(`Flow Directory: ${this.config.flowDir}`);
+        
+        const startTime = Date.now();
         
         if (!this.authz) {
             console.error('Service account not configured');
@@ -301,6 +366,25 @@ export class FlowWrapper {
         });
         
         console.log(`FCL Arguments: ${JSON.stringify(fclArgs, null, 2)}`);
+        
+        // Create transaction record
+        const transactionData: Partial<Transaction> = {
+            transaction_type: 'transaction',
+            status: 'pending',
+            proposer_wallet_id: proposerWalletId,
+            payer_wallet_id: payerWalletId,
+            authorizer_wallet_ids: authorizerWalletIds,
+            transaction_path: transactionPath,
+            arguments: args,
+            network: this.config.network,
+            logs: [{
+                level: 'info',
+                message: 'Transaction execution started',
+                timestamp: new Date().toISOString()
+            }]
+        };
+        
+        const transaction = await transactionLogger.createTransaction(transactionData);
         
         // Normalize roles into FCL authorization functions
         const normalizeAuth = (val: any) => {
@@ -377,21 +461,146 @@ export class FlowWrapper {
         
         try {
             console.log('Sending transaction to Flow network...');
+            
+            // Update transaction status to submitted
+            if (transaction) {
+                await transactionLogger.updateTransaction(transaction.id!, {
+                    status: 'submitted',
+                    logs: [
+                        ...(transaction.logs || []),
+                        {
+                            level: 'info',
+                            message: 'Transaction submitted to Flow network',
+                            timestamp: new Date().toISOString()
+                        }
+                    ]
+                });
+            }
+            
             const txId = await (fcl as any).mutate(transactionConfig);
             console.log(`Transaction ID: ${txId}`);
+            
+            // Update transaction with Flow transaction ID
+            if (transaction) {
+                await transactionLogger.updateTransaction(transaction.id!, {
+                    flow_transaction_id: txId,
+                    status: 'submitted',
+                    logs: [
+                        ...(transaction.logs || []),
+                        {
+                            level: 'info',
+                            message: 'Transaction submitted with Flow ID',
+                            flow_transaction_id: txId,
+                            timestamp: new Date().toISOString()
+                        }
+                    ]
+                });
+            }
+            
             console.log('Waiting for transaction to be sealed...');
             
             const sealed = await (fcl as any).tx(txId).onceSealed();
+            const executionTime = Date.now() - startTime;
+            
             console.log(`Transaction sealed successfully!`);
             console.log(`Sealed transaction data: ${JSON.stringify(sealed, null, 2)}`);
             console.log('=== TRANSACTION EXECUTION COMPLETED ===');
             
-            return { success: true, transactionId: txId, data: sealed };
+            // Update transaction with final results
+            if (transaction) {
+                // Extract blockchain data from sealed transaction and events
+                let blockHeight = null;
+                let blockTimestamp = null;
+                let gasUsed = null;
+                let gasLimit = null;
+                
+                // Try to get block height from blockId using Flow API
+                try {
+                    if (sealed.blockId) {
+                        const block = await fcl.send([fcl.getBlock(), fcl.atBlockId(sealed.blockId)]);
+                        const blockData = await fcl.decode(block);
+                        blockHeight = blockData.height;
+                        blockTimestamp = blockData.timestamp;
+                        console.log(`Block details: height=${blockHeight}, timestamp=${blockTimestamp}`);
+                    }
+                } catch (blockError) {
+                    console.log('Could not fetch block details:', blockError);
+                }
+                
+                // Extract gas information from events
+                const feesEvent = sealed.events?.find((event: any) => 
+                    event.type === 'A.f919ee77447b7497.FlowFees.FeesDeducted'
+                );
+                
+                if (feesEvent) {
+                    // Convert gas cost from FLOW to smallest unit and round to integer
+                    gasUsed = Math.round(parseFloat(feesEvent.data.amount) * 100000000); // Convert to smallest unit and round
+                    console.log(`Gas used: ${gasUsed} (from fees event)`);
+                }
+                
+                // Log the extracted data
+                console.log('=== EXTRACTED BLOCKCHAIN DATA ===');
+                console.log('blockHeight:', blockHeight);
+                console.log('blockTimestamp:', blockTimestamp);
+                console.log('gasUsed:', gasUsed);
+                console.log('gasLimit:', gasLimit);
+                console.log('=================================');
+                
+                await transactionLogger.updateTransaction(transaction.id!, {
+                    status: 'sealed',
+                    block_height: blockHeight,
+                    block_timestamp: blockTimestamp ? new Date(blockTimestamp).toISOString() : null,
+                    gas_used: gasUsed,
+                    gas_limit: gasLimit,
+                    result_data: sealed,
+                    execution_time_ms: executionTime,
+                    logs: [
+                        ...(transaction.logs || []),
+                        {
+                            level: 'info',
+                            message: 'Transaction sealed successfully',
+                            block_height: blockHeight,
+                            block_timestamp: blockTimestamp,
+                            gas_used: gasUsed,
+                            gas_limit: gasLimit,
+                            execution_time_ms: executionTime,
+                            timestamp: new Date().toISOString(),
+                            block_id: sealed.blockId,
+                            fees_event: feesEvent?.data
+                        }
+                    ]
+                });
+            }
+            
+            return { success: true, transactionId: txId, data: sealed, dbTransactionId: transaction?.id };
         } catch (error: any) {
+            const executionTime = Date.now() - startTime;
+            
             console.error(`Transaction Execution Error: ${error.message}`);
             console.error(`Error Stack: ${error.stack}`);
             console.log('=== TRANSACTION EXECUTION FAILED ===');
-            return { success: false, errorMessage: error.message, transactionId: null, data: null };
+            
+            // Update transaction with failure
+            if (transaction) {
+                await transactionLogger.updateTransaction(transaction.id!, {
+                    status: 'failed',
+                    error_message: error.message,
+                    execution_time_ms: executionTime,
+                    logs: [
+                        ...(transaction.logs || []),
+                        {
+                            level: 'error',
+                            message: 'Transaction execution failed',
+                            error: error.message,
+                            stack: error.stack,
+                            execution_time_ms: executionTime,
+                            timestamp: new Date().toISOString()
+                        }
+                    ]
+                });
+            }
+            
+            return { success: false, errorMessage: error.message, transactionId: null, data: null, dbTransactionId: transaction?.id };
         }
     }
 
@@ -449,6 +658,28 @@ export class FlowWrapper {
                 (this.config as any)[key] = value as any;
             }
         }
+    }
+
+    // Transaction management methods
+    async getTransactionHistory(walletId: string, limit: number = 50) {
+        return await transactionLogger.getTransactionsByWallet(walletId, limit);
+    }
+
+    async getTransactionById(transactionId: string) {
+        return await transactionLogger.getTransaction(transactionId);
+    }
+
+    async getTransactionByFlowId(flowTransactionId: string) {
+        return await transactionLogger.getTransactionByFlowId(flowTransactionId);
+    }
+
+    async addTransactionLog(transactionId: string, logEntry: any) {
+        return await transactionLogger.addLog(transactionId, logEntry);
+    }
+
+    async updateTransactionStatus(transactionId: string, status: Transaction['status'], additionalData?: Partial<Transaction>) {
+        const updates: Partial<Transaction> = { status, ...additionalData };
+        return await transactionLogger.updateTransaction(transactionId, updates);
     }
 }
 

@@ -1,4 +1,5 @@
 import { FlowNetwork, FlowResultOptions } from './types';
+import { Transaction } from './supabase';
 export declare class FlowResult {
     success: boolean;
     data: any;
@@ -43,49 +44,61 @@ export declare class FlowWrapper {
         hashAlgorithm: string;
     };
     authzFactory(address: string, keyId: number, privateKey: string, signatureAlgorithm?: string, hashAlgorithm?: string): (account: any) => Promise<any>;
-    executeScript(scriptPath: string, args?: any[]): Promise<{
+    executeScript(scriptPath: string, args?: any[], proposerWalletId?: string): Promise<{
         success: boolean;
         data: any;
+        transactionId: string;
         errorMessage?: undefined;
     } | {
         success: boolean;
         errorMessage: any;
         data: any;
+        transactionId: string;
     }>;
     sendTransaction(transactionPath: string, args?: any[], roles?: {
         proposer?: any;
         payer?: any;
         authorizer?: any | any[];
-    }, privateKeys?: any): Promise<{
+    }, privateKeys?: any, proposerWalletId?: string, payerWalletId?: string, authorizerWalletIds?: string[]): Promise<{
         success: boolean;
         errorMessage: string;
         transactionId?: undefined;
         data?: undefined;
+        dbTransactionId?: undefined;
     } | {
         success: boolean;
         transactionId: any;
         data: any;
+        dbTransactionId: string;
         errorMessage?: undefined;
     } | {
         success: boolean;
         errorMessage: any;
         transactionId: any;
         data: any;
+        dbTransactionId: string;
     }>;
     getAccount(address: string): Promise<FlowResult>;
     getTransaction(transactionId: string): Promise<FlowResult>;
     waitForTransactionSeal(transactionId: string, timeout?: number): Promise<FlowResult>;
     updateConfig(options: Partial<FlowConfig>): void;
+    getTransactionHistory(walletId: string, limit?: number): Promise<Transaction[]>;
+    getTransactionById(transactionId: string): Promise<Transaction>;
+    getTransactionByFlowId(flowTransactionId: string): Promise<Transaction>;
+    addTransactionLog(transactionId: string, logEntry: any): Promise<boolean>;
+    updateTransactionStatus(transactionId: string, status: Transaction['status'], additionalData?: Partial<Transaction>): Promise<Transaction>;
 }
 export declare function createFlowWrapper(network?: FlowNetwork | string, options?: Partial<FlowConfig>): FlowWrapper;
 export declare function executeScript(scriptPath: string, args?: any[], network?: FlowNetwork | string, options?: Partial<FlowConfig>): Promise<{
     success: boolean;
     data: any;
+    transactionId: string;
     errorMessage?: undefined;
 } | {
     success: boolean;
     errorMessage: any;
     data: any;
+    transactionId: string;
 }>;
 export declare function sendTransaction(transactionPath: string, args?: any[], roles?: {
     proposer?: any;
@@ -96,14 +109,17 @@ export declare function sendTransaction(transactionPath: string, args?: any[], r
     errorMessage: string;
     transactionId?: undefined;
     data?: undefined;
+    dbTransactionId?: undefined;
 } | {
     success: boolean;
     transactionId: any;
     data: any;
+    dbTransactionId: string;
     errorMessage?: undefined;
 } | {
     success: boolean;
     errorMessage: any;
     transactionId: any;
     data: any;
+    dbTransactionId: string;
 }>;

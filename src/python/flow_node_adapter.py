@@ -102,23 +102,50 @@ class FlowNodeAdapter:
             'network': network
         })
 
-    def send_transaction(self, transaction_path: str, args: Optional[List[Any]] = None, roles: Optional[Dict[str, Any]] = None, network: str = 'mainnet') -> Dict[str, Any]:
-        return self._run('send-transaction', {
+    def send_transaction(self, transaction_path: str, args: Optional[List[Any]] = None, roles: Optional[Dict[str, Any]] = None, network: str = 'mainnet', proposer_wallet_id: Optional[str] = None, payer_wallet_id: Optional[str] = None, authorizer_wallet_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+        payload = {
             'transactionPath': transaction_path,
             'args': args or [],
             'roles': roles or {},
             'network': network
-        })
+        }
+        
+        # Add wallet IDs if provided
+        if proposer_wallet_id:
+            payload['proposerWalletId'] = proposer_wallet_id
+        if payer_wallet_id:
+            payload['payerWalletId'] = payer_wallet_id
+        if authorizer_wallet_ids:
+            payload['authorizerWalletIds'] = authorizer_wallet_ids
+        
+        print(f"=== PYTHON ADAPTER PAYLOAD WITH WALLET IDS ===")
+        print(f"Proposer wallet ID: {proposer_wallet_id}")
+        print(f"Payer wallet ID: {payer_wallet_id}")
+        print(f"Authorizer wallet IDs: {authorizer_wallet_ids}")
+        print(f"Final payload: {json.dumps(payload, indent=2)}")
+        print("=============================================")
+            
+        return self._run('send-transaction', payload)
     
-    def send_transaction_with_private_key(self, transaction_path: str, args: Optional[List[Any]] = None, roles: Optional[Dict[str, Any]] = None, network: str = 'mainnet', private_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    def send_transaction_with_private_key(self, transaction_path: str, args: Optional[List[Any]] = None, roles: Optional[Dict[str, Any]] = None, network: str = 'mainnet', private_keys: Optional[Dict[str, str]] = None, proposer_wallet_id: Optional[str] = None, payer_wallet_id: Optional[str] = None, authorizer_wallet_ids: Optional[List[str]] = None) -> Dict[str, Any]:
         """Send transaction with private keys for accounts not in flow.json"""
-        return self._run('send-transaction', {
+        payload = {
             'transactionPath': transaction_path,
             'args': args or [],
             'roles': roles or {},
             'network': network,
             'privateKeys': private_keys or {}
-        })
+        }
+        
+        # Add wallet IDs if provided
+        if proposer_wallet_id:
+            payload['proposerWalletId'] = proposer_wallet_id
+        if payer_wallet_id:
+            payload['payerWalletId'] = payer_wallet_id
+        if authorizer_wallet_ids:
+            payload['authorizerWalletIds'] = authorizer_wallet_ids
+            
+        return self._run('send-transaction', payload)
 
     def get_transaction(self, transaction_id: str, network: str = 'mainnet') -> Dict[str, Any]:
         return self._run('get-transaction', {
