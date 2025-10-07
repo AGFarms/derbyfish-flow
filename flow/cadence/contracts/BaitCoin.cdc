@@ -123,7 +123,7 @@ access(all) contract BaitCoin: FungibleToken {
                 case Type<FungibleTokenMetadataViews.FTVaultData>():
                     return FungibleTokenMetadataViews.FTVaultData(
                         storagePath: BaitCoin.VaultStoragePath,
-                        receiverPath: BaitCoin.VaultPublicPath,
+                        receiverPath: BaitCoin.ReceiverPublicPath,
                         metadataPath: BaitCoin.VaultPublicPath,
                         receiverLinkedType: Type<&BaitCoin.Vault>(),
                         metadataLinkedType: Type<&BaitCoin.Vault>(),
@@ -300,7 +300,7 @@ access(all) contract BaitCoin: FungibleToken {
             case Type<FungibleTokenMetadataViews.FTVaultData>():
                 return FungibleTokenMetadataViews.FTVaultData(
                     storagePath: self.VaultStoragePath,
-                    receiverPath: self.VaultPublicPath,
+                    receiverPath: self.ReceiverPublicPath,
                     metadataPath: self.VaultPublicPath,
                     receiverLinkedType: Type<&BaitCoin.Vault>(),
                     metadataLinkedType: Type<&BaitCoin.Vault>(),

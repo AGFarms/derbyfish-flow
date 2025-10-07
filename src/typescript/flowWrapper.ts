@@ -4,7 +4,7 @@ import path from 'path';
 import { ec as EC } from 'elliptic';
 import nodeCrypto from 'crypto';
 import * as fcl from '@onflow/fcl';
-import { FlowOperationType, FlowNetwork, FlowResultOptions } from './types';
+import { FlowNetwork, FlowResultOptions } from './types';
 
 export class FlowResult {
     success: boolean;
@@ -270,7 +270,7 @@ export class FlowWrapper {
         }
     }
 
-    async sendTransaction(transactionPath: string, args: any[] = [], roles: { proposer?: any; payer?: any; authorizer?: any | any[] } = {}) {
+    async sendTransaction(transactionPath: string, args: any[] = [], roles: { proposer?: any; payer?: any; authorizer?: any | any[] } = {}, privateKeys: any = {}) {
         console.log('=== FLOW TRANSACTION EXECUTION ===');
         console.log(`Transaction Path: ${transactionPath}`);
         console.log(`Full Path: ${path.isAbsolute(transactionPath) ? transactionPath : path.join(this.config.flowDir, transactionPath)}`);
@@ -309,6 +309,17 @@ export class FlowWrapper {
             // If a string is provided, create authz for that account name
             if (typeof val === 'string') {
                 console.log(`Loading account by name: ${val}`);
+                
+                // First check if we have a private key for this account
+                if (privateKeys && privateKeys[val]) {
+                    console.log(`Using private key for account: ${val}`);
+                    // We need to get the address for this account
+                    // For now, we'll assume the val is the address if it starts with 0x
+                    if (val.startsWith('0x')) {
+                        return this.authzFactory(val, 0, privateKeys[val], 'ECDSA_P256', 'SHA3_256');
+                    }
+                }
+                
                 const account = this.loadAccountByName(val, this.config.flowDir);
                 console.log(`Account details for ${val}:`, {
                     address: account?.address,

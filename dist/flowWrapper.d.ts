@@ -56,7 +56,7 @@ export declare class FlowWrapper {
         proposer?: any;
         payer?: any;
         authorizer?: any | any[];
-    }): Promise<{
+    }, privateKeys?: any): Promise<{
         success: boolean;
         errorMessage: string;
         transactionId?: undefined;

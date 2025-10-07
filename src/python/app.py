@@ -381,7 +381,7 @@ def index():
                 'test_bait_coin_admin': 'POST /scripts/test-bait-coin-admin'
             },
             'transactions': {
-                'admin_burn_bait': 'POST /transactions/admin-burn-bait (amount)',
+                'admin_burn_bait': 'POST /transactions/admin-burn-bait (amount, from_wallet?) - Burn from admin wallet or transfer from custodial wallet then burn',
                 'admin_mint_bait': 'POST /transactions/admin-mint-bait (to_address, amount)',
                 'admin_mint_fusd': 'POST /transactions/admin-mint-fusd (to_address, amount)',
                 'check_contract_usdf_balance': 'GET /transactions/check-contract-usdf-balance',
@@ -481,31 +481,155 @@ def check_bait_balance():
 @app.route('/transactions/admin-burn-bait', methods=['POST'])
 @require_admin_auth
 def admin_burn_bait():
-        
-
-    """Admin burn BAIT tokens"""
+    """Admin burn BAIT tokens from admin wallet or from a specified custodial wallet"""
     data = request.get_json() or {}
     amount = data.get('amount')
+    from_wallet = data.get('from_wallet')  # Optional: if provided, burn from this wallet
     network = data.get('network', 'mainnet')
     
     if not amount:
         return jsonify({'error': 'Amount parameter is required'}), 400
     
-    # Use Node adapter for transaction execution
-    result = node_adapter.send_transaction(
-        transaction_path='cadence/transactions/adminBurnBait.cdc',
-        args=[amount],
-        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
-    )
-    
-    return jsonify({
-        'success': result.get('success'),
-        'stdout': result.get('stdout'),
-        'stderr': result.get('stderr'),
-        'returncode': result.get('returncode'),
-        'transaction_id': result.get('transaction_id'),
-        'execution_time': result.get('execution_time')
-    })
+    # If from_wallet is specified, first transfer bait from that wallet to admin, then burn
+    if from_wallet:
+        print(f"=== ADMIN BURN BAIT FROM CUSTODIAL WALLET ===")
+        print(f"Amount: {amount}")
+        print(f"From Wallet: {from_wallet}")
+        print(f"Network: {network}")
+        print("Step 1: Look up wallet in database and get private key")
+        print("=====================================")
+        
+        # Step 1: Look up the wallet in the database to get the private key
+        # Remove 0x prefix if present
+        wallet_address = from_wallet.replace('0x', '') if from_wallet.startswith('0x') else from_wallet
+        
+        try:
+            # Query the wallet table to get the private key
+            wallet_response = supabase.table('wallet').select('flow_private_key, flow_address, auth_id').eq('flow_address', wallet_address).execute()
+            
+            if not wallet_response.data or len(wallet_response.data) == 0:
+                return jsonify({
+                    'success': False,
+                    'error': f'Wallet {from_wallet} not found in database',
+                    'step': 'wallet_lookup'
+                }), 404
+            
+            wallet_data = wallet_response.data[0]
+            private_key = wallet_data.get('flow_private_key')
+            flow_address = wallet_data.get('flow_address')
+            auth_id = wallet_data.get('auth_id')
+            
+            if not private_key:
+                return jsonify({
+                    'success': False,
+                    'error': f'No private key found for wallet {from_wallet}',
+                    'step': 'private_key_lookup'
+                }), 400
+            
+            print(f"Found wallet in database:")
+            print(f"  Address: {flow_address}")
+            print(f"  Auth ID: {auth_id}")
+            print(f"  Has private key: {bool(private_key)}")
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Database error looking up wallet: {str(e)}',
+                'step': 'database_error'
+            }), 500
+        
+        print("Step 2: Transfer bait from custodial wallet to admin wallet")
+        print("=====================================")
+        
+        # Step 2: Transfer bait from custodial wallet to admin wallet
+        # We need to use the custodial wallet as the authorizer for the send transaction
+        # sendBait.cdc takes (to: Address, amount: UFix64) where signer is the sender
+        admin_wallet_address = "0xed2202de80195438"  # Admin wallet address
+        
+        # For now, we'll need to create a temporary Flow account configuration
+        # or modify the node adapter to accept private keys directly
+        # This is a limitation - we need to either:
+        # 1. Add the wallet to flow.json temporarily, or
+        # 2. Modify the node adapter to accept private keys
+        
+        print("Step 2: Transfer bait from custodial wallet to admin wallet")
+        print("=====================================")
+        
+        # Step 2: Transfer bait from custodial wallet to admin wallet using private key
+        admin_wallet_address = "0xed2202de80195438"  # Admin wallet address
+        
+        # Use the new method with private keys
+        transfer_result = node_adapter.send_transaction_with_private_key(
+            transaction_path='cadence/transactions/sendBait.cdc',
+            args=[admin_wallet_address, amount],  # Send TO admin wallet FROM custodial wallet
+            roles={'proposer': from_wallet, 'authorizer': [from_wallet], 'payer': 'mainnet-agfarms'},
+            private_keys={from_wallet: private_key}  # Pass the private key for the custodial wallet
+        )
+        
+        if not transfer_result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': 'Failed to transfer bait from custodial wallet to admin wallet',
+                'transfer_result': transfer_result,
+                'step': 'transfer'
+            }), 500
+        
+        print(f"Step 2 completed successfully. Transaction ID: {transfer_result.get('transaction_id')}")
+        print("Step 3: Burn bait from admin wallet")
+        print("=====================================")
+        
+        # Step 3: Burn the bait from admin wallet
+        burn_result = node_adapter.send_transaction(
+            transaction_path='cadence/transactions/adminBurnBait.cdc',
+            args=[amount],
+            roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
+        )
+        
+        if not burn_result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': 'Failed to burn bait from admin wallet after successful transfer',
+                'transfer_result': transfer_result,
+                'burn_result': burn_result,
+                'step': 'burn'
+            }), 500
+        
+        print(f"Step 3 completed successfully. Transaction ID: {burn_result.get('transaction_id')}")
+        print("All steps completed successfully!")
+        print("=====================================")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Successfully burned bait from custodial wallet',
+            'transfer_transaction_id': transfer_result.get('transaction_id'),
+            'burn_transaction_id': burn_result.get('transaction_id'),
+            'amount': amount,
+            'from_wallet': from_wallet,
+            'execution_time': transfer_result.get('execution_time', 0) + burn_result.get('execution_time', 0),
+            'burned_from': from_wallet
+        })
+    else:
+        print(f"=== ADMIN BURN BAIT FROM ADMIN WALLET ===")
+        print(f"Amount: {amount}")
+        print(f"Network: {network}")
+        print("=====================================")
+        
+        # Use Node adapter for transaction execution from admin's own wallet
+        result = node_adapter.send_transaction(
+            transaction_path='cadence/transactions/adminBurnBait.cdc',
+            args=[amount],
+            roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
+        )
+        
+        return jsonify({
+            'success': result.get('success'),
+            'stdout': result.get('stdout'),
+            'stderr': result.get('stderr'),
+            'returncode': result.get('returncode'),
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time'),
+            'burned_from': 'admin_wallet'
+        })
 
 @app.route('/transactions/admin-mint-bait', methods=['POST'])
 @require_admin_auth

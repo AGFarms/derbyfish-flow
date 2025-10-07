@@ -109,6 +109,16 @@ class FlowNodeAdapter:
             'roles': roles or {},
             'network': network
         })
+    
+    def send_transaction_with_private_key(self, transaction_path: str, args: Optional[List[Any]] = None, roles: Optional[Dict[str, Any]] = None, network: str = 'mainnet', private_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Send transaction with private keys for accounts not in flow.json"""
+        return self._run('send-transaction', {
+            'transactionPath': transaction_path,
+            'args': args or [],
+            'roles': roles or {},
+            'network': network,
+            'privateKeys': private_keys or {}
+        })
 
     def get_transaction(self, transaction_id: str, network: str = 'mainnet') -> Dict[str, Any]:
         return self._run('get-transaction', {

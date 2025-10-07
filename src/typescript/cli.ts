@@ -40,8 +40,12 @@ async function main() {
       const transactionPath = payload.transactionPath;
       const txArgs = payload.args || [];
       const roles = payload.roles || {};
+      const privateKeys = payload.privateKeys || {};
       console.log(`Sending transaction: ${transactionPath} with args: ${JSON.stringify(txArgs)} and roles: ${JSON.stringify(roles)}`);
-      const result: any = await wrapper.sendTransaction(transactionPath, txArgs, roles);
+      if (Object.keys(privateKeys).length > 0) {
+        console.log(`Using private keys for accounts: ${Object.keys(privateKeys).join(', ')}`);
+      }
+      const result: any = await wrapper.sendTransaction(transactionPath, txArgs, roles, privateKeys);
       console.log(`Transaction execution result: ${JSON.stringify(result, null, 2)}`);
       print({ 
         success: result.success, 

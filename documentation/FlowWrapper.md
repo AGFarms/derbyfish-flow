@@ -2,497 +2,180 @@
 
 A production-ready TypeScript/JavaScript wrapper for Flow blockchain operations using FCL (Flow Client Library) with comprehensive error handling and type safety.
 
-## Overview
+## Architecture Overview
 
-The Flow FCL Wrapper provides a standardized interface for interacting with the Flow blockchain through FCL. It replaces direct FCL calls with a robust system that includes:
+The FlowWrapper system implements a multi-layered architecture for executing Flow blockchain transactions through HTTP endpoints:
 
-- **Type Safety**: Full TypeScript support with proper enums and interfaces
-- **Standardized Error Handling**: Consistent error reporting and recovery mechanisms
-- **FCL Integration**: Direct use of Flow Client Library for optimal performance
-- **Service Account Management**: Automatic loading and configuration of service accounts
-- **Contract Aliases**: Automatic contract address resolution
-- **Simplified API**: Clean, easy-to-use interface for common operations
+1. **HTTP Layer** (`app.py`) - Flask REST API with JWT/admin authentication
+2. **Adapter Layer** (`flow_node_adapter.py`) - Python to TypeScript bridge via subprocess
+3. **TypeScript Layer** (`cli.ts` + `flowWrapper.ts`) - FCL-based Flow operations
+4. **Blockchain Layer** - Flow network execution via FCL
 
-## Features
+### Authentication System
 
-### Core Functionality
-- Execute Flow scripts using FCL
-- Send transactions with proper signing and error handling
-- Get account information
-- Get transaction status and wait for sealing
-- Type-safe operations with TypeScript
+**User Authentication (`@require_auth`)**:
+- JWT verification using Supabase tokens with HS256 algorithm
+- Wallet resolution from database using user ID (`sub` claim)
+- Context injection: `request.user_payload` and `request.wallet_details`
 
-### Production Features
-- Automatic service account configuration
-- Contract address resolution
-- Network configuration (mainnet, testnet, emulator)
-- Error handling and recovery
-- Clean, consistent API
+**Admin Authentication (`@require_admin_auth`)**:
+- Secret key verification via string comparison with `ADMIN_SECRET_KEY`
+- Bearer token format: `Authorization: Bearer <admin_secret>`
 
-## Installation
+## Transaction Execution Flows
 
-The Flow wrapper is included in the derbyfish-flow project. No Flow CLI installation required - this uses FCL directly.
+### Send BAIT Transaction
 
-```bash
-# Install dependencies
-npm install
-
-# Build TypeScript
-npm run build
+**HTTP Request**:
+```http
+POST /transactions/send-bait
+Authorization: Bearer <supabase_jwt>
+Content-Type: application/json
+{"to_address": "0x1234567890abcdef", "amount": "100.0"}
 ```
 
-## Quick Start
+**Execution Pipeline**:
+1. **Authentication**: JWT verification → wallet lookup → user context injection
+2. **Role Configuration**: `{proposer: user_id, authorizer: [user_id], payer: 'mainnet-agfarms'}`
+3. **Adapter Layer**: Python subprocess call to TypeScript CLI with base64-encoded payload
+4. **FCL Execution**: `fcl.mutate()` with user authorization for proposer/authorizer, service authorization for payer
+5. **Cadence Transaction**: `sendBait.cdc` - withdraws from sender's vault, deposits to recipient's receiver capability
 
-### Basic Usage
-
-```typescript
-import { FlowWrapper, FlowConfig, FlowNetwork } from './dist/flowWrapper';
-
-// Create a wrapper instance
-const wrapper = new FlowWrapper({
-    network: FlowNetwork.MAINNET,
-    flowDir: "flow"
-});
-
-// Execute a script
-const result = await wrapper.executeScript(
-    "cadence/scripts/checkBaitBalance.cdc",
-    ["0x1234567890abcdef"]
-);
-
-if (result.success) {
-    console.log(`Script result: ${result.data}`);
-} else {
-    console.log(`Error: ${result.errorMessage}`);
+**Cadence Implementation**:
+```cadence
+transaction(to: Address, amount: UFix64) {
+    prepare(sender: auth(BorrowValue, Storage) &Account) {
+        let senderVault = sender.storage.borrow<auth(FungibleToken.Withdraw) &BaitCoin.Vault>(from: /storage/baitCoinVault)
+        let recipient = getAccount(to)
+        let recipientReceiver = recipient.capabilities.get<&{FungibleToken.Receiver}>(/public/baitCoinReceiver)
+        let baitVault <- senderVault.withdraw(amount: amount)
+        recipientReceiver.deposit(from: <-baitVault)
+    }
 }
 ```
 
-### Convenience Functions
+### Admin Mint BAIT Transaction
 
-```python
-from flowWrapper import execute_script, send_transaction
-
-# Execute a script with a temporary wrapper
-result = execute_script(
-    script_path="cadence/scripts/checkBaitBalance.cdc",
-    args=["0x1234567890abcdef"],
-    network="mainnet"
-)
-
-# Send a transaction
-result = send_transaction(
-    transaction_path="cadence/transactions/sendBait.cdc",
-    args=["0x1234567890abcdef", "100.0"],
-    signer="mainnet-agfarms",
-    network="mainnet"
-)
+**HTTP Request**:
+```http
+POST /transactions/admin-mint-bait
+Authorization: Bearer <admin_secret>
+Content-Type: application/json
+{"to_address": "0x1234567890abcdef", "amount": "1000.0"}
 ```
 
-## Configuration
+**Execution Pipeline**:
+1. **Admin Authentication**: Secret key verification
+2. **Role Configuration**: `{proposer: 'mainnet-agfarms', authorizer: 'mainnet-agfarms', payer: 'mainnet-agfarms'}`
+3. **Same adapter/FCL layers** as send_bait
+4. **Admin Cadence Transaction**: `adminMintBait.cdc` - uses admin resource to mint new tokens
 
-### FlowConfig
-
-The `FlowConfig` class allows you to customize the wrapper behavior:
-
-```python
-@dataclass
-class FlowConfig:
-    network: FlowNetwork = FlowNetwork.MAINNET
-    flow_dir: Path = Path("flow")
-    timeout: int = 300  # 5 minutes
-    max_retries: int = 3
-    retry_delay: float = 1.0
-    rate_limit_delay: float = 0.2  # 200ms between requests
-    json_output: bool = True
-    log_level: str = "INFO"
+**Cadence Implementation**:
+```cadence
+transaction(to: Address, amount: UFix64) {
+    prepare(signer: auth(BorrowValue, Storage) &Account) {
+        let adminResource = signer.storage.borrow<&BaitCoin.Admin>(from: /storage/baitCoinAdmin)
+        let recipientAccount = getAccount(to)
+        let recipientReceiver = recipientAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/baitCoinReceiver)
+        adminResource.mintBait(amount: amount, recipient: to)
+    }
+}
 ```
 
-### Configuration Options
+## Account Management & Authorization
 
-- **network**: Flow network to use (mainnet, testnet, emulator)
-- **flow_dir**: Directory containing Flow configuration files
-- **timeout**: Default timeout for operations in seconds
-- **max_retries**: Maximum number of retry attempts
-- **retry_delay**: Base delay between retries (exponential backoff)
-- **rate_limit_delay**: Minimum delay between requests to respect rate limits
-- **json_output**: Whether to request JSON output from Flow CLI
-- **log_level**: Logging level (DEBUG, INFO, WARNING, ERROR)
+### Service Account (`mainnet-agfarms`)
+- **Purpose**: Transaction fee payment, fallback authorization
+- **Configuration**: `flow/mainnet-agfarms.pkey` + `flow.json` account definition
+- **Usage**: Always payer for user transactions, full authorization for admin operations
 
-## API Reference
+### User Accounts
+- **Identification**: JWT `sub` claim maps to Flow account name
+- **Configuration**: `flow/accounts/flow-production.json` + `flow/accounts/pkeys/{user_id}.pkey`
+- **Authorization**: User must explicitly authorize their own transactions
 
-### FlowWrapper Class
+### Admin Account
+- **Resource**: Admin resource stored in `/storage/baitCoinAdmin`
+- **Access Control**: Only accounts with admin resource can perform mint/burn operations
+- **Security**: Admin secret must be protected, all admin operations logged
 
-#### Constructor
-```python
-FlowWrapper(config: Optional[FlowConfig] = None)
-```
+## Technical Implementation
 
-#### Methods
-
-##### execute_script
-Execute a Flow script and return parsed results.
-
-```python
-def execute_script(
-    script_path: str, 
-    args: List[str] = None, 
-    timeout: Optional[int] = None
-) -> FlowResult
-```
-
-**Parameters:**
-- `script_path`: Path to the Cadence script file
-- `args`: List of arguments to pass to the script
-- `timeout`: Override default timeout
-
-**Returns:** `FlowResult` object with success status and parsed data
-
-##### send_transaction
-Send a Flow transaction with proper signing.
-
-```python
-def send_transaction(
-    transaction_path: str,
-    args: List[str] = None,
-    signer: Optional[str] = None,
-    payer: Optional[str] = None,
-    proposer: Optional[str] = None,
-    authorizer: Optional[str] = None,
-    timeout: Optional[int] = None
-) -> FlowResult
-```
-
-**Parameters:**
-- `transaction_path`: Path to the Cadence transaction file
-- `args`: List of arguments to pass to the transaction
-- `signer`: Account to sign the transaction
-- `payer`: Account to pay for the transaction
-- `proposer`: Account to propose the transaction
-- `authorizer`: Account to authorize the transaction
-- `timeout`: Override default timeout
-
-**Returns:** `FlowResult` object with transaction ID and status
-
-##### get_account
-Get account information from the Flow blockchain.
-
-```python
-def get_account(address: str, timeout: Optional[int] = None) -> FlowResult
-```
-
-##### get_transaction
-Get transaction information by ID.
-
-```python
-def get_transaction(transaction_id: str, timeout: Optional[int] = None) -> FlowResult
-```
-
-##### wait_for_transaction_seal
-Wait for a transaction to be sealed on the blockchain.
-
-```python
-def wait_for_transaction_seal(transaction_id: str, timeout: int = 300) -> FlowResult
-```
-
-##### get_metrics
-Get performance and success metrics.
-
-```python
-def get_metrics() -> Dict[str, Any]
-```
-
-**Returns:** Dictionary containing:
-- `total_operations`: Total number of operations performed
-- `successful_operations`: Number of successful operations
-- `failed_operations`: Number of failed operations
-- `success_rate_percent`: Success rate as a percentage
-- `average_execution_time`: Average execution time in seconds
-- `total_retries`: Total number of retries performed
-- `rate_limited_operations`: Number of rate-limited operations
-- `timeout_operations`: Number of timeout operations
-- `operation_types`: Breakdown by operation type
-- `networks`: Breakdown by network
-
-##### reset_metrics
-Reset all collected metrics.
-
-```python
-def reset_metrics()
-```
-
-##### update_config
-Update configuration parameters.
-
-```python
-def update_config(**kwargs)
-```
-
-### FlowResult Class
-
-The `FlowResult` class represents the result of a Flow CLI operation:
-
-```python
-@dataclass
-class FlowResult:
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    raw_output: str = ""
-    error_message: str = ""
-    execution_time: float = 0.0
-    command: str = ""
-    network: str = ""
-    operation_type: str = ""
-    transaction_id: Optional[str] = None
-    retry_count: int = 0
-```
-
-**Fields:**
-- `success`: Whether the operation succeeded
-- `data`: Parsed JSON data (if available)
-- `raw_output`: Raw stdout from Flow CLI
-- `error_message`: Error message from stderr
-- `execution_time`: Time taken to execute the command
-- `command`: The actual command that was executed
-- `network`: Network the command was executed on
-- `operation_type`: Type of operation (script, transaction, account, block)
-- `transaction_id`: Transaction ID (for transactions)
-- `retry_count`: Number of retries performed
-
-## Rate Limiting
-
-The wrapper includes built-in rate limiting to respect Flow network limits:
-
-- **Scripts**: 5 RPS limit (200ms between requests)
-- **Transactions**: 50 RPS limit (20ms between requests)
-
-Rate limiting is applied automatically and is thread-safe.
-
-## Error Handling
-
-The wrapper provides comprehensive error handling:
-
-### Error Categories
-- **Rate Limited**: Operations that hit rate limits
-- **Timeout**: Operations that exceed timeout limits
-- **Network Errors**: Connection or network-related issues
-- **Validation Errors**: Invalid parameters or data
-- **Authentication Errors**: Signing or authorization issues
-
-### Retry Logic
-- Automatic retry with exponential backoff
-- Configurable maximum retry attempts
-- Non-retryable errors (invalid, not found, unauthorized, insufficient) are not retried
-
-## Logging
-
-The wrapper uses Python's standard logging module with configurable levels:
-
-```python
-import logging
-
-# Set log level
-logging.getLogger('flowWrapper').setLevel(logging.DEBUG)
-```
-
-Log messages include:
-- Command execution details
-- Rate limiting information
-- Retry attempts
-- Error details
-- Performance metrics
-
-## Thread Safety
-
-The Flow wrapper is fully thread-safe and can be used in multi-threaded environments:
-
-- Rate limiting is thread-safe
-- Metrics collection is thread-safe
-- Multiple wrapper instances can be used simultaneously
-
-## Integration Examples
-
-### Flask API Integration
-
-```python
-from flask import Flask, jsonify
-from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork
-
-app = Flask(__name__)
-
-# Initialize wrapper
-flow_wrapper = FlowWrapper(FlowConfig(
-    network=FlowNetwork.MAINNET,
-    flow_dir=Path("flow")
-))
-
-@app.route('/check-balance/<address>')
-def check_balance(address):
-    result = flow_wrapper.execute_script(
-        script_path="cadence/scripts/checkBaitBalance.cdc",
-        args=[address]
-    )
+### TypeScript FCL Integration
+```typescript
+// flowWrapper.ts - Authorization factory
+authzFactory(address: string, keyId: number, privateKey: string, signatureAlgorithm: string, hashAlgorithm: string) {
+    const ec = new EC(signatureAlgorithm === 'ECDSA_secp256k1' ? 'secp256k1' : 'p256');
+    const key = ec.keyFromPrivate(Buffer.from(privateKey, 'hex'));
     
-    return jsonify({
-        'success': result.success,
-        'data': result.data,
-        'error': result.error_message,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/metrics')
-def get_metrics():
-    return jsonify(flow_wrapper.get_metrics())
+    return async function authz(account: any) {
+        return {
+            ...account,
+            tempId: `${address}-${keyId}`,
+            addr: fcl.sansPrefix(address),
+            keyId: Number(keyId),
+            signingFunction: async function(signable: any) {
+                const message = Buffer.from(signable.message, 'hex');
+                const digest = hashAlgorithm === 'SHA3_256' 
+                    ? nodeCrypto.createHash('sha3-256').update(message).digest()
+                    : nodeCrypto.createHash('sha256').update(message).digest();
+                const signature = key.sign(digest);
+                return { addr: fcl.withPrefix(address), keyId: Number(keyId), signature: sigHex };
+            }
+        };
+    };
+}
 ```
 
-### Background Processing
-
+### Python Adapter Bridge
 ```python
-import threading
-from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork
-
-class FlowProcessor:
-    def __init__(self):
-        self.wrapper = FlowWrapper(FlowConfig(
-            network=FlowNetwork.MAINNET,
-            rate_limit_delay=0.1  # Faster rate limiting for background processing
-        ))
-    
-    def process_wallet(self, address):
-        # Check balance
-        balance_result = self.wrapper.execute_script(
-            script_path="cadence/scripts/checkBaitBalance.cdc",
-            args=[address]
-        )
-        
-        if balance_result.success:
-            # Process based on balance
-            pass
-        
-        return balance_result
-
-# Use in multiple threads
-processor = FlowProcessor()
-threads = []
-
-for address in addresses:
-    thread = threading.Thread(target=processor.process_wallet, args=(address,))
-    threads.append(thread)
-    thread.start()
-
-for thread in threads:
-    thread.join()
+# flow_node_adapter.py - Subprocess execution
+def _run(self, command: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    encoded = base64.b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8')
+    proc = subprocess.run(['node', self.ts_cli, command, f'--payload={encoded}'], 
+                         cwd=self.repo_root, capture_output=True, text=True, timeout=300)
+    return {'success': bool(data.get('success', proc.returncode == 0)), 
+            'data': data.get('data'), 'transaction_id': data.get('transactionId')}
 ```
 
-## Best Practices
+## Security & Error Handling
 
-### Configuration
-- Use appropriate rate limiting delays for your use case
-- Set reasonable timeouts for different operation types
-- Configure logging level based on environment (DEBUG for development, INFO for production)
+### Authentication Security
+- **JWT Validation**: Signature verification, expiration checking, algorithm validation
+- **Admin Secret**: Environment variable protection, bearer token format enforcement
+- **Wallet Resolution**: Database lookup with service role key bypassing RLS
 
-### Error Handling
-- Always check the `success` field of `FlowResult`
-- Handle rate limiting gracefully (operations will be retried automatically)
-- Log errors for debugging and monitoring
+### Transaction Security
+- **Authorization Patterns**: User transactions require explicit user authorization, admin transactions use admin-only authorization
+- **Fee Payment**: Service account pays fees to prevent user transaction failures
+- **Balance Validation**: Cadence enforces sufficient balance before token withdrawal
 
-### Performance
-- Use the metrics endpoint to monitor performance
-- Consider using multiple wrapper instances for high-throughput scenarios
-- Monitor retry rates to identify potential issues
+### Error Categories & Retry Logic
+- **Rate Limiting**: Automatic retry with exponential backoff (scripts: 200ms, transactions: 20ms)
+- **Network Errors**: Timeout handling with configurable limits (default: 300s)
+- **Validation Errors**: Non-retryable (insufficient funds, missing vaults, invalid parameters)
+- **Authentication Errors**: Non-retryable (invalid tokens, missing permissions)
 
-### Security
-- Never log private keys or sensitive data
-- Use appropriate signing accounts for different operations
-- Validate all inputs before passing to Flow CLI
+## Performance & Monitoring
 
-## Troubleshooting
+### Metrics Collection
+- **Operation Tracking**: Success rates, execution times, retry counts per operation type
+- **Network Monitoring**: Breakdown by network (mainnet/testnet/emulator)
+- **Rate Limiting**: Track rate-limited operations and timeout occurrences
 
-### Common Issues
+### Thread Safety
+- **Concurrent Execution**: Thread-safe rate limiting and metrics collection
+- **Multiple Instances**: Support for multiple wrapper instances in parallel
+- **Background Processing**: Thread-based background task execution with result storage
 
-#### Flow CLI Not Found
-```
-RuntimeError: Flow CLI not found in PATH
-```
-**Solution**: Ensure Flow CLI is installed and available in your system PATH.
+## Key Differences: Send vs Admin Mint
 
-#### Rate Limiting
-```
-⚠️ Rate limited for 0x123..., will retry later
-```
-**Solution**: This is normal behavior. The wrapper will automatically retry. Consider increasing `rate_limit_delay` if you're hitting limits frequently.
+| Aspect | Send BAIT | Admin Mint BAIT |
+|--------|-----------|-----------------|
+| **Authentication** | JWT (user) | Admin Secret |
+| **Authorization** | User + Service | Admin Only |
+| **Transaction Type** | Transfer existing tokens | Create new tokens |
+| **Prerequisites** | User must have BAIT tokens | Recipient must have vault |
+| **Permission Level** | User operation | Admin operation |
+| **Fee Payment** | Service account | Admin account |
 
-#### Timeout Errors
-```
-Command timed out after 300 seconds
-```
-**Solution**: Increase the timeout value or check network connectivity.
-
-#### JSON Parsing Errors
-```
-Error parsing JSON for 0x123...
-```
-**Solution**: Check that the script is returning valid JSON. Some scripts may return non-JSON output.
-
-### Debug Mode
-
-Enable debug logging to see detailed information:
-
-```python
-import logging
-logging.getLogger('flowWrapper').setLevel(logging.DEBUG)
-```
-
-This will show:
-- Exact commands being executed
-- Rate limiting delays
-- Retry attempts
-- Detailed error information
-
-## Migration from Direct Subprocess Calls
-
-### Before (Direct subprocess)
-```python
-import subprocess
-
-def check_balance(address):
-    cmd = f"flow scripts execute cadence/scripts/checkBaitBalance.cdc {address} --network mainnet --output json"
-    result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-    
-    if result.returncode == 0:
-        data = json.loads(result.stdout)
-        return data
-    else:
-        raise Exception(result.stderr)
-```
-
-### After (Using Flow Wrapper)
-```python
-from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork
-
-wrapper = FlowWrapper(FlowConfig(network=FlowNetwork.MAINNET))
-
-def check_balance(address):
-    result = wrapper.execute_script(
-        script_path="cadence/scripts/checkBaitBalance.cdc",
-        args=[address]
-    )
-    
-    if result.success:
-        return result.data
-    else:
-        raise Exception(result.error_message)
-```
-
-## Contributing
-
-When contributing to the Flow wrapper:
-
-1. Follow the existing code style
-2. Add appropriate logging
-3. Include error handling
-4. Update tests if applicable
-5. Update this documentation
-
-## License
-
-This wrapper is part of the derbyfish-flow project and follows the same license terms.

@@ -288,7 +288,7 @@ class FlowWrapper {
             return { success: false, errorMessage: error.message, data: null };
         }
     }
-    async sendTransaction(transactionPath, args = [], roles = {}) {
+    async sendTransaction(transactionPath, args = [], roles = {}, privateKeys = {}) {
         console.log('=== FLOW TRANSACTION EXECUTION ===');
         console.log(`Transaction Path: ${transactionPath}`);
         console.log(`Full Path: ${path_1.default.isAbsolute(transactionPath) ? transactionPath : path_1.default.join(this.config.flowDir, transactionPath)}`);
@@ -326,6 +326,15 @@ class FlowWrapper {
             // If a string is provided, create authz for that account name
             if (typeof val === 'string') {
                 console.log(`Loading account by name: ${val}`);
+                // First check if we have a private key for this account
+                if (privateKeys && privateKeys[val]) {
+                    console.log(`Using private key for account: ${val}`);
+                    // We need to get the address for this account
+                    // For now, we'll assume the val is the address if it starts with 0x
+                    if (val.startsWith('0x')) {
+                        return this.authzFactory(val, 0, privateKeys[val], 'ECDSA_P256', 'SHA3_256');
+                    }
+                }
                 const account = this.loadAccountByName(val, this.config.flowDir);
                 console.log(`Account details for ${val}:`, {
                     address: account?.address,
