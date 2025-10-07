@@ -8,10 +8,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js (required for the TypeScript CLI)
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
 # Copy package.json and install Node.js dependencies
@@ -31,6 +32,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/python/ ./src/python/
 COPY flow/ ./flow/
 COPY migrations/ ./migrations/
+COPY startup-check.sh ./
+RUN chmod +x startup-check.sh
 
 # Set environment variables
 ENV PYTHONPATH=/app/src/python
@@ -44,5 +47,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
-# Run the application
-CMD ["dotenvx", "run", "--", "python", "src/python/app.py"]
+# Run startup check and then the application
+CMD ["sh", "-c", "./startup-check.sh && dotenvx run -- python src/python/app.py"]

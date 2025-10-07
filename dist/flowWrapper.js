@@ -86,7 +86,15 @@ class FlowWrapper {
         this.loadFlowConfig();
         const svc = this.loadServiceAccount(this.config.flowDir);
         this.service = svc;
+        console.log('=== CONSTRUCTOR SERVICE ACCOUNT SETUP ===');
+        console.log(`Service address: ${svc.address}`);
+        console.log(`Service key: ${svc.key ? 'LOADED' : 'NOT LOADED'}`);
+        console.log(`Service keyId: ${svc.keyId}`);
+        console.log(`Service signatureAlgorithm: ${svc.signatureAlgorithm}`);
+        console.log(`Service hashAlgorithm: ${svc.hashAlgorithm}`);
         this.authz = svc.address && svc.key ? this.authzFactory(svc.address, svc.keyId || 0, svc.key, svc.signatureAlgorithm, svc.hashAlgorithm) : null;
+        console.log(`Authz configured: ${this.authz ? 'YES' : 'NO'}`);
+        console.log('==========================================');
     }
     getAccessNode(network) {
         if (network === types_1.FlowNetwork.MAINNET)
@@ -114,18 +122,32 @@ class FlowWrapper {
         }
     }
     loadServiceAccount(flowDir) {
+        console.log('=== LOADING SERVICE ACCOUNT ===');
+        console.log(`Flow Directory: ${flowDir}`);
         const keyPath = path_1.default.join(flowDir, 'mainnet-agfarms.pkey');
+        console.log(`Private key path: ${keyPath}`);
+        console.log(`Private key file exists: ${fs_1.default.existsSync(keyPath)}`);
         const key = fs_1.default.existsSync(keyPath) ? fs_1.default.readFileSync(keyPath, 'utf8').trim() : null;
+        console.log(`Private key loaded: ${key ? 'YES' : 'NO'}`);
+        if (key) {
+            console.log(`Private key length: ${key.length} characters`);
+            console.log(`Private key preview: ${key.substring(0, 8)}...${key.substring(key.length - 8)}`);
+        }
         let address = null;
         let keyId = 0;
         let signatureAlgorithm = 'ECDSA_secp256k1';
         let hashAlgorithm = 'SHA2_256';
         const flowJsonPath = path_1.default.join(flowDir, 'flow.json');
+        console.log(`Flow.json path: ${flowJsonPath}`);
+        console.log(`Flow.json exists: ${fs_1.default.existsSync(flowJsonPath)}`);
         if (fs_1.default.existsSync(flowJsonPath)) {
             try {
                 const cfg = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
+                console.log('Flow.json loaded successfully');
+                console.log(`Accounts in flow.json: ${Object.keys(cfg.accounts || {}).join(', ')}`);
                 if (cfg.accounts && cfg.accounts['mainnet-agfarms']) {
                     address = String(cfg.accounts['mainnet-agfarms'].address);
+                    console.log(`Found mainnet-agfarms address in flow.json: ${address}`);
                     if (cfg.accounts['mainnet-agfarms'].key && typeof cfg.accounts['mainnet-agfarms'].key.index === 'number') {
                         keyId = cfg.accounts['mainnet-agfarms'].key.index;
                     }
@@ -135,17 +157,29 @@ class FlowWrapper {
                     if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.hashAlgorithm) {
                         hashAlgorithm = cfg.accounts['mainnet-agfarms'].key.hashAlgorithm;
                     }
+                    console.log(`Key configuration: keyId=${keyId}, sigAlg=${signatureAlgorithm}, hashAlg=${hashAlgorithm}`);
+                }
+                else {
+                    console.log('mainnet-agfarms account not found in flow.json');
                 }
             }
-            catch { }
+            catch (error) {
+                console.log(`Error loading flow.json: ${error}`);
+            }
         }
         if (!address) {
+            console.log('Address not found in flow.json, checking flow-production.json...');
             const accountsPath = path_1.default.join(flowDir, 'accounts', 'flow-production.json');
+            console.log(`Flow-production.json path: ${accountsPath}`);
+            console.log(`Flow-production.json exists: ${fs_1.default.existsSync(accountsPath)}`);
             if (fs_1.default.existsSync(accountsPath)) {
                 try {
                     const cfg = JSON.parse(fs_1.default.readFileSync(accountsPath, 'utf8'));
+                    console.log('Flow-production.json loaded successfully');
+                    console.log(`Accounts in flow-production.json: ${Object.keys(cfg.accounts || {}).join(', ')}`);
                     if (cfg.accounts && cfg.accounts['mainnet-agfarms']) {
                         address = String(cfg.accounts['mainnet-agfarms'].address);
+                        console.log(`Found mainnet-agfarms address in flow-production.json: ${address}`);
                         if (cfg.accounts['mainnet-agfarms'].key && typeof cfg.accounts['mainnet-agfarms'].key.index === 'number') {
                             keyId = cfg.accounts['mainnet-agfarms'].key.index;
                         }
@@ -155,12 +189,26 @@ class FlowWrapper {
                         if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.hashAlgorithm) {
                             hashAlgorithm = cfg.accounts['mainnet-agfarms'].key.hashAlgorithm;
                         }
+                        console.log(`Key configuration: keyId=${keyId}, sigAlg=${signatureAlgorithm}, hashAlg=${hashAlgorithm}`);
+                    }
+                    else {
+                        console.log('mainnet-agfarms account not found in flow-production.json');
                     }
                 }
-                catch { }
+                catch (error) {
+                    console.log(`Error loading flow-production.json: ${error}`);
+                }
             }
         }
-        return { address, key, keyId, signatureAlgorithm, hashAlgorithm };
+        const result = { address, key, keyId, signatureAlgorithm, hashAlgorithm };
+        console.log('=== SERVICE ACCOUNT RESULT ===');
+        console.log(`Address: ${result.address}`);
+        console.log(`Key: ${result.key ? 'LOADED' : 'NOT LOADED'}`);
+        console.log(`KeyId: ${result.keyId}`);
+        console.log(`Signature Algorithm: ${result.signatureAlgorithm}`);
+        console.log(`Hash Algorithm: ${result.hashAlgorithm}`);
+        console.log('===============================');
+        return result;
     }
     loadAccountByName(accountName, flowDir) {
         const keyPath = path_1.default.join(flowDir, 'accounts', 'pkeys', `${accountName}.pkey`);
