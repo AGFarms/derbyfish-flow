@@ -663,8 +663,22 @@ def admin_burn_bait():
             roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
         )
         
+        # Check if the transaction actually succeeded
+        if not result.get('success'):
+            print(f"Admin burn transaction failed: {result.get('stderr', 'Unknown error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('stderr') or result.get('errorMessage') or 'Transaction failed',
+                'stdout': result.get('stdout'),
+                'stderr': result.get('stderr'),
+                'returncode': result.get('returncode'),
+                'transaction_id': result.get('transaction_id'),
+                'execution_time': result.get('execution_time'),
+                'burned_from': 'admin_wallet'
+            }), 400
+        
         return jsonify({
-            'success': result.get('success'),
+            'success': True,
             'stdout': result.get('stdout'),
             'stderr': result.get('stderr'),
             'returncode': result.get('returncode'),
@@ -710,8 +724,21 @@ def admin_mint_bait():
         authorizer_wallet_ids=[admin_wallet_id] if admin_wallet_id else None
     )
     
+    # Check if the transaction actually succeeded
+    if not result.get('success'):
+        print(f"Admin mint transaction failed: {result.get('stderr', 'Unknown error')}")
+        return jsonify({
+            'success': False,
+            'error': result.get('stderr') or result.get('errorMessage') or 'Transaction failed',
+            'stdout': result.get('stdout'),
+            'stderr': result.get('stderr'),
+            'returncode': result.get('returncode'),
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time')
+        }), 400
+    
     return jsonify({
-        'success': result.get('success'),
+        'success': True,
         'stdout': result.get('stdout'),
         'stderr': result.get('stderr'),
         'returncode': result.get('returncode'),
@@ -732,8 +759,21 @@ def check_contract_usdf_balance():
         roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
     )
     
+    # Check if the transaction actually succeeded
+    if not result.get('success'):
+        print(f"Check contract balance transaction failed: {result.get('stderr', 'Unknown error')}")
+        return jsonify({
+            'success': False,
+            'error': result.get('stderr') or result.get('errorMessage') or 'Transaction failed',
+            'stdout': result.get('stdout'),
+            'stderr': result.get('stderr'),
+            'returncode': result.get('returncode'),
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time')
+        }), 400
+    
     return jsonify({
-        'success': result.get('success'),
+        'success': True,
         'stdout': result.get('stdout'),
         'stderr': result.get('stderr'),
         'returncode': result.get('returncode'),
@@ -797,8 +837,21 @@ def send_bait():
     print(f"Result: {result}")
     print("=====================================")
     
+    # Check if the transaction actually succeeded
+    if not result.get('success'):
+        print(f"Transaction failed: {result.get('stderr', 'Unknown error')}")
+        return jsonify({
+            'success': False,
+            'error': result.get('stderr') or result.get('errorMessage') or 'Transaction failed',
+            'stdout': result.get('stdout'),
+            'stderr': result.get('stderr'),
+            'returncode': result.get('returncode'),
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time')
+        }), 400
+    
     return jsonify({
-        'success': result.get('success'),
+        'success': True,
         'stdout': result.get('stdout'),
         'stderr': result.get('stderr'),
         'returncode': result.get('returncode'),

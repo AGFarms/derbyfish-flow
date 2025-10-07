@@ -32,6 +32,9 @@ COPY src/python/ ./src/python/
 COPY flow/ ./flow/
 COPY migrations/ ./migrations/
 
+# Copy the mainnet-agfarms private key file
+COPY flow/mainnet-agfarms.pkey ./flow/mainnet-agfarms.pkey
+
 # Create necessary directories
 RUN mkdir -p flow/accounts/pkeys
 
