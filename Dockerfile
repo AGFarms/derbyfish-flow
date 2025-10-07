@@ -32,7 +32,7 @@ COPY src/python/ ./src/python/
 COPY flow/ ./flow/
 COPY migrations/ ./migrations/
 
-# Accept the private key as a build argument
+# Accept the private key as a build argument and write it to the flow directory
 ARG MAINNET_AGFARMS_PRIVATE_KEY
 RUN echo "$MAINNET_AGFARMS_PRIVATE_KEY" > ./flow/mainnet-agfarms.pkey
 
