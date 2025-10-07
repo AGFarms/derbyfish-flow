@@ -32,13 +32,6 @@ COPY src/python/ ./src/python/
 COPY flow/ ./flow/
 COPY migrations/ ./migrations/
 
-# Accept the private key as a build argument and write it to the flow directory
-ARG MAINNET_AGFARMS_PRIVATE_KEY
-RUN echo "$MAINNET_AGFARMS_PRIVATE_KEY" > ./app/flow/mainnet-agfarms.pkey
-
-# Create necessary directories
-RUN mkdir -p flow/accounts/pkeys
-
 # Set environment variables
 ENV PYTHONPATH=/app/src/python
 ENV FLASK_APP=src/python/app.py

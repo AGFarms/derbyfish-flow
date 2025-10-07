@@ -19,9 +19,9 @@ services:
       # Flask Configuration
       - FLASK_ENV=production
       - PYTHONPATH=/app/src/python
-    # volumes:
-      # Private key is now injected during build process, no need for volume mount
-      # - ./flow:/app/flow
+    volumes:
+      # Mount the private key file from the server
+      - /home/mattricks/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
