@@ -19,9 +19,9 @@ services:
       # Flask Configuration
       - FLASK_ENV=production
       - PYTHONPATH=/app/src/python
-    volumes:
-      # Mount flow directory for persistent data (optional)
-      - ./flow:/app/flow
+    # volumes:
+      # Private key is now injected during build process, no need for volume mount
+      # - ./flow:/app/flow
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]

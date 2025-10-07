@@ -51,7 +51,7 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SERVER_PORT }}
         script: |
-          cd /home/mattricks/derbyfish-web
+          cd /home/mattricks/derbyfish-flow
           git fetch origin
           git reset --hard origin/main
 
