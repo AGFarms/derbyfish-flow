@@ -50,18 +50,44 @@ jobs:
         username: ${{ secrets.SERVER_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SERVER_PORT }}
+        debug: true
+        timeout: 60s
         script: |
+          echo "Starting deployment..."
+          echo "Current directory: $(pwd)"
+          
+          echo "Changing to project directory..."
           cd /home/mattricks/derbyfish-flow
+          echo "New directory: $(pwd)"
+          
+          echo "Fetching latest code..."
           git fetch origin
+          echo "Git fetch complete"
+          
+          echo "Resetting to main branch..."
           git reset --hard origin/main
+          echo "Git reset complete"
 
+          echo "Setting image tag..."
           export IMAGE_TAG=${{ github.sha }}
-          echo "Deploying image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+          echo "Image tag set to: $IMAGE_TAG"
+          echo "Full image name: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
 
+          echo "Pulling new Docker image..."
           docker pull ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          echo "Docker pull complete"
 
+          echo "Stopping existing containers..."
           IMAGE_TAG=$IMAGE_TAG docker-compose -f docker-compose.yml down
-          IMAGE_TAG=$IMAGE_TAG docker-compose -f docker-compose.yml up -d --remove-orphans
+          echo "Containers stopped"
 
+          echo "Starting new containers..."
+          IMAGE_TAG=$IMAGE_TAG docker-compose -f docker-compose.yml up -d --remove-orphans
+          echo "New containers started"
+
+          echo "Cleaning up old Docker resources..."
           docker system prune -f
+          echo "Cleanup complete"
+
+          echo "Deployment finished successfully"
 
