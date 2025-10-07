@@ -1,5 +1,5 @@
-import "BaitCoin"
-import "FungibleToken"
+import FungibleToken from 0xf233dcee88fe0abe
+import BaitCoin from 0xed2202de80195438
 
 // Admin transaction to burn BAIT tokens from admin's own vault
 transaction(amount: UFix64) {

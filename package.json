@@ -4,8 +4,10 @@
   "description": "Flow CLI HTTP Wrapper - Node.js version with FCL integration",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "dev": "nodemon dist/app.js",
+    "cli": "node dist/cli.js",
     "test": "jest",
     "fund-wallets": "node fundWallets.js",
     "generate-accounts": "node generateFlowAccounts.js",
@@ -26,7 +28,8 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.38.0",
     "axios": "^1.12.2",
-    "dotenv": "^16.3.1",
+    "dotenv": "^17.2.3",
+    "elliptic": "^6.6.1",
     "express": "^4.18.2",
     "fastify": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
@@ -35,9 +38,11 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@types/node": "^22.5.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
-    "supertest": "^6.3.3"
+    "supertest": "^6.3.3",
+    "typescript": "^5.6.3"
   },
   "engines": {
     "node": ">=16.0.0"

@@ -3,13 +3,15 @@
 		"BaitCoin": {
 			"source": "cadence/contracts/BaitCoin.cdc",
 			"aliases": {
-				"testing": "0000000000000007"
+				"mainnet": "ed2202de80195438"
 			}
 		},
-		"Counter": {
-			"source": "cadence/contracts/Counter.cdc",
+		"FungibleToken": {
+			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
 			"aliases": {
-				"testing": "0000000000000007"
+				"emulator": "ee82856bf20e2aa6",
+				"mainnet": "f233dcee88fe0abe",
+				"testnet": "9a0766d93b6608b7"
 			}
 		},
 		"USDF": {

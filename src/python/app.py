@@ -9,7 +9,7 @@ import jwt
 import functools
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork, FlowResult
+from flow_node_adapter import FlowNodeAdapter
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +22,9 @@ SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY')
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')
 
+# Admin configuration
+ADMIN_SECRET_KEY = os.getenv('ADMIN_SECRET_KEY')
+
 # Validate required environment variables
 if not SUPABASE_URL:
     print("WARNING: SUPABASE_URL environment variable not set")
@@ -31,6 +34,8 @@ if not SUPABASE_SERVICE_KEY:
     print("WARNING: SUPABASE_SERVICE_ROLE_KEY environment variable not set - server-side operations may not work")
 if not SUPABASE_JWT_SECRET:
     print("WARNING: SUPABASE_JWT_SECRET environment variable not set - JWT authentication will not work")
+if not ADMIN_SECRET_KEY:
+    print("WARNING: ADMIN_SECRET_KEY environment variable not set - admin operations will not work")
 
 # Initialize Supabase client with service role key for server-side operations
 # This bypasses RLS policies for server-side wallet lookups
@@ -39,15 +44,48 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE
 # Global storage for background tasks
 background_tasks = {}
 
-# Initialize Flow wrapper
-flow_wrapper = FlowWrapper(FlowConfig(
-    network=FlowNetwork.MAINNET,
-    flow_dir=os.path.join(os.path.dirname(__file__), 'flow'),
-    timeout=300,
-    max_retries=3,
-    rate_limit_delay=0.2,
-    json_output=True
-))
+# Initialize Node-based Flow adapter
+node_adapter = FlowNodeAdapter(repo_root=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+def verify_admin_secret(auth_header):
+    """Verify admin secret key from Authorization header"""
+    try:
+        if not ADMIN_SECRET_KEY:
+            print("WARNING: ADMIN_SECRET_KEY not configured")
+            return False
+        
+        if not auth_header:
+            print("Authentication failed: No Authorization header provided")
+            return False
+        
+        # Check if it's a Bearer token
+        if not auth_header.startswith('Bearer '):
+            print("Authentication failed: Invalid authorization header format")
+            return False
+        
+        # Extract the token
+        token_parts = auth_header.split(' ')
+        if len(token_parts) != 2:
+            print("Authentication failed: Malformed authorization header")
+            return False
+            
+        token = token_parts[1]
+        
+        if not token or token.strip() == '':
+            print("Authentication failed: Empty token")
+            return False
+        
+        # Simple string comparison for admin secret
+        if token == ADMIN_SECRET_KEY:
+            print("Admin authentication successful")
+            return True
+        else:
+            print("Authentication failed: Invalid admin secret")
+            return False
+            
+    except Exception as e:
+        print(f"Admin authentication error: {str(e)}")
+        return False
 
 def verify_supabase_jwt(token):
     """Verify and decode Supabase JWT token"""
@@ -155,6 +193,26 @@ def log_authenticated_user(user_payload, wallet_details):
     print(f"Wallet Active: {is_active}")
     print(f"Timestamp: {datetime.now().isoformat()}")
     print("==========================")
+
+def require_admin_auth(f):
+    """Decorator to require admin secret key authentication for endpoints"""
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            # Get Authorization header
+            auth_header = request.headers.get('Authorization')
+            
+            # Verify the admin secret
+            if not verify_admin_secret(auth_header):
+                return jsonify({'error': 'Invalid or missing admin secret'}), 401
+            
+            return f(*args, **kwargs)
+            
+        except Exception as e:
+            print(f"Admin authentication error: {str(e)}")
+            return jsonify({'error': 'Authentication failed due to server error'}), 500
+    
+    return decorated_function
 
 def require_auth(f):
     """Decorator to require JWT authentication for endpoints"""
@@ -356,6 +414,7 @@ def auth_status():
         'supabase_service_key_configured': bool(SUPABASE_SERVICE_KEY),
         'supabase_jwt_secret_configured': bool(SUPABASE_JWT_SECRET),
         'supabase_client_initialized': bool(supabase),
+        'admin_secret_key_configured': bool(ADMIN_SECRET_KEY),
         'timestamp': datetime.now().isoformat()
     })
 
@@ -392,113 +451,38 @@ def check_bait_balance():
     
     print(f"Address: {address}, Network: {network}")
     
-    # Use Flow wrapper for script execution
-    result = flow_wrapper.execute_script(
+    # Use Node adapter for script execution
+    print(f"=== PYTHON APP SCRIPT EXECUTION ===")
+    print(f"Script: checkBaitBalance.cdc")
+    print(f"Address: {address}")
+    print(f"Network: {network}")
+    print(f"User ID: {request.user_payload.get('sub')}")
+    print(f"Wallet Details: {request.wallet_details}")
+    
+    result = node_adapter.execute_script(
         script_path='cadence/scripts/checkBaitBalance.cdc',
         args=[address]
     )
     
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'data': result.data,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/scripts/check-contract-vaults')
-@require_auth
-def check_contract_vaults():
-    """Check contract vaults"""
-    network = request.args.get('network', 'mainnet')
-    
-    # Use Flow wrapper for script execution
-    result = flow_wrapper.execute_script(
-        script_path='cadence/scripts/checkContractVaults.cdc'
-    )
+    print(f"=== PYTHON APP SCRIPT RESULT ===")
+    print(f"Result: {result}")
+    print("=====================================")
     
     return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'data': result.data,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/scripts/create-vault-and-mint', methods=['POST'])
-@require_auth
-def create_vault_and_mint():
-    """Create vault and mint tokens"""
-    data = request.get_json() or {}
-    network = data.get('network', 'mainnet')
-    
-    # Use Flow wrapper for script execution
-    result = flow_wrapper.execute_script(
-        script_path='cadence/scripts/createVaultAndMint.cdc'
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'data': result.data,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/scripts/sell-bait', methods=['POST'])
-@require_auth
-def sell_bait():
-    """Sell BAIT tokens"""
-    data = request.get_json() or {}
-    network = data.get('network', 'mainnet')
-    
-    # Use Flow wrapper for script execution
-    result = flow_wrapper.execute_script(
-        script_path='cadence/scripts/sellBait.cdc'
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'data': result.data,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/scripts/test-bait-coin-admin', methods=['POST'])
-@require_auth
-def test_bait_coin_admin():
-    """Test BAIT coin admin functions"""
-    data = request.get_json() or {}
-    network = data.get('network', 'mainnet')
-    
-    # Use Flow wrapper for script execution
-    result = flow_wrapper.execute_script(
-        script_path='cadence/scripts/testBaitCoinAdmin.cdc'
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'data': result.data,
-        'execution_time': result.execution_time
+        'success': result.get('success'),
+        'stdout': result.get('stdout'),
+        'stderr': result.get('stderr'),
+        'returncode': result.get('returncode'),
+        'data': result.get('data'),
+        'execution_time': result.get('execution_time')
     })
 
 # Transaction endpoints
 @app.route('/transactions/admin-burn-bait', methods=['POST'])
-@require_auth
+@require_admin_auth
 def admin_burn_bait():
+        
+
     """Admin burn BAIT tokens"""
     data = request.get_json() or {}
     amount = data.get('amount')
@@ -507,28 +491,26 @@ def admin_burn_bait():
     if not amount:
         return jsonify({'error': 'Amount parameter is required'}), 400
     
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
+    # Use Node adapter for transaction execution
+    result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/adminBurnBait.cdc',
         args=[amount],
-        proposer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        authorizer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        payer='mainnet-agfarms'  # Admin operation - use mainnet-agfarms
+        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
     )
     
     return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
+        'success': result.get('success'),
+        'stdout': result.get('stdout'),
+        'stderr': result.get('stderr'),
+        'returncode': result.get('returncode'),
+        'transaction_id': result.get('transaction_id'),
+        'execution_time': result.get('execution_time')
     })
 
 @app.route('/transactions/admin-mint-bait', methods=['POST'])
-@require_auth
+@require_admin_auth
 def admin_mint_bait():
+        
     """Admin mint BAIT tokens"""
     data = request.get_json() or {}
     amount = data.get('amount')
@@ -538,70 +520,24 @@ def admin_mint_bait():
     if not amount:
         return jsonify({'error': 'Amount parameter is required'}), 400
     
-    # Use authenticated user's wallet address as default if not specified
+    # to_address is required for admin operations
     if not to_address:
-        to_address = get_wallet_address(request.wallet_details)
-        if to_address:
-            print(f"Using authenticated user's wallet address: {to_address}")
-        else:
-            return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
+        return jsonify({'error': 'to_address parameter is required'}), 400
     
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
+    # Use Node adapter for transaction execution
+    result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/adminMintBait.cdc',
         args=[to_address, amount],
-        proposer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        authorizer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        payer='mainnet-agfarms'  # Admin operation - use mainnet-agfarms
+        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
     )
     
     return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/admin-mint-fusd', methods=['POST'])
-@require_auth
-def admin_mint_fusd():
-    """Admin mint FUSD tokens"""
-    data = request.get_json() or {}
-    amount = data.get('amount')
-    to_address = data.get('to_address')
-    network = data.get('network', 'mainnet')
-    
-    if not amount:
-        return jsonify({'error': 'Amount parameter is required'}), 400
-    
-    # Use authenticated user's wallet address as default if not specified
-    if not to_address:
-        to_address = get_wallet_address(request.wallet_details)
-        if to_address:
-            print(f"Using authenticated user's wallet address: {to_address}")
-        else:
-            return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/adminMintFusd.cdc',
-        args=[to_address, amount],
-        proposer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        authorizer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        payer='mainnet-agfarms'  # Admin operation - use mainnet-agfarms
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
+        'success': result.get('success'),
+        'stdout': result.get('stdout'),
+        'stderr': result.get('stderr'),
+        'returncode': result.get('returncode'),
+        'transaction_id': result.get('transaction_id'),
+        'execution_time': result.get('execution_time')
     })
 
 @app.route('/transactions/check-contract-usdf-balance')
@@ -610,129 +546,20 @@ def check_contract_usdf_balance():
     """Check contract USDF balance"""
     network = request.args.get('network', 'mainnet')
     
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
+    # Use Node adapter for transaction execution
+    result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/checkContractUsdfBalance.cdc',
         args=[],
-        proposer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        authorizer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        payer='mainnet-agfarms'  # Admin operation - use mainnet-agfarms
+        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
     )
     
     return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/create-all-vault', methods=['POST'])
-@require_auth
-def create_all_vault():
-    """Create all vaults"""
-    data = request.get_json() or {}
-    address = data.get('address')
-    network = data.get('network', 'mainnet')
-    
-    # Use authenticated user's wallet address as default if not specified
-    if not address:
-        address = get_wallet_address(request.wallet_details)
-        if address:
-            print(f"Using authenticated user's wallet address: {address}")
-        else:
-            return jsonify({'error': 'address parameter is required and no wallet address found for authenticated user'}), 400
-    
-    # Get user ID for Flow account name
-    user_id = request.user_payload.get('sub')
-    if not user_id:
-        return jsonify({'error': 'No user ID found in token'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/createAllVault.cdc',
-        args=[address],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/create-usdf-vault', methods=['POST'])
-@require_auth
-def create_usdf_vault():
-    """Create USDF vault"""
-    data = request.get_json() or {}
-    address = data.get('address')
-    network = data.get('network', 'mainnet')
-    
-    # Use authenticated user's wallet address as default if not specified
-    if not address:
-        address = get_wallet_address(request.wallet_details)
-        if address:
-            print(f"Using authenticated user's wallet address: {address}")
-        else:
-            return jsonify({'error': 'address parameter is required and no wallet address found for authenticated user'}), 400
-    
-    # Get user ID for Flow account name
-    user_id = request.user_payload.get('sub')
-    if not user_id:
-        return jsonify({'error': 'No user ID found in token'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/createUsdfVault.cdc',
-        args=[address],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/reset-all-vaults', methods=['POST'])
-@require_auth
-def reset_all_vaults():
-    """Reset all vaults"""
-    data = request.get_json() or {}
-    network = data.get('network', 'mainnet')
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/resetAllVaults.cdc',
-        args=[],
-        proposer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        authorizer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-        payer='mainnet-agfarms'  # Admin operation - use mainnet-agfarms
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
+        'success': result.get('success'),
+        'stdout': result.get('stdout'),
+        'stderr': result.get('stderr'),
+        'returncode': result.get('returncode'),
+        'transaction_id': result.get('transaction_id'),
+        'execution_time': result.get('execution_time')
     })
 
 @app.route('/transactions/send-bait', methods=['POST'])
@@ -755,254 +582,43 @@ def send_bait():
         else:
             return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
     
-    # Get user ID for Flow account name
+    # Get user ID for Flow account name (this matches the account name in flow-production.json)
     user_id = request.user_payload.get('sub')
     if not user_id:
         return jsonify({'error': 'No user ID found in token'}), 400
     
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
+    # Debug logging
+    print(f"=== PYTHON APP SEND BAIT TRANSACTION ===")
+    print(f"User ID (account name): {user_id}")
+    print(f"To address: {to_address}")
+    print(f"Amount: {amount}")
+    print(f"Network: {network}")
+    print(f"Wallet Details: {request.wallet_details}")
+    print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
+    print(f"Transaction Path: cadence/transactions/sendBait.cdc")
+    print(f"Transaction Args: [{to_address}, {amount}]")
+    print("=====================================")
+    
+    # Use Node adapter for transaction execution
+    result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
+        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'}
     )
     
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/send-fusd', methods=['POST'])
-@require_auth
-def send_fusd():
-    """Send FUSD tokens"""
-    data = request.get_json() or {}
-    to_address = data.get('to_address')
-    amount = data.get('amount')
-    network = data.get('network', 'mainnet')
-    
-    if not amount:
-        return jsonify({'error': 'amount parameter is required'}), 400
-    
-    # Use authenticated user's wallet address as default if not specified
-    if not to_address:
-        to_address = get_wallet_address(request.wallet_details)
-        if to_address:
-            print(f"Using authenticated user's wallet address: {to_address}")
-        else:
-            return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
-    
-    # Get user ID for Flow account name
-    user_id = request.user_payload.get('sub')
-    if not user_id:
-        return jsonify({'error': 'No user ID found in token'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/sendFusd.cdc',
-        args=[to_address, amount],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
-    )
+    print(f"=== PYTHON APP SEND BAIT RESULT ===")
+    print(f"Result: {result}")
+    print("=====================================")
     
     return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
+        'success': result.get('success'),
+        'stdout': result.get('stdout'),
+        'stderr': result.get('stderr'),
+        'returncode': result.get('returncode'),
+        'transaction_id': result.get('transaction_id'),
+        'execution_time': result.get('execution_time')
     })
 
-@app.route('/transactions/swap-bait-for-fusd', methods=['POST'])
-@require_auth
-def swap_bait_for_fusd():
-    """Swap BAIT for FUSD"""
-    data = request.get_json() or {}
-    amount = data.get('amount')
-    network = data.get('network', 'mainnet')
-    
-    if not amount:
-        return jsonify({'error': 'Amount parameter is required'}), 400
-    
-    # Get user ID for Flow account name
-    user_id = request.user_payload.get('sub')
-    if not user_id:
-        return jsonify({'error': 'No user ID found in token'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/swapBaitForFusd.cdc',
-        args=[amount],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/swap-fusd-for-bait', methods=['POST'])
-@require_auth
-def swap_fusd_for_bait():
-    """Swap FUSD for BAIT"""
-    data = request.get_json() or {}
-    amount = data.get('amount')
-    network = data.get('network', 'mainnet')
-    
-    if not amount:
-        return jsonify({'error': 'Amount parameter is required'}), 400
-    
-    # Get user ID for Flow account name
-    user_id = request.user_payload.get('sub')
-    if not user_id:
-        return jsonify({'error': 'No user ID found in token'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/swapFusdForBait.cdc',
-        args=[amount],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/withdraw-contract-usdf', methods=['POST'])
-@require_auth
-def withdraw_contract_usdf():
-    """Withdraw contract USDF"""
-    data = request.get_json() or {}
-    amount = data.get('amount')
-    network = data.get('network', 'mainnet')
-    
-    if not amount:
-        return jsonify({'error': 'Amount parameter is required'}), 400
-    
-    # Get user ID for Flow account name
-    user_id = request.user_payload.get('sub')
-    if not user_id:
-        return jsonify({'error': 'No user ID found in token'}), 400
-    
-    # Use Flow wrapper for transaction execution
-    result = flow_wrapper.send_transaction(
-        transaction_path='cadence/transactions/withdrawContractUsdf.cdc',
-        args=[amount],
-        proposer='mainnet-agfarms',  # Hardcoded to mainnet-agfarms
-        authorizers=[user_id],  # Use user ID as additional authorizer (mainnet-agfarms is always included)
-        payer='mainnet-agfarms'  # Always use mainnet-agfarms as payer
-    )
-    
-    return jsonify({
-        'command': result.command,
-        'success': result.success,
-        'stdout': result.raw_output,
-        'stderr': result.error_message,
-        'returncode': 0 if result.success else 1,
-        'transaction_id': result.transaction_id,
-        'execution_time': result.execution_time
-    })
-
-@app.route('/transactions/deposit-flow', methods=['POST'])
-@require_auth
-def deposit_flow():
-    """Deposit FLOW tokens to an account for storage capacity"""
-    data = request.get_json() or {}
-    to_address = data.get('to_address')
-    amount = data.get('amount', '0.25')  # Default 0.25 FLOW
-    network = data.get('network', 'mainnet')
-    
-    # Use authenticated user's wallet address as default if not specified
-    if not to_address:
-        to_address = get_wallet_address(request.wallet_details)
-        if to_address:
-            print(f"Using authenticated user's wallet address: {to_address}")
-        else:
-            return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
-    
-    # Use Flow wrapper for transaction execution with inline code
-    try:
-        # Create a temporary transaction file for the inline code
-        inline_code = f'''import FlowToken from 0x7e60df042a9c0868
-
-transaction(recipient: Address, amount: UFix64) {{
-    prepare(signer: auth(BorrowValue, Storage) &Account) {{
-        let vault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault) 
-            ?? panic("Could not borrow FlowToken vault")
-        let tokens <- vault.withdraw(amount: amount)
-        let recipient = getAccount(recipient)
-        let receiver = recipient.capabilities.get<&{{FungibleToken.Receiver}}>(/public/flowTokenReceiver) 
-            ?? panic("Could not borrow FlowToken receiver")
-        receiver.deposit(from: <-tokens)
-    }}
-    execute {{
-        log("Transferred ".concat(amount.toString()).concat(" FLOW tokens").concat(" to ").concat(recipient.toString()))
-    }}
-}}'''
-        
-        # Write temporary transaction file
-        temp_tx_path = os.path.join(flow_wrapper.config.flow_dir, 'temp_deposit_flow.cdc')
-        with open(temp_tx_path, 'w') as f:
-            f.write(inline_code)
-        
-        # Execute transaction
-        result = flow_wrapper.send_transaction(
-            transaction_path='temp_deposit_flow.cdc',
-            args=[f'0x{to_address}', amount],
-            proposer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-            authorizer='mainnet-agfarms',  # Admin operation - use mainnet-agfarms
-            payer='mainnet-agfarms'  # Admin operation - use mainnet-agfarms
-        )
-        
-        # Clean up temporary file
-        try:
-            os.remove(temp_tx_path)
-        except:
-            pass
-        
-        return jsonify({
-            'command': result.command,
-            'success': result.success,
-            'stdout': result.raw_output,
-            'stderr': result.error_message,
-            'returncode': 0 if result.success else 1,
-            'transaction_id': result.transaction_id,
-            'execution_time': result.execution_time
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'command': 'deposit-flow transaction',
-            'success': False,
-            'stdout': '',
-            'stderr': str(e),
-            'returncode': -1
-        })
 
 # Background task endpoints
 @app.route('/background/run-script', methods=['POST'])

@@ -1,5 +1,5 @@
-import "FUSD"
-import "FungibleToken"
+import FungibleToken from 0xf233dcee88fe0abe
+import FUSD from 0xe223d8a629e49c68
 
 // Admin transaction to mint FUSD tokens directly to a recipient
 transaction(to: Address, amount: UFix64) {

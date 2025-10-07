@@ -1,72 +1,70 @@
-# Flow CLI Wrapper
+# Flow FCL Wrapper
 
-A production-ready Python wrapper for Flow CLI operations with comprehensive error handling, logging, rate limiting, and metrics collection.
+A production-ready TypeScript/JavaScript wrapper for Flow blockchain operations using FCL (Flow Client Library) with comprehensive error handling and type safety.
 
 ## Overview
 
-The Flow CLI Wrapper provides a standardized, thread-safe interface for interacting with the Flow blockchain through the Flow CLI. It replaces direct subprocess calls with a robust system that includes:
+The Flow FCL Wrapper provides a standardized interface for interacting with the Flow blockchain through FCL. It replaces direct FCL calls with a robust system that includes:
 
+- **Type Safety**: Full TypeScript support with proper enums and interfaces
 - **Standardized Error Handling**: Consistent error reporting and recovery mechanisms
-- **JSON Output Parsing**: Automatic parsing of Flow CLI JSON responses
-- **Rate Limiting**: Built-in rate limiting to respect Flow network limits
-- **Retry Logic**: Exponential backoff retry mechanism for transient failures
-- **Comprehensive Logging**: Detailed logging for debugging and monitoring
-- **Metrics Collection**: Performance and success rate tracking
-- **Thread Safety**: Safe for use in multi-threaded environments
+- **FCL Integration**: Direct use of Flow Client Library for optimal performance
+- **Service Account Management**: Automatic loading and configuration of service accounts
+- **Contract Aliases**: Automatic contract address resolution
+- **Simplified API**: Clean, easy-to-use interface for common operations
 
 ## Features
 
 ### Core Functionality
-- Execute Flow scripts with automatic JSON parsing
+- Execute Flow scripts using FCL
 - Send transactions with proper signing and error handling
 - Get account information
 - Get transaction status and wait for sealing
-- Comprehensive metrics and monitoring
+- Type-safe operations with TypeScript
 
 ### Production Features
-- Rate limiting (configurable delays between requests)
-- Retry logic with exponential backoff
-- Timeout handling
-- Thread-safe operations
-- Comprehensive error categorization
-- Performance metrics collection
+- Automatic service account configuration
+- Contract address resolution
+- Network configuration (mainnet, testnet, emulator)
+- Error handling and recovery
+- Clean, consistent API
 
 ## Installation
 
-The Flow wrapper is included in the derbyfish-flow project. Ensure you have the Flow CLI installed and available in your PATH.
+The Flow wrapper is included in the derbyfish-flow project. No Flow CLI installation required - this uses FCL directly.
 
 ```bash
-# Install Flow CLI (if not already installed)
-# See: https://docs.onflow.org/flow-cli/install/
+# Install dependencies
+npm install
+
+# Build TypeScript
+npm run build
 ```
 
 ## Quick Start
 
 ### Basic Usage
 
-```python
-from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork
+```typescript
+import { FlowWrapper, FlowConfig, FlowNetwork } from './dist/flowWrapper';
 
-# Create a wrapper instance
-wrapper = FlowWrapper(FlowConfig(
-    network=FlowNetwork.MAINNET,
-    flow_dir=Path("flow"),
-    timeout=300,
-    max_retries=3,
-    rate_limit_delay=0.2,
-    json_output=True
-))
+// Create a wrapper instance
+const wrapper = new FlowWrapper({
+    network: FlowNetwork.MAINNET,
+    flowDir: "flow"
+});
 
-# Execute a script
-result = wrapper.execute_script(
-    script_path="cadence/scripts/checkBaitBalance.cdc",
-    args=["0x1234567890abcdef"]
-)
+// Execute a script
+const result = await wrapper.executeScript(
+    "cadence/scripts/checkBaitBalance.cdc",
+    ["0x1234567890abcdef"]
+);
 
-if result.success:
-    print(f"Script result: {result.data}")
-else:
-    print(f"Error: {result.error_message}")
+if (result.success) {
+    console.log(`Script result: ${result.data}`);
+} else {
+    console.log(`Error: ${result.errorMessage}`);
+}
 ```
 
 ### Convenience Functions
