@@ -6,3 +6,7 @@ __pycache__/
 .vscode/
 schema.sql
 flow/accounts/pkeys/
+
+node_modules/
+.DS_Store
+package-lock.json

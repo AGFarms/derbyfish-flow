@@ -1,0 +1,53 @@
+{
+  "name": "derbyfish-flow-api",
+  "version": "1.0.1",
+  "description": "Flow CLI HTTP Wrapper - Node.js version with FCL integration",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "jest",
+    "fund-wallets": "node fundWallets.js",
+    "generate-accounts": "node generateFlowAccounts.js",
+    "sync-wallets": "node syncWallets.js"
+  },
+  "keywords": [
+    "flow",
+    "blockchain",
+    "api",
+    "fcl",
+    "cadence"
+  ],
+  "author": "DerbyFish Team",
+  "license": "MIT",
+  "dependencies": {
+    "@onflow/fcl": "^1.20.2",
+    "@onflow/sdk": "^1.10.2",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "axios": "^1.12.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "fastify": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/derbyfish/derbyfish-flow"
+  },
+  "bugs": {
+    "url": "https://github.com/derbyfish/derbyfish-flow/issues"
+  },
+  "homepage": "https://github.com/derbyfish/derbyfish-flow#readme"
+}
