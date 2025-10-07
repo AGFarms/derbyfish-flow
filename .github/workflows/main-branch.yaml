@@ -58,10 +58,14 @@ jobs:
           export IMAGE_TAG=${{ github.sha }}
           echo "Deploying image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
 
+          # Update docker-compose.yml with the new image tag
+          sed -i "s|image: ${{ env.DOCKER_IMAGE }}:.*|image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}|g" docker-compose.yml
+          echo "Updated docker-compose.yml with image tag: ${{ github.sha }}"
+
           docker pull ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
 
-          IMAGE_TAG=$IMAGE_TAG docker-compose -f docker-compose.yml down
-          IMAGE_TAG=$IMAGE_TAG docker-compose -f docker-compose.yml up -d --remove-orphans
+          docker-compose -f docker-compose.yml down
+          docker-compose -f docker-compose.yml up -d --remove-orphans
 
           docker system prune -f
 

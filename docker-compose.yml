@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   derbyfish-flow-api:
-    build: .
+    image: derbyfish/derbyfish-flow:031335270abda6cfbd90f20caea341c8646267ef
     container_name: derbyfish-flow-api
     ports:
       - "5000:5000"
