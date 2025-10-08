@@ -31,8 +31,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY src/python/ ./src/python/
 COPY flow/ ./flow/
-COPY migrations/ ./migrations/
 COPY dist/ ./dist/
+COPY migrations/ ./migrations/
 COPY startup-check.sh ./
 RUN chmod +x startup-check.sh
 
