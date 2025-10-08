@@ -600,11 +600,17 @@ class WalletSyncService:
     def save_production_config(self, config):
         """Save production config to flow-production.json"""
         try:
-            # Create backup of existing file
+            import shutil
+            
+            # Create backup of existing file (use copy instead of rename to avoid "device busy" errors)
             if self.production_file.exists():
                 backup_file = self.production_file.with_suffix('.json.backup')
-                self.production_file.rename(backup_file)
-                print(f"📋 Created backup: {backup_file}")
+                try:
+                    shutil.copy2(self.production_file, backup_file)
+                    print(f"📋 Created backup: {backup_file}")
+                except Exception as backup_error:
+                    print(f"⚠️  Could not create backup: {backup_error}")
+                    # Continue anyway, backup is not critical
             
             # Write new config
             with open(self.production_file, 'w') as f:

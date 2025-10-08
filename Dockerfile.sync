@@ -8,18 +8,35 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     git \
+    build-essential \
+    jq \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js (required for the TypeScript CLI)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
 
 # Install Flow CLI
 RUN curl -s https://storage.googleapis.com/flow-cli/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
+# Copy package.json and install Node.js dependencies
+COPY package.json ./
+RUN npm install
+
+# Copy TypeScript source and build
+COPY src/typescript/ ./src/typescript/
+COPY tsconfig.json ./
+RUN npm run build
+
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire project
-COPY . .
+# Copy the rest of the project
+COPY src/python/ ./src/python/
+COPY flow/ ./flow/
+COPY migrations/ ./migrations/
 
 # Set Python path to include the python source directory
 ENV PYTHONPATH=/app/src/python
