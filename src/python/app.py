@@ -826,9 +826,16 @@ def send_bait():
         flow_address = get_flow_address_by_user_id(to_address)
         if flow_address:
             print(f"Found Flow address for user ID: {flow_address}")
+            # Ensure Flow address has 0x prefix
+            if not flow_address.startswith('0x'):
+                flow_address = f'0x{flow_address}'
             to_address = flow_address
         else:
             return jsonify({'error': f'No wallet found for user ID: {to_address}'}), 404
+    else:
+        # If it's already a Flow address, ensure it has 0x prefix
+        if not to_address.startswith('0x') and len(to_address) == 16:
+            to_address = f'0x{to_address}'
     
     # Get user ID for Flow account name (this matches the account name in flow-production.json)
     user_id = request.user_payload.get('sub')
