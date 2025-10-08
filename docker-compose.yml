@@ -22,6 +22,8 @@ services:
     volumes:
       # Mount the private key file from the repository
       - /home/mattricks/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
+      # Mount the user private keys directory
+      - /home/mattricks/pkeys/:/app/flow/accounts/pkeys/:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]

@@ -844,12 +844,17 @@ def send_bait():
     
     # Debug logging
     print(f"=== PYTHON APP SEND BAIT TRANSACTION ===")
+    # Get the user's Flow address for the transaction roles
+    user_flow_address = get_wallet_address(request.wallet_details)
+    if not user_flow_address:
+        return jsonify({'error': 'No Flow address found for authenticated user'}), 400
+    
     print(f"User ID (account name): {user_id}")
     print(f"To address: {to_address}")
     print(f"Amount: {amount}")
     print(f"Network: {network}")
     print(f"Wallet Details: {request.wallet_details}")
-    print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
+    print(f"Roles: proposer={user_flow_address}, authorizer=[{user_flow_address}], payer=mainnet-agfarms")
     print(f"Transaction Path: cadence/transactions/sendBait.cdc")
     print(f"Transaction Args: [{to_address}, {amount}]")
     print("=====================================")
@@ -863,7 +868,7 @@ def send_bait():
     result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount],
-        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
+        roles={'proposer': user_flow_address, 'authorizer': [user_flow_address], 'payer': 'mainnet-agfarms'},
         proposer_wallet_id=sender_wallet_id,
         payer_wallet_id=admin_wallet_id,
         authorizer_wallet_ids=[sender_wallet_id] if sender_wallet_id else None
