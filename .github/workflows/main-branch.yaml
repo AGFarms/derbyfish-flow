@@ -59,7 +59,7 @@ jobs:
           echo "Deploying image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
 
           # Update docker-compose.yml with the new image tag
-          sed -i "s|image: ${{ env.DOCKER_IMAGE }}:.*|image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}|g" docker-compose.yml
+          sed -i "s|image: .*derbyfish-flow:.*|image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}|g" docker-compose.yml
           echo "Updated docker-compose.yml with image tag: ${{ github.sha }}"
 
           docker pull ${{ env.DOCKER_IMAGE }}:${{ github.sha }}

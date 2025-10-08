@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   derbyfish-flow-api:
-    image: derbyfish/derbyfish-flow:031335270abda6cfbd90f20caea341c8646267ef
+    image: farmera/derbyfish-flow:0ae2b8922257f6147d37efb06c4d57d627760b19
     container_name: derbyfish-flow-api
     ports:
       - "5000:5000"
@@ -20,8 +20,8 @@ services:
       - FLASK_ENV=production
       - PYTHONPATH=/app/src/python
     volumes:
-      # Mount the private key file from the server
-      - /home/mattricks/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
+      # Mount the private key file from the repository
+      - ./flow/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
