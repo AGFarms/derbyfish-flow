@@ -18,11 +18,27 @@ transaction(address: Address) {
             signer.storage.save(<-emptyBaitVault, to: /storage/baitCoinVault)
             
             // Publish BAIT vault capability as Receiver
-            let baitVaultCapability = signer.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/baitCoinVault)
-            signer.capabilities.publish(baitVaultCapability, at: /public/baitCoinReceiver)
-            log("BAIT vault created and published")
+            let baitReceiverCapability = signer.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/baitCoinVault)
+            signer.capabilities.publish(baitReceiverCapability, at: /public/baitCoinReceiver)
+            
+            // Publish BAIT vault balance capability for public viewing
+            let baitBalanceCapability = signer.capabilities.storage.issue<&{FungibleToken.Balance}>(/storage/baitCoinVault)
+            signer.capabilities.publish(baitBalanceCapability, at: /public/baitCoinVault)
+            
+            log("BAIT vault created and published with receiver and balance capabilities")
         } else {
             log("BAIT vault already exists")
+            
+            // Check if balance capability is published, if not, publish it
+            let existingBalanceCapability = signer.capabilities.get<&{FungibleToken.Balance}>(/public/baitCoinVault)
+            if existingBalanceCapability == nil {
+                log("Publishing missing BAIT balance capability...")
+                let baitBalanceCapability = signer.capabilities.storage.issue<&{FungibleToken.Balance}>(/storage/baitCoinVault)
+                signer.capabilities.publish(baitBalanceCapability, at: /public/baitCoinVault)
+                log("BAIT balance capability published")
+            } else {
+                log("BAIT balance capability already published")
+            }
         }
 
     }

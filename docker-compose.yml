@@ -22,13 +22,47 @@ services:
     volumes:
       # Mount the private key file from the repository
       - /home/mattricks/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
-      # Mount the user private keys directory
+      # Mount the user private keys directory (read-only for API)
       - /home/mattricks/pkeys/:/app/flow/accounts/pkeys/:ro
+      # Mount flow-production.json (read-only for API)
+      - /home/mattricks/flow-production.json:/app/flow/accounts/flow-production.json:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - derbyfish-network
+    depends_on:
+      - derbyfish-flow-sync
+
+  derbyfish-flow-sync:
+    image: farmera/derbyfish-flow-sync:0ae2b8922257f6147d37efb06c4d57d627760b19
+    container_name: derbyfish-flow-sync
+    environment:
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # Sync Configuration
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+      
+      # Python Configuration
+      - PYTHONPATH=/app/src/python
+    volumes:
+      # Mount the private key file from the repository
+      - /home/mattricks/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
+      # Mount the user private keys directory (read-write for sync service)
+      - /home/mattricks/pkeys/:/app/flow/accounts/pkeys/
+      # Mount flow-production.json (read-write for sync service)
+      - /home/mattricks/flow-production.json:/app/flow/accounts/flow-production.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os; exit(0 if os.path.exists('/app/flow/accounts/flow-production.json') else 1)"]
+      interval: 60s
+      timeout: 30s
       retries: 3
       start_period: 40s
     networks:
