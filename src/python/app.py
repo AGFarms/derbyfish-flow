@@ -798,6 +798,44 @@ def check_contract_usdf_balance():
         'execution_time': result.get('execution_time')
     })
 
+def check_bait_balance(flow_address):
+    """Check BaitCoin balance for a wallet using checkBaitBalance.cdc script"""
+    try:
+        # Ensure address has 0x prefix
+        if not flow_address.startswith('0x'):
+            flow_address = '0x' + flow_address
+        
+        # Use Node adapter to execute script
+        result = node_adapter.execute_script(
+            script_path="cadence/scripts/checkBaitBalance.cdc",
+            args=[flow_address],
+            network="mainnet"
+        )
+        
+        if not result.get('success', False):
+            error_msg = result.get('error_message', '') or result.get('stderr', '')
+            print(f"Error checking BaitCoin balance for {flow_address}: {error_msg}")
+            return None
+        
+        # Parse the balance from the result
+        try:
+            balance_data = result.get('data', {})
+            if "value" in balance_data:
+                balance_str = balance_data["value"]
+                balance = float(balance_str)
+                return balance
+            else:
+                print(f"Unexpected response format for {flow_address}: {balance_data}")
+                return None
+                
+        except (ValueError, KeyError, TypeError) as e:
+            print(f"Error parsing BaitCoin balance result for {flow_address}: {e}")
+            return None
+        
+    except Exception as e:
+        print(f"Error checking BaitCoin balance for {flow_address}: {e}")
+        return None
+
 @app.route('/transactions/send-bait', methods=['POST'])
 @require_auth
 def send_bait():
@@ -849,12 +887,35 @@ def send_bait():
     if not user_flow_address:
         return jsonify({'error': 'No Flow address found for authenticated user'}), 400
     
+    # Check user's BaitCoin balance before attempting transaction
+    print(f"Checking BaitCoin balance for user {user_flow_address}...")
+    user_balance = check_bait_balance(user_flow_address)
+    
+    if user_balance is None:
+        return jsonify({'error': 'Unable to check BaitCoin balance. Please try again later.'}), 500
+    
+    # Convert amount to float for comparison
+    try:
+        amount_float = float(amount)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid amount format'}), 400
+    
+    if user_balance < amount_float:
+        return jsonify({
+            'error': f'Insufficient BaitCoin balance. You have {user_balance} BaitCoin but are trying to send {amount_float} BaitCoin.',
+            'current_balance': user_balance,
+            'requested_amount': amount_float,
+            'shortfall': amount_float - user_balance
+        }), 400
+    
+    print(f"✓ BaitCoin balance check passed: {user_balance} >= {amount_float}")
+    
     print(f"User ID (account name): {user_id}")
     print(f"To address: {to_address}")
     print(f"Amount: {amount}")
     print(f"Network: {network}")
     print(f"Wallet Details: {request.wallet_details}")
-    print(f"Roles: proposer={user_flow_address}, authorizer=[{user_flow_address}], payer=mainnet-agfarms")
+    print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
     print(f"Transaction Path: cadence/transactions/sendBait.cdc")
     print(f"Transaction Args: [{to_address}, {amount}]")
     print("=====================================")
@@ -865,10 +926,11 @@ def send_bait():
     admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet for payer
     
     # Use Node adapter for transaction execution with wallet IDs
+    # Use auth_id as proposer and authorizer, mainnet-agfarms as payer
     result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount],
-        roles={'proposer': user_flow_address, 'authorizer': [user_flow_address], 'payer': 'mainnet-agfarms'},
+        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
         proposer_wallet_id=sender_wallet_id,
         payer_wallet_id=admin_wallet_id,
         authorizer_wallet_ids=[sender_wallet_id] if sender_wallet_id else None
@@ -880,10 +942,25 @@ def send_bait():
     
     # Check if the transaction actually succeeded
     if not result.get('success'):
-        print(f"Transaction failed: {result.get('stderr', 'Unknown error')}")
+        error_msg = result.get('stderr') or result.get('errorMessage') or 'Transaction failed'
+        print(f"Transaction failed: {error_msg}")
+        
+        # Check for specific insufficient balance error
+        if "Cannot withdraw tokens" in error_msg and "greater than the balance" in error_msg:
+            return jsonify({
+                'success': False,
+                'error': 'Insufficient BaitCoin balance. The transaction failed because you do not have enough BaitCoin tokens.',
+                'error_type': 'insufficient_balance',
+                'stdout': result.get('stdout'),
+                'stderr': result.get('stderr'),
+                'returncode': result.get('returncode'),
+                'transaction_id': result.get('transaction_id'),
+                'execution_time': result.get('execution_time')
+            }), 400
+        
         return jsonify({
             'success': False,
-            'error': result.get('stderr') or result.get('errorMessage') or 'Transaction failed',
+            'error': error_msg,
             'stdout': result.get('stdout'),
             'stderr': result.get('stderr'),
             'returncode': result.get('returncode'),

@@ -26,7 +26,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flowWrapper import FlowWrapper, FlowConfig, FlowNetwork, FlowResult
+from flow_node_adapter import FlowNodeAdapter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -47,15 +47,8 @@ class WalletSyncService:
         self.pkeys_dir = self.accounts_dir / "pkeys"
         self.production_file = self.accounts_dir / "flow-production.json"
         
-        # Initialize Flow wrapper
-        self.flow_wrapper = FlowWrapper(FlowConfig(
-            network=FlowNetwork.MAINNET,
-            flow_dir=self.flow_dir,
-            timeout=60,
-            max_retries=3,
-            rate_limit_delay=0.2,
-            json_output=True
-        ))
+        # Initialize Flow node adapter
+        self.flow_adapter = FlowNodeAdapter()
         
         # Statistics (thread-safe)
         self.total_wallets = 0
@@ -205,28 +198,29 @@ class WalletSyncService:
             if not flow_address.startswith('0x'):
                 flow_address = '0x' + flow_address
             
-            # Use Flow wrapper to execute script
-            result = self.flow_wrapper.execute_script(
+            # Use Flow adapter to execute script
+            result = self.flow_adapter.execute_script(
                 script_path="cadence/scripts/checkFlowBalance.cdc",
                 args=[flow_address],
-                timeout=30
+                network="mainnet"
             )
             
-            if not result.success:
+            if not result.get('success', False):
                 # Check if it's a rate limit error
-                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                error_msg = result.get('error_message', '') or result.get('stderr', '')
+                if "rate limited" in error_msg.lower() or "ResourceExhausted" in error_msg:
                     thread_id = threading.current_thread().ident
                     print(f"⚠️  Rate limited checking FLOW balance for {flow_address}")
-                    print(f"   📋 Full error: {result.error_message.strip()}")
-                    print(f"   🔍 Command: {result.command}")
+                    print(f"   📋 Full error: {error_msg.strip()}")
+                    print(f"   🔍 Command: {result.get('command', 'unknown')}")
                     print(f"   🧵 Thread ID: {thread_id}")
                     return None
-                print(f"⚠️  Error checking FLOW balance for {flow_address}: {result.error_message}")
+                print(f"⚠️  Error checking FLOW balance for {flow_address}: {error_msg}")
                 return None
             
             # Parse JSON output
             try:
-                balance_data = result.data
+                balance_data = result.get('data', {})
                 
                 # The script returns a dictionary with key-value pairs
                 if "value" in balance_data and isinstance(balance_data["value"], list):
@@ -269,31 +263,34 @@ class WalletSyncService:
             print(f"🔍 DEBUG: Funding {flow_address} with {amount} FLOW")
             print(f"🔍 DEBUG: Using account: {funder_account}")
             
-            # Use Flow wrapper to send transaction
-            result = self.flow_wrapper.send_transaction(
+            # Use Flow adapter to send transaction
+            result = self.flow_adapter.send_transaction(
                 transaction_path="cadence/transactions/fundWallet.cdc",
                 args=[flow_address, str(amount)],
-                signer=funder_account,
-                timeout=60
+                proposer_wallet_id=funder_account,
+                payer_wallet_id=funder_account,
+                authorizer_wallet_ids=[funder_account],
+                network="mainnet"
             )
             
-            print(f"🔍 DEBUG: Return code: {0 if result.success else 1}")
-            print(f"🔍 DEBUG: Stdout: {result.raw_output}")
-            print(f"🔍 DEBUG: Stderr: {result.error_message}")
+            print(f"🔍 DEBUG: Return code: {0 if result.get('success', False) else 1}")
+            print(f"🔍 DEBUG: Stdout: {result.get('stdout', '')}")
+            print(f"🔍 DEBUG: Stderr: {result.get('stderr', '')}")
             
-            if not result.success:
+            if not result.get('success', False):
                 # Check if it's a rate limit error
-                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                error_msg = result.get('error_message', '') or result.get('stderr', '')
+                if "rate limited" in error_msg.lower() or "ResourceExhausted" in error_msg:
                     print(f"⚠️  Rate limited funding {flow_address} with {amount} FLOW")
-                    print(f"   📋 Full error: {result.error_message.strip()}")
-                    print(f"   🔍 Command: {result.command}")
+                    print(f"   📋 Full error: {error_msg.strip()}")
+                    print(f"   🔍 Command: {result.get('command', 'unknown')}")
                     print(f"   🔑 Using account: {funder_account}")
                 else:
-                    print(f"❌ Error funding {flow_address} with {amount} FLOW: {result.error_message}")
+                    print(f"❌ Error funding {flow_address} with {amount} FLOW: {error_msg}")
                 return False
             
-            if result.transaction_id:
-                print(f"✓ Funded {flow_address} with {amount} FLOW (Transaction: {result.transaction_id})")
+            if result.get('transaction_id'):
+                print(f"✓ Funded {flow_address} with {amount} FLOW (Transaction: {result['transaction_id']})")
             else:
                 print(f"✓ Funded {flow_address} with {amount} FLOW")
             
@@ -310,31 +307,32 @@ class WalletSyncService:
             if not flow_address.startswith('0x'):
                 flow_address = '0x' + flow_address
             
-            # Use Flow wrapper to execute script
-            result = self.flow_wrapper.execute_script(
+            # Use Flow adapter to execute script
+            result = self.flow_adapter.execute_script(
                 script_path="cadence/scripts/checkBaitBalance.cdc",
                 args=[flow_address],
-                timeout=30
+                network="mainnet"
             )
             
-            if result.success:
+            if result.get('success', False):
                 # Script executed successfully, vault exists (even if balance is 0)
                 return True
             else:
                 # Check if error is about vault not existing
-                if "Could not borrow BAIT vault reference" in result.error_message:
+                error_msg = result.get('error_message', '') or result.get('stderr', '')
+                if "Could not borrow BAIT vault reference" in error_msg:
                     return False
                 # Check if it's a rate limit error
-                elif "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                elif "rate limited" in error_msg.lower() or "ResourceExhausted" in error_msg:
                     thread_id = threading.current_thread().ident
                     print(f"⚠️  Rate limited checking vault for {flow_address}")
-                    print(f"   📋 Full error: {result.error_message.strip()}")
-                    print(f"   🔍 Command: {result.command}")
+                    print(f"   📋 Full error: {error_msg.strip()}")
+                    print(f"   🔍 Command: {result.get('command', 'unknown')}")
                     print(f"   🧵 Thread ID: {thread_id}")
                     return None
                 else:
                     # Some other error occurred
-                    print(f"⚠️  Error checking vault for {flow_address}: {result.error_message}")
+                    print(f"⚠️  Error checking vault for {flow_address}: {error_msg}")
                     return None
                     
         except Exception as e:
@@ -351,28 +349,30 @@ class WalletSyncService:
             
             print(f"🔍 Creating vault for address: {flow_address}, auth_id: {auth_id}")
             
-            # Use Flow wrapper to send transaction
-            result = self.flow_wrapper.send_transaction(
+            # Use Flow adapter to send transaction
+            result = self.flow_adapter.send_transaction(
                 transaction_path="cadence/transactions/createAllVault.cdc",
                 args=[f'0x{flow_address}'],
-                signer=flow_address,  # Signer (target address)
-                payer=payer_account,  # Rotating payer for fees
-                timeout=60
+                proposer_wallet_id=flow_address,  # Proposer (target address)
+                payer_wallet_id=payer_account,  # Rotating payer for fees
+                authorizer_wallet_ids=[flow_address],  # Authorizer (target address)
+                network="mainnet"
             )
             
-            print(f"🔍 DEBUG: Return code: {0 if result.success else 1}")
-            print(f"🔍 DEBUG: Stdout: {result.raw_output}")
-            print(f"🔍 DEBUG: Stderr: {result.error_message}")
+            print(f"🔍 DEBUG: Return code: {0 if result.get('success', False) else 1}")
+            print(f"🔍 DEBUG: Stdout: {result.get('stdout', '')}")
+            print(f"🔍 DEBUG: Stderr: {result.get('stderr', '')}")
             
-            if not result.success:
+            if not result.get('success', False):
                 # Check if it's a rate limit error
-                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                error_msg = result.get('error_message', '') or result.get('stderr', '')
+                if "rate limited" in error_msg.lower() or "ResourceExhausted" in error_msg:
                     print(f"⚠️  Rate limited creating vault for {auth_id} ({flow_address})")
-                    print(f"   📋 Full error: {result.error_message.strip()}")
-                    print(f"   🔍 Command: {result.command}")
+                    print(f"   📋 Full error: {error_msg.strip()}")
+                    print(f"   🔍 Command: {result.get('command', 'unknown')}")
                     print(f"   🔑 Using payer: {payer_account}")
                 else:
-                    print(f"❌ Error creating vault for {auth_id} ({flow_address}): {result.error_message}")
+                    print(f"❌ Error creating vault for {auth_id} ({flow_address}): {error_msg}")
                 return False
             
             print(f"✓ Created BaitCoin vault for {auth_id} ({flow_address})")
@@ -392,28 +392,30 @@ class WalletSyncService:
             
             print(f"🔍 Publishing BaitCoin balance capability for address: {flow_address}, auth_id: {auth_id}")
             
-            # Use Flow wrapper to send transaction
-            result = self.flow_wrapper.send_transaction(
+            # Use Flow adapter to send transaction
+            result = self.flow_adapter.send_transaction(
                 transaction_path="cadence/transactions/publishBaitBalance.cdc",
                 args=[],
-                signer=flow_address,  # Signer (target address)
-                payer=payer_account,  # Rotating payer for fees
-                timeout=60
+                proposer_wallet_id=flow_address,  # Proposer (target address)
+                payer_wallet_id=payer_account,  # Rotating payer for fees
+                authorizer_wallet_ids=[flow_address],  # Authorizer (target address)
+                network="mainnet"
             )
             
-            print(f"🔍 DEBUG: Return code: {0 if result.success else 1}")
-            print(f"🔍 DEBUG: Stdout: {result.raw_output}")
-            print(f"🔍 DEBUG: Stderr: {result.error_message}")
+            print(f"🔍 DEBUG: Return code: {0 if result.get('success', False) else 1}")
+            print(f"🔍 DEBUG: Stdout: {result.get('stdout', '')}")
+            print(f"🔍 DEBUG: Stderr: {result.get('stderr', '')}")
             
-            if not result.success:
+            if not result.get('success', False):
                 # Check if it's a rate limit error
-                if "rate limited" in result.error_message.lower() or "ResourceExhausted" in result.error_message:
+                error_msg = result.get('error_message', '') or result.get('stderr', '')
+                if "rate limited" in error_msg.lower() or "ResourceExhausted" in error_msg:
                     print(f"⚠️  Rate limited publishing balance capability for {auth_id} ({flow_address})")
-                    print(f"   📋 Full error: {result.error_message.strip()}")
-                    print(f"   🔍 Command: {result.command}")
+                    print(f"   📋 Full error: {error_msg.strip()}")
+                    print(f"   🔍 Command: {result.get('command', 'unknown')}")
                     print(f"   🔑 Using payer: {payer_account}")
                 else:
-                    print(f"❌ Error publishing balance capability for {auth_id} ({flow_address}): {result.error_message}")
+                    print(f"❌ Error publishing balance capability for {auth_id} ({flow_address}): {error_msg}")
                 return False
             
             print(f"✓ Published BaitCoin balance capability for {auth_id} ({flow_address})")
@@ -718,17 +720,10 @@ class WalletSyncService:
         print(f"- Balance capability errors: {self.balance_capability_errors}")
         print(f"- Production config saved to: {self.production_file}")
         
-        # Print Flow wrapper metrics
-        flow_metrics = self.flow_wrapper.get_metrics()
-        print(f"\n📊 Flow CLI Operations Summary:")
-        print(f"- Total operations: {flow_metrics['total_operations']}")
-        print(f"- Successful operations: {flow_metrics['successful_operations']}")
-        print(f"- Failed operations: {flow_metrics['failed_operations']}")
-        print(f"- Success rate: {flow_metrics['success_rate_percent']}%")
-        print(f"- Average execution time: {flow_metrics['average_execution_time']}s")
-        print(f"- Total retries: {flow_metrics['total_retries']}")
-        print(f"- Rate limited operations: {flow_metrics['rate_limited_operations']}")
-        print(f"- Timeout operations: {flow_metrics['timeout_operations']}")
+        # Print Flow adapter operations summary
+        print(f"\n📊 Flow Operations Summary:")
+        print(f"- Using FlowNodeAdapter for Flow CLI operations")
+        print(f"- All operations logged with detailed debugging information")
         
         self.last_sync_time = datetime.now()
         return True

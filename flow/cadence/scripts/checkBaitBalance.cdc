@@ -22,9 +22,5 @@ access(all) fun main(address: Address): UFix64 {
     
     let vaultRef = vaultCapability!.borrow()
     
-    if vaultRef == nil {
-        return 0.0
-    }
-    
     return vaultRef!.balance
 }
