@@ -353,9 +353,9 @@ class WalletSyncService:
             result = self.flow_adapter.send_transaction(
                 transaction_path="cadence/transactions/createAllVault.cdc",
                 args=[f'0x{flow_address}'],
-                proposer_wallet_id=flow_address,  # Proposer (target address)
+                proposer_wallet_id=auth_id,  # Proposer (wallet ID, not address)
                 payer_wallet_id=payer_account,  # Rotating payer for fees
-                authorizer_wallet_ids=[flow_address],  # Authorizer (target address)
+                authorizer_wallet_ids=[auth_id],  # Authorizer (wallet ID, not address)
                 network="mainnet"
             )
             
@@ -396,9 +396,9 @@ class WalletSyncService:
             result = self.flow_adapter.send_transaction(
                 transaction_path="cadence/transactions/publishBaitBalance.cdc",
                 args=[],
-                proposer_wallet_id=flow_address,  # Proposer (target address)
+                proposer_wallet_id=auth_id,  # Proposer (wallet ID, not address)
                 payer_wallet_id=payer_account,  # Rotating payer for fees
-                authorizer_wallet_ids=[flow_address],  # Authorizer (target address)
+                authorizer_wallet_ids=[auth_id],  # Authorizer (wallet ID, not address)
                 network="mainnet"
             )
             

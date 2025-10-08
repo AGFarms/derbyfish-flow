@@ -1,5 +1,5 @@
-import "BaitCoin"
-import "FungibleToken"
+import BaitCoin from 0xed2202de80195438
+import FungibleToken from 0xf233dcee88fe0abe
 
 // Transaction to publish BAIT balance capability for public viewing
 transaction {
