@@ -313,7 +313,13 @@ export class FlowWrapper {
         const fclArgs = args.map(arg => {
             if (typeof arg === 'string' && arg.startsWith('0x')) return fcl.arg(arg, (fcl as any).t.Address);
             else if (typeof arg === 'string' && arg.includes('.')) return fcl.arg(arg, (fcl as any).t.UFix64);
-            else if (typeof arg === 'number') return fcl.arg(arg.toString(), (fcl as any).t.UFix64);
+            else if (typeof arg === 'number') {
+                // Ensure UFix64 values have at least one decimal place
+                const numStr = arg.toString();
+                const hasDecimal = numStr.includes('.');
+                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
+                return fcl.arg(formattedNum, (fcl as any).t.UFix64);
+            }
             else return fcl.arg(String(arg), (fcl as any).t.String);
         });
         
@@ -421,7 +427,13 @@ export class FlowWrapper {
         const fclArgs = args.map(arg => {
             if (typeof arg === 'string' && arg.startsWith('0x')) return fcl.arg(arg, (fcl as any).t.Address);
             else if (typeof arg === 'string' && arg.includes('.')) return fcl.arg(arg, (fcl as any).t.UFix64);
-            else if (typeof arg === 'number') return fcl.arg(arg.toString(), (fcl as any).t.UFix64);
+            else if (typeof arg === 'number') {
+                // Ensure UFix64 values have at least one decimal place
+                const numStr = arg.toString();
+                const hasDecimal = numStr.includes('.');
+                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
+                return fcl.arg(formattedNum, (fcl as any).t.UFix64);
+            }
             else return fcl.arg(String(arg), (fcl as any).t.String);
         });
         

@@ -319,8 +319,13 @@ class FlowWrapper {
                 return fcl.arg(arg, fcl.t.Address);
             else if (typeof arg === 'string' && arg.includes('.'))
                 return fcl.arg(arg, fcl.t.UFix64);
-            else if (typeof arg === 'number')
-                return fcl.arg(arg.toString(), fcl.t.UFix64);
+            else if (typeof arg === 'number') {
+                // Ensure UFix64 values have at least one decimal place
+                const numStr = arg.toString();
+                const hasDecimal = numStr.includes('.');
+                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
+                return fcl.arg(formattedNum, fcl.t.UFix64);
+            }
             else
                 return fcl.arg(String(arg), fcl.t.String);
         });
@@ -415,8 +420,13 @@ class FlowWrapper {
                 return fcl.arg(arg, fcl.t.Address);
             else if (typeof arg === 'string' && arg.includes('.'))
                 return fcl.arg(arg, fcl.t.UFix64);
-            else if (typeof arg === 'number')
-                return fcl.arg(arg.toString(), fcl.t.UFix64);
+            else if (typeof arg === 'number') {
+                // Ensure UFix64 values have at least one decimal place
+                const numStr = arg.toString();
+                const hasDecimal = numStr.includes('.');
+                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
+                return fcl.arg(formattedNum, fcl.t.UFix64);
+            }
             else
                 return fcl.arg(String(arg), fcl.t.String);
         });
