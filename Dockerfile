@@ -48,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
 # Run startup check and then the application
-CMD ["sh", "-c", "./startup-check.sh && dotenvx run -- python src/python/app.py"]
+CMD ["sh", "-c", "./startup-check.sh && python src/python/app.py"]
