@@ -21,7 +21,7 @@ services:
       - PYTHONPATH=/app/src/python
     volumes:
       # Mount the private key file from the repository
-      - ./flow/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
+      - /home/mattricks/mainnet-agfarms.pkey:/app/flow/mainnet-agfarms.pkey:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
