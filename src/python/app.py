@@ -848,13 +848,8 @@ def send_bait():
     if not amount:
         return jsonify({'error': 'amount parameter is required'}), 400
     
-    # Use authenticated user's wallet address as default if not specified
     if not to_address:
-        to_address = get_wallet_address(request.wallet_details)
-        if to_address:
-            print(f"Using authenticated user's wallet address: {to_address}")
-        else:
-            return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
+        return jsonify({'error': 'to_address parameter is required'}), 400
     
     # Check if to_address is a user ID (UUID format) and convert to Flow address
     import re
@@ -891,33 +886,37 @@ def send_bait():
     print(f"Checking BaitCoin balance for user {user_flow_address}...")
     user_balance = check_bait_balance(user_flow_address)
     
-    if user_balance is None:
-        return jsonify({'error': 'Unable to check BaitCoin balance. Please try again later.'}), 500
-    
     # Convert amount to float for comparison
     try:
         amount_float = float(amount)
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid amount format'}), 400
     
-    if user_balance < amount_float:
-        return jsonify({
-            'error': f'Insufficient BaitCoin balance. You have {user_balance} BaitCoin but are trying to send {amount_float} BaitCoin.',
-            'current_balance': user_balance,
-            'requested_amount': amount_float,
-            'shortfall': amount_float - user_balance
-        }), 400
-    
-    print(f"✓ BaitCoin balance check passed: {user_balance} >= {amount_float}")
+    # If balance check failed, log warning but continue with transaction
+    if user_balance is None:
+        print(f"⚠️  Could not check BaitCoin balance for {user_flow_address}, proceeding with transaction")
+        print(f"⚠️  Transaction may fail if insufficient balance")
+    else:
+        print(f"✓ BaitCoin balance check: {user_balance} BaitCoin")
+        
+        if user_balance < amount_float:
+            return jsonify({
+                'error': f'Insufficient BaitCoin balance. You have {user_balance} BaitCoin but are trying to send {amount_float} BaitCoin.',
+                'current_balance': user_balance,
+                'requested_amount': amount_float,
+                'shortfall': amount_float - user_balance
+            }), 400
+        
+        print(f"✓ BaitCoin balance check passed: {user_balance} >= {amount_float}")
     
     print(f"User ID (account name): {user_id}")
     print(f"To address: {to_address}")
-    print(f"Amount: {amount}")
+    print(f"Amount: {amount_float}")
     print(f"Network: {network}")
     print(f"Wallet Details: {request.wallet_details}")
     print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
     print(f"Transaction Path: cadence/transactions/sendBait.cdc")
-    print(f"Transaction Args: [{to_address}, {amount}]")
+    print(f"Transaction Args: [{to_address}, {amount_float}]")
     print("=====================================")
     
     # Get wallet IDs for transaction logging
@@ -927,9 +926,10 @@ def send_bait():
     
     # Use Node adapter for transaction execution with wallet IDs
     # Use auth_id as proposer and authorizer, mainnet-agfarms as payer
+    # Pass amount as decimal (float) to match Flow CLI behavior
     result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/sendBait.cdc',
-        args=[to_address, amount],
+        args=[to_address, amount_float],  # Use amount_float instead of amount string
         roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
         proposer_wallet_id=sender_wallet_id,
         payer_wallet_id=admin_wallet_id,
