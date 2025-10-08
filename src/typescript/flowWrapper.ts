@@ -311,8 +311,20 @@ export class FlowWrapper {
         console.log(`Script Code Preview (first 200 chars): ${code.substring(0, 200)}...`);
         
         const fclArgs = args.map(arg => {
-            if (typeof arg === 'string' && arg.startsWith('0x')) return fcl.arg(arg, (fcl as any).t.Address);
-            else if (typeof arg === 'string' && arg.includes('.')) return fcl.arg(arg, (fcl as any).t.UFix64);
+            if (typeof arg === 'string') {
+                // Check if it's a Flow address (starts with 0x or is a hex string of appropriate length)
+                if (arg.startsWith('0x') || /^[0-9a-fA-F]{16}$/.test(arg) || /^[0-9a-fA-F-]{36}$/.test(arg)) {
+                    return fcl.arg(arg, (fcl as any).t.Address);
+                }
+                // Check if it's a decimal number
+                else if (arg.includes('.')) {
+                    return fcl.arg(arg, (fcl as any).t.UFix64);
+                }
+                // Default to String for other strings
+                else {
+                    return fcl.arg(arg, (fcl as any).t.String);
+                }
+            }
             else if (typeof arg === 'number') {
                 // Ensure UFix64 values have at least one decimal place
                 const numStr = arg.toString();
@@ -320,7 +332,9 @@ export class FlowWrapper {
                 const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
                 return fcl.arg(formattedNum, (fcl as any).t.UFix64);
             }
-            else return fcl.arg(String(arg), (fcl as any).t.String);
+            else {
+                return fcl.arg(String(arg), (fcl as any).t.String);
+            }
         });
         
         console.log(`FCL Arguments: ${JSON.stringify(fclArgs, null, 2)}`);
@@ -425,8 +439,20 @@ export class FlowWrapper {
         console.log(`Transaction Code Preview (first 300 chars): ${code.substring(0, 300)}...`);
         
         const fclArgs = args.map(arg => {
-            if (typeof arg === 'string' && arg.startsWith('0x')) return fcl.arg(arg, (fcl as any).t.Address);
-            else if (typeof arg === 'string' && arg.includes('.')) return fcl.arg(arg, (fcl as any).t.UFix64);
+            if (typeof arg === 'string') {
+                // Check if it's a Flow address (starts with 0x or is a hex string of appropriate length)
+                if (arg.startsWith('0x') || /^[0-9a-fA-F]{16}$/.test(arg) || /^[0-9a-fA-F-]{36}$/.test(arg)) {
+                    return fcl.arg(arg, (fcl as any).t.Address);
+                }
+                // Check if it's a decimal number
+                else if (arg.includes('.')) {
+                    return fcl.arg(arg, (fcl as any).t.UFix64);
+                }
+                // Default to String for other strings
+                else {
+                    return fcl.arg(arg, (fcl as any).t.String);
+                }
+            }
             else if (typeof arg === 'number') {
                 // Ensure UFix64 values have at least one decimal place
                 const numStr = arg.toString();
@@ -434,7 +460,9 @@ export class FlowWrapper {
                 const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
                 return fcl.arg(formattedNum, (fcl as any).t.UFix64);
             }
-            else return fcl.arg(String(arg), (fcl as any).t.String);
+            else {
+                return fcl.arg(String(arg), (fcl as any).t.String);
+            }
         });
         
         console.log(`FCL Arguments: ${JSON.stringify(fclArgs, null, 2)}`);

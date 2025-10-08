@@ -190,6 +190,23 @@ def get_wallet_id_by_address(address):
         print(f"Error fetching wallet ID by address: {e}")
         return None
 
+def get_flow_address_by_user_id(user_id):
+    """Get Flow address by user ID (auth_id) from Supabase"""
+    if not supabase:
+        print("Supabase client not initialized")
+        return None
+    
+    try:
+        response = supabase.table('wallet').select('flow_address').eq('auth_id', user_id).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0]['flow_address']
+        else:
+            print(f"No wallet found for user ID {user_id}")
+            return None
+    except Exception as e:
+        print(f"Error fetching Flow address by user ID: {e}")
+        return None
+
 def get_or_create_admin_wallet():
     """Get admin wallet from the database (assumes it exists from migration)"""
     admin_wallet_id = '77ef3a77-19e8-49d9-bcc7-f89872378622'  # Fixed admin wallet ID from migration
@@ -800,6 +817,18 @@ def send_bait():
             print(f"Using authenticated user's wallet address: {to_address}")
         else:
             return jsonify({'error': 'to_address parameter is required and no wallet address found for authenticated user'}), 400
+    
+    # Check if to_address is a user ID (UUID format) and convert to Flow address
+    import re
+    uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    if re.match(uuid_pattern, to_address):
+        print(f"to_address appears to be a user ID: {to_address}")
+        flow_address = get_flow_address_by_user_id(to_address)
+        if flow_address:
+            print(f"Found Flow address for user ID: {flow_address}")
+            to_address = flow_address
+        else:
+            return jsonify({'error': f'No wallet found for user ID: {to_address}'}), 404
     
     # Get user ID for Flow account name (this matches the account name in flow-production.json)
     user_id = request.user_payload.get('sub')
