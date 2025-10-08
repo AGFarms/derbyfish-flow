@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   derbyfish-flow-api:
     image: farmera/derbyfish-flow:0ae2b8922257f6147d37efb06c4d57d627760b19

@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project
 COPY . .
 
-# Set Python path
+# Set Python path to include the python source directory
 ENV PYTHONPATH=/app/src/python
 
 # Create necessary directories
@@ -30,9 +30,12 @@ RUN mkdir -p /app/flow/accounts/pkeys
 # Make the sync service executable
 RUN chmod +x /app/src/python/syncWalletsService.py
 
+# Change to the python directory for proper imports
+WORKDIR /app/src/python
+
 # Health check
 HEALTHCHECK --interval=60s --timeout=30s --start-period=40s --retries=3 \
     CMD python3 -c "import os; exit(0 if os.path.exists('/app/flow/accounts/flow-production.json') else 1)"
 
 # Run the sync service
-CMD ["python3", "/app/src/python/syncWalletsService.py"]
+CMD ["python3", "syncWalletsService.py"]
