@@ -54,13 +54,21 @@ class FlowResult {
         this.data = options.data || null;
         this.errorMessage = options.errorMessage || "";
         this.transactionId = options.transactionId || null;
+        this.executionTime = options.executionTime || 0;
+        this.blockHeight = options.blockHeight || null;
+        this.blockTimestamp = options.blockTimestamp || null;
+        this.gasUsed = options.gasUsed || null;
     }
     toDict() {
         return {
             success: this.success,
             data: this.data,
             errorMessage: this.errorMessage,
-            transactionId: this.transactionId
+            transactionId: this.transactionId,
+            executionTime: this.executionTime,
+            blockHeight: this.blockHeight,
+            blockTimestamp: this.blockTimestamp,
+            gasUsed: this.gasUsed
         };
     }
 }
@@ -74,6 +82,8 @@ class FlowConfig {
 exports.FlowConfig = FlowConfig;
 class FlowWrapper {
     constructor(config = {}) {
+        this.transactionLock = false;
+        this.transactionQueue = [];
         this.config = new FlowConfig(config);
         fcl.config().put('accessNode.api', this.getAccessNode(this.config.network));
         const baitAddr = '0xed2202de80195438';
@@ -86,15 +96,9 @@ class FlowWrapper {
         this.loadFlowConfig();
         const svc = this.loadServiceAccount(this.config.flowDir);
         this.service = svc;
-        console.log('=== CONSTRUCTOR SERVICE ACCOUNT SETUP ===');
-        console.log(`Service address: ${svc.address}`);
-        console.log(`Service key: ${svc.key ? 'LOADED' : 'NOT LOADED'}`);
-        console.log(`Service keyId: ${svc.keyId}`);
-        console.log(`Service signatureAlgorithm: ${svc.signatureAlgorithm}`);
-        console.log(`Service hashAlgorithm: ${svc.hashAlgorithm}`);
+        // Clean service account setup log
+        console.log(`🔑 Service: ${svc.address} (key: ${svc.key ? '✓' : '✗'})`);
         this.authz = svc.address && svc.key ? this.authzFactory(svc.address, svc.keyId || 0, svc.key, svc.signatureAlgorithm, svc.hashAlgorithm) : null;
-        console.log(`Authz configured: ${this.authz ? 'YES' : 'NO'}`);
-        console.log('==========================================');
     }
     getAccessNode(network) {
         if (network === types_1.FlowNetwork.MAINNET)
@@ -105,49 +109,54 @@ class FlowWrapper {
     }
     loadFlowConfig() {
         const flowJsonPath = path_1.default.join(this.config.flowDir, 'flow.json');
-        if (fs_1.default.existsSync(flowJsonPath)) {
-            try {
-                const flowConfig = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
-                if (flowConfig.contracts) {
-                    for (const [contractName, contractConfig] of Object.entries(flowConfig.contracts)) {
-                        if (contractConfig.aliases && contractConfig.aliases[this.config.network]) {
-                            const address = String(contractConfig.aliases[this.config.network]);
-                            const withPrefix = address.startsWith('0x') ? address : `0x${address}`;
-                            fcl.config().put(`0x${contractName}`, withPrefix);
-                        }
-                    }
+        if (!fs_1.default.existsSync(flowJsonPath)) {
+            throw new Error(`Flow config file not found: ${flowJsonPath}`);
+        }
+        const flowConfig = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
+        if (flowConfig.contracts) {
+            for (const [contractName, contractConfig] of Object.entries(flowConfig.contracts)) {
+                if (contractConfig.aliases && contractConfig.aliases[this.config.network]) {
+                    const address = String(contractConfig.aliases[this.config.network]);
+                    const withPrefix = address.startsWith('0x') ? address : `0x${address}`;
+                    fcl.config()
+                        .put(`0x${contractName}`, withPrefix)
+                        .put(`contracts.${contractName}`, withPrefix);
                 }
             }
-            catch { }
         }
     }
     loadServiceAccount(flowDir) {
-        console.log('=== LOADING SERVICE ACCOUNT ===');
-        console.log(`Flow Directory: ${flowDir}`);
         const keyPath = path_1.default.join(flowDir, 'mainnet-agfarms.pkey');
-        console.log(`Private key path: ${keyPath}`);
-        console.log(`Private key file exists: ${fs_1.default.existsSync(keyPath)}`);
-        const key = fs_1.default.existsSync(keyPath) ? fs_1.default.readFileSync(keyPath, 'utf8').trim() : null;
-        console.log(`Private key loaded: ${key ? 'YES' : 'NO'}`);
-        if (key) {
-            console.log(`Private key length: ${key.length} characters`);
-            console.log(`Private key preview: ${key.substring(0, 8)}...${key.substring(key.length - 8)}`);
+        if (!fs_1.default.existsSync(keyPath)) {
+            throw new Error(`Service account private key not found: ${keyPath}`);
         }
+        const key = fs_1.default.readFileSync(keyPath, 'utf8').trim();
         let address = null;
         let keyId = 0;
         let signatureAlgorithm = 'ECDSA_secp256k1';
         let hashAlgorithm = 'SHA2_256';
         const flowJsonPath = path_1.default.join(flowDir, 'flow.json');
-        console.log(`Flow.json path: ${flowJsonPath}`);
-        console.log(`Flow.json exists: ${fs_1.default.existsSync(flowJsonPath)}`);
         if (fs_1.default.existsSync(flowJsonPath)) {
-            try {
-                const cfg = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
-                console.log('Flow.json loaded successfully');
-                console.log(`Accounts in flow.json: ${Object.keys(cfg.accounts || {}).join(', ')}`);
+            const cfg = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
+            if (cfg.accounts && cfg.accounts['mainnet-agfarms']) {
+                address = String(cfg.accounts['mainnet-agfarms'].address);
+                if (cfg.accounts['mainnet-agfarms'].key && typeof cfg.accounts['mainnet-agfarms'].key.index === 'number') {
+                    keyId = cfg.accounts['mainnet-agfarms'].key.index;
+                }
+                if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.signatureAlgorithm) {
+                    signatureAlgorithm = cfg.accounts['mainnet-agfarms'].key.signatureAlgorithm;
+                }
+                if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.hashAlgorithm) {
+                    hashAlgorithm = cfg.accounts['mainnet-agfarms'].key.hashAlgorithm;
+                }
+            }
+        }
+        if (!address) {
+            const accountsPath = path_1.default.join(flowDir, 'accounts', 'flow-production.json');
+            if (fs_1.default.existsSync(accountsPath)) {
+                const cfg = JSON.parse(fs_1.default.readFileSync(accountsPath, 'utf8'));
                 if (cfg.accounts && cfg.accounts['mainnet-agfarms']) {
                     address = String(cfg.accounts['mainnet-agfarms'].address);
-                    console.log(`Found mainnet-agfarms address in flow.json: ${address}`);
                     if (cfg.accounts['mainnet-agfarms'].key && typeof cfg.accounts['mainnet-agfarms'].key.index === 'number') {
                         keyId = cfg.accounts['mainnet-agfarms'].key.index;
                     }
@@ -157,70 +166,44 @@ class FlowWrapper {
                     if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.hashAlgorithm) {
                         hashAlgorithm = cfg.accounts['mainnet-agfarms'].key.hashAlgorithm;
                     }
-                    console.log(`Key configuration: keyId=${keyId}, sigAlg=${signatureAlgorithm}, hashAlg=${hashAlgorithm}`);
                 }
-                else {
-                    console.log('mainnet-agfarms account not found in flow.json');
-                }
-            }
-            catch (error) {
-                console.log(`Error loading flow.json: ${error}`);
             }
         }
         if (!address) {
-            console.log('Address not found in flow.json, checking flow-production.json...');
-            const accountsPath = path_1.default.join(flowDir, 'accounts', 'flow-production.json');
-            console.log(`Flow-production.json path: ${accountsPath}`);
-            console.log(`Flow-production.json exists: ${fs_1.default.existsSync(accountsPath)}`);
-            if (fs_1.default.existsSync(accountsPath)) {
-                try {
-                    const cfg = JSON.parse(fs_1.default.readFileSync(accountsPath, 'utf8'));
-                    console.log('Flow-production.json loaded successfully');
-                    console.log(`Accounts in flow-production.json: ${Object.keys(cfg.accounts || {}).join(', ')}`);
-                    if (cfg.accounts && cfg.accounts['mainnet-agfarms']) {
-                        address = String(cfg.accounts['mainnet-agfarms'].address);
-                        console.log(`Found mainnet-agfarms address in flow-production.json: ${address}`);
-                        if (cfg.accounts['mainnet-agfarms'].key && typeof cfg.accounts['mainnet-agfarms'].key.index === 'number') {
-                            keyId = cfg.accounts['mainnet-agfarms'].key.index;
-                        }
-                        if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.signatureAlgorithm) {
-                            signatureAlgorithm = cfg.accounts['mainnet-agfarms'].key.signatureAlgorithm;
-                        }
-                        if (cfg.accounts['mainnet-agfarms'].key && cfg.accounts['mainnet-agfarms'].key.hashAlgorithm) {
-                            hashAlgorithm = cfg.accounts['mainnet-agfarms'].key.hashAlgorithm;
-                        }
-                        console.log(`Key configuration: keyId=${keyId}, sigAlg=${signatureAlgorithm}, hashAlg=${hashAlgorithm}`);
-                    }
-                    else {
-                        console.log('mainnet-agfarms account not found in flow-production.json');
-                    }
-                }
-                catch (error) {
-                    console.log(`Error loading flow-production.json: ${error}`);
-                }
-            }
+            throw new Error('Service account address not found in flow.json or flow-production.json');
         }
-        const result = { address, key, keyId, signatureAlgorithm, hashAlgorithm };
-        console.log('=== SERVICE ACCOUNT RESULT ===');
-        console.log(`Address: ${result.address}`);
-        console.log(`Key: ${result.key ? 'LOADED' : 'NOT LOADED'}`);
-        console.log(`KeyId: ${result.keyId}`);
-        console.log(`Signature Algorithm: ${result.signatureAlgorithm}`);
-        console.log(`Hash Algorithm: ${result.hashAlgorithm}`);
-        console.log('===============================');
-        return result;
+        return { address, key, keyId, signatureAlgorithm, hashAlgorithm };
     }
     loadAccountByName(accountName, flowDir) {
         const keyPath = path_1.default.join(flowDir, 'accounts', 'pkeys', `${accountName}.pkey`);
-        const key = fs_1.default.existsSync(keyPath) ? fs_1.default.readFileSync(keyPath, 'utf8').trim() : null;
+        if (!fs_1.default.existsSync(keyPath)) {
+            throw new Error(`Private key file not found for account ${accountName}: ${keyPath}`);
+        }
+        const key = fs_1.default.readFileSync(keyPath, 'utf8').trim();
         let address = null;
         let keyId = 0;
         let signatureAlgorithm = 'ECDSA_P256';
         let hashAlgorithm = 'SHA3_256';
         const flowJsonPath = path_1.default.join(flowDir, 'flow.json');
         if (fs_1.default.existsSync(flowJsonPath)) {
-            try {
-                const cfg = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
+            const cfg = JSON.parse(fs_1.default.readFileSync(flowJsonPath, 'utf8'));
+            if (cfg.accounts && cfg.accounts[accountName]) {
+                address = String(cfg.accounts[accountName].address);
+                if (cfg.accounts[accountName].key && typeof cfg.accounts[accountName].key.index === 'number') {
+                    keyId = cfg.accounts[accountName].key.index;
+                }
+                if (cfg.accounts[accountName].key && cfg.accounts[accountName].key.signatureAlgorithm) {
+                    signatureAlgorithm = cfg.accounts[accountName].key.signatureAlgorithm;
+                }
+                if (cfg.accounts[accountName].key && cfg.accounts[accountName].key.hashAlgorithm) {
+                    hashAlgorithm = cfg.accounts[accountName].key.hashAlgorithm;
+                }
+            }
+        }
+        if (!address) {
+            const accountsPath = path_1.default.join(flowDir, 'accounts', 'flow-production.json');
+            if (fs_1.default.existsSync(accountsPath)) {
+                const cfg = JSON.parse(fs_1.default.readFileSync(accountsPath, 'utf8'));
                 if (cfg.accounts && cfg.accounts[accountName]) {
                     address = String(cfg.accounts[accountName].address);
                     if (cfg.accounts[accountName].key && typeof cfg.accounts[accountName].key.index === 'number') {
@@ -234,28 +217,9 @@ class FlowWrapper {
                     }
                 }
             }
-            catch { }
         }
         if (!address) {
-            const accountsPath = path_1.default.join(flowDir, 'accounts', 'flow-production.json');
-            if (fs_1.default.existsSync(accountsPath)) {
-                try {
-                    const cfg = JSON.parse(fs_1.default.readFileSync(accountsPath, 'utf8'));
-                    if (cfg.accounts && cfg.accounts[accountName]) {
-                        address = String(cfg.accounts[accountName].address);
-                        if (cfg.accounts[accountName].key && typeof cfg.accounts[accountName].key.index === 'number') {
-                            keyId = cfg.accounts[accountName].key.index;
-                        }
-                        if (cfg.accounts[accountName].key && cfg.accounts[accountName].key.signatureAlgorithm) {
-                            signatureAlgorithm = cfg.accounts[accountName].key.signatureAlgorithm;
-                        }
-                        if (cfg.accounts[accountName].key && cfg.accounts[accountName].key.hashAlgorithm) {
-                            hashAlgorithm = cfg.accounts[accountName].key.hashAlgorithm;
-                        }
-                    }
-                }
-                catch { }
-            }
+            throw new Error(`Account ${accountName} not found in flow.json or flow-production.json`);
         }
         return { address, key, keyId, signatureAlgorithm, hashAlgorithm };
     }
@@ -303,228 +267,96 @@ class FlowWrapper {
         };
     }
     async executeScript(scriptPath, args = [], proposerWalletId) {
-        console.log('=== FLOW SCRIPT EXECUTION ===');
-        console.log(`Script Path: ${scriptPath}`);
-        console.log(`Full Path: ${path_1.default.isAbsolute(scriptPath) ? scriptPath : path_1.default.join(this.config.flowDir, scriptPath)}`);
-        console.log(`Arguments: ${JSON.stringify(args, null, 2)}`);
-        console.log(`Network: ${this.config.network}`);
-        console.log(`Flow Directory: ${this.config.flowDir}`);
         const startTime = Date.now();
         const fullPath = path_1.default.isAbsolute(scriptPath) ? scriptPath : path_1.default.join(this.config.flowDir, scriptPath);
         const code = await promises_1.default.readFile(fullPath, 'utf8');
-        console.log(`Script Code Length: ${code.length} characters`);
-        console.log(`Script Code Preview (first 200 chars): ${code.substring(0, 200)}...`);
-        const fclArgs = args.map(arg => {
-            if (typeof arg === 'string') {
-                // Check if it's a Flow address (starts with 0x or is a hex string of appropriate length)
-                if (arg.startsWith('0x') || /^[0-9a-fA-F]{16}$/.test(arg) || /^[0-9a-fA-F-]{36}$/.test(arg)) {
-                    return fcl.arg(arg, fcl.t.Address);
-                }
-                // Check if it's a decimal number
-                else if (arg.includes('.')) {
-                    return fcl.arg(arg, fcl.t.UFix64);
-                }
-                // Default to String for other strings
-                else {
-                    return fcl.arg(arg, fcl.t.String);
-                }
-            }
-            else if (typeof arg === 'number') {
-                // Ensure UFix64 values have at least one decimal place
-                const numStr = arg.toString();
-                const hasDecimal = numStr.includes('.');
-                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
-                return fcl.arg(formattedNum, fcl.t.UFix64);
-            }
-            else {
-                return fcl.arg(String(arg), fcl.t.String);
-            }
-        });
-        console.log(`FCL Arguments: ${JSON.stringify(fclArgs, null, 2)}`);
-        // Create transaction record
-        const transactionData = {
-            transaction_type: 'script',
-            status: 'pending',
-            proposer_wallet_id: proposerWalletId,
-            script_path: scriptPath,
-            arguments: args,
-            network: this.config.network,
-            logs: [{
-                    level: 'info',
-                    message: 'Script execution started',
-                    timestamp: new Date().toISOString()
-                }]
-        };
-        const transaction = await supabase_1.transactionLogger.createTransaction(transactionData);
+        console.log(`📜 Script: ${path_1.default.basename(scriptPath)} (${args.length} args)`);
+        const fclArgs = this._buildFclArgs(args);
+        const transaction = await this._createTransactionRecord('script', scriptPath, args, proposerWalletId);
         try {
-            const data = await fcl.query({ cadence: code, args: fclArgs });
+            const data = await fcl.query({
+                cadence: code,
+                args: (arg, t) => fclArgs
+            });
             const executionTime = Date.now() - startTime;
-            console.log(`Script Execution Result: ${JSON.stringify(data, null, 2)}`);
-            console.log('=== SCRIPT EXECUTION COMPLETED ===');
-            // Update transaction record with success
-            if (transaction) {
-                await supabase_1.transactionLogger.updateTransaction(transaction.id, {
-                    status: 'executed',
-                    result_data: data,
-                    execution_time_ms: executionTime,
-                    logs: [
-                        ...(transaction.logs || []),
-                        {
-                            level: 'info',
-                            message: 'Script execution completed successfully',
-                            timestamp: new Date().toISOString(),
-                            execution_time_ms: executionTime
-                        }
-                    ]
-                });
-            }
-            return { success: true, data, transactionId: transaction?.id };
+            console.log(`✅ Script completed (${executionTime}ms)`);
+            await this._updateTransactionSuccess(transaction, data, executionTime);
+            return new FlowResult({
+                success: true,
+                data,
+                transactionId: transaction?.id,
+                executionTime
+            });
         }
         catch (error) {
             const executionTime = Date.now() - startTime;
-            console.error(`Script Execution Error: ${error.message}`);
-            console.error(`Error Stack: ${error.stack}`);
-            console.log('=== SCRIPT EXECUTION FAILED ===');
-            // Update transaction record with failure
-            if (transaction) {
-                await supabase_1.transactionLogger.updateTransaction(transaction.id, {
-                    status: 'failed',
-                    error_message: error.message,
-                    execution_time_ms: executionTime,
-                    logs: [
-                        ...(transaction.logs || []),
-                        {
-                            level: 'error',
-                            message: 'Script execution failed',
-                            error: error.message,
-                            stack: error.stack,
-                            timestamp: new Date().toISOString(),
-                            execution_time_ms: executionTime
-                        }
-                    ]
-                });
-            }
-            return { success: false, errorMessage: error.message, data: null, transactionId: transaction?.id };
+            console.log(`❌ Script failed (${executionTime}ms): ${error.message}`);
+            await this._updateTransactionFailure(transaction, error, executionTime);
+            return new FlowResult({
+                success: false,
+                errorMessage: error.message,
+                transactionId: transaction?.id,
+                executionTime
+            });
         }
     }
     async sendTransaction(transactionPath, args = [], roles = {}, privateKeys = {}, proposerWalletId, payerWalletId, authorizerWalletIds) {
-        console.log('=== FLOW TRANSACTION EXECUTION ===');
-        console.log(`Transaction Path: ${transactionPath}`);
-        console.log(`Full Path: ${path_1.default.isAbsolute(transactionPath) ? transactionPath : path_1.default.join(this.config.flowDir, transactionPath)}`);
-        console.log(`Arguments: ${JSON.stringify(args, null, 2)}`);
-        console.log(`Roles: ${JSON.stringify(roles, null, 2)}`);
-        console.log(`Network: ${this.config.network}`);
-        console.log(`Flow Directory: ${this.config.flowDir}`);
+        return new Promise((resolve, reject) => {
+            const transactionFunction = async () => {
+                try {
+                    const result = await this._executeTransaction(transactionPath, args, roles, privateKeys, proposerWalletId, payerWalletId, authorizerWalletIds);
+                    resolve(result);
+                }
+                catch (error) {
+                    reject(error);
+                }
+            };
+            this.transactionQueue.push(transactionFunction);
+            this._processTransactionQueue();
+        });
+    }
+    async _processTransactionQueue() {
+        if (this.transactionLock || this.transactionQueue.length === 0) {
+            return;
+        }
+        this.transactionLock = true;
+        console.log(`🔒 Transaction lock acquired. Queue size: ${this.transactionQueue.length}`);
+        while (this.transactionQueue.length > 0) {
+            const transactionFunction = this.transactionQueue.shift();
+            if (transactionFunction) {
+                try {
+                    await transactionFunction();
+                }
+                catch (error) {
+                    console.error('Transaction in queue failed:', error);
+                }
+            }
+        }
+        this.transactionLock = false;
+        console.log('🔓 Transaction lock released');
+    }
+    async _executeTransaction(transactionPath, args = [], roles = {}, privateKeys = {}, proposerWalletId, payerWalletId, authorizerWalletIds) {
         const startTime = Date.now();
         if (!this.authz) {
-            console.error('Service account not configured');
-            return { success: false, errorMessage: 'service account not configured' };
+            console.log('❌ Service account not configured');
+            return new FlowResult({
+                success: false,
+                errorMessage: 'Service account not configured',
+                executionTime: 0
+            });
         }
-        console.log(`Service Account Address: ${this.service.address}`);
-        console.log(`Service Account Key ID: ${this.service.keyId}`);
         const fullPath = path_1.default.isAbsolute(transactionPath) ? transactionPath : path_1.default.join(this.config.flowDir, transactionPath);
         const code = await promises_1.default.readFile(fullPath, 'utf8');
-        console.log(`Transaction Code Length: ${code.length} characters`);
-        console.log(`Transaction Code Preview (first 300 chars): ${code.substring(0, 300)}...`);
-        const fclArgs = args.map(arg => {
-            if (typeof arg === 'string') {
-                // Check if it's a Flow address (starts with 0x or is a hex string of appropriate length)
-                if (arg.startsWith('0x') || /^[0-9a-fA-F]{16}$/.test(arg) || /^[0-9a-fA-F-]{36}$/.test(arg)) {
-                    return fcl.arg(arg, fcl.t.Address);
-                }
-                // Check if it's a decimal number
-                else if (arg.includes('.')) {
-                    return fcl.arg(arg, fcl.t.UFix64);
-                }
-                // Default to String for other strings
-                else {
-                    return fcl.arg(arg, fcl.t.String);
-                }
-            }
-            else if (typeof arg === 'number') {
-                // Ensure UFix64 values have at least one decimal place
-                const numStr = arg.toString();
-                const hasDecimal = numStr.includes('.');
-                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
-                return fcl.arg(formattedNum, fcl.t.UFix64);
-            }
-            else {
-                return fcl.arg(String(arg), fcl.t.String);
-            }
-        });
-        console.log(`FCL Arguments: ${JSON.stringify(fclArgs, null, 2)}`);
-        // Create transaction record
-        const transactionData = {
-            transaction_type: 'transaction',
-            status: 'pending',
-            proposer_wallet_id: proposerWalletId,
-            payer_wallet_id: payerWalletId,
-            authorizer_wallet_ids: authorizerWalletIds,
-            transaction_path: transactionPath,
-            arguments: args,
-            network: this.config.network,
-            logs: [{
-                    level: 'info',
-                    message: 'Transaction execution started',
-                    timestamp: new Date().toISOString()
-                }]
+        console.log(`💸 Transaction: ${path_1.default.basename(transactionPath)} (${args.length} args)`);
+        const fclArgs = this._buildFclArgs(args);
+        const transaction = await this._createTransactionRecord('transaction', transactionPath, args, proposerWalletId, payerWalletId, authorizerWalletIds);
+        // Build roles from wallet IDs if provided
+        const transactionRoles = {
+            proposer: proposerWalletId || roles.proposer,
+            payer: payerWalletId || roles.payer,
+            authorizer: authorizerWalletIds || roles.authorizer
         };
-        const transaction = await supabase_1.transactionLogger.createTransaction(transactionData);
-        // Normalize roles into FCL authorization functions
-        const normalizeAuth = (val) => {
-            if (!val)
-                return this.authz;
-            if (typeof val === 'function')
-                return val;
-            // If a string is provided, create authz for that account name
-            if (typeof val === 'string') {
-                console.log(`Loading account by name: ${val}`);
-                // First check if we have a private key for this account
-                if (privateKeys && privateKeys[val]) {
-                    console.log(`Using private key for account: ${val}`);
-                    // We need to get the address for this account
-                    // For now, we'll assume the val is the address if it starts with 0x
-                    if (val.startsWith('0x')) {
-                        return this.authzFactory(val, 0, privateKeys[val], 'ECDSA_P256', 'SHA3_256');
-                    }
-                }
-                const account = this.loadAccountByName(val, this.config.flowDir);
-                console.log(`Account details for ${val}:`, {
-                    address: account?.address,
-                    keyId: account?.keyId,
-                    hasKey: !!account?.key,
-                    signatureAlgorithm: account?.signatureAlgorithm,
-                    hashAlgorithm: account?.hashAlgorithm
-                });
-                if (account && account.address && account.key) {
-                    return this.authzFactory(account.address, account.keyId || 0, account.key, account.signatureAlgorithm, account.hashAlgorithm);
-                }
-            }
-            // Fall back to service authz if account not found
-            return this.authz;
-        };
-        let authorizations = [];
-        if (roles && roles.authorizer) {
-            if (Array.isArray(roles.authorizer)) {
-                console.log(`Multiple authorizers: ${roles.authorizer.join(', ')}`);
-                authorizations = roles.authorizer.map(a => normalizeAuth(a));
-            }
-            else {
-                console.log(`Single authorizer: ${roles.authorizer}`);
-                authorizations = [normalizeAuth(roles.authorizer)];
-            }
-        }
-        else {
-            console.log('Using default service account as authorizer');
-            authorizations = [this.authz];
-        }
-        const proposer = roles && roles.proposer ? normalizeAuth(roles.proposer) : this.authz;
-        const payer = roles && roles.payer ? normalizeAuth(roles.payer) : this.authz;
-        console.log(`Final Roles Configuration:`);
-        console.log(`- Proposer: ${roles?.proposer || 'service account'}`);
-        console.log(`- Payer: ${roles?.payer || 'service account'}`);
-        console.log(`- Authorizers: ${roles?.authorizer ? (Array.isArray(roles.authorizer) ? roles.authorizer.join(', ') : roles.authorizer) : 'service account'}`);
-        console.log(`- Number of authorizations: ${authorizations.length}`);
+        const { proposer, payer, authorizations } = this._setupTransactionRoles(transactionRoles, privateKeys);
         const transactionConfig = {
             cadence: code,
             args: function (arg, t) { return fclArgs; },
@@ -533,139 +365,229 @@ class FlowWrapper {
             authorizations: authorizations,
             limit: 9999
         };
-        console.log(`Transaction Configuration:`, {
-            cadenceLength: transactionConfig.cadence.length,
-            argsCount: fclArgs.length,
-            authorizationsCount: authorizations.length,
-            limit: transactionConfig.limit
-        });
         try {
-            console.log('Sending transaction to Flow network...');
-            // Update transaction status to submitted
-            if (transaction) {
-                await supabase_1.transactionLogger.updateTransaction(transaction.id, {
-                    status: 'submitted',
-                    logs: [
-                        ...(transaction.logs || []),
-                        {
-                            level: 'info',
-                            message: 'Transaction submitted to Flow network',
-                            timestamp: new Date().toISOString()
-                        }
-                    ]
-                });
-            }
+            await this._updateTransactionStatus(transaction, 'submitted', 'Transaction submitted to Flow network');
             const txId = await fcl.mutate(transactionConfig);
-            console.log(`Transaction ID: ${txId}`);
-            // Update transaction with Flow transaction ID
-            if (transaction) {
-                await supabase_1.transactionLogger.updateTransaction(transaction.id, {
-                    flow_transaction_id: txId,
-                    status: 'submitted',
-                    logs: [
-                        ...(transaction.logs || []),
-                        {
-                            level: 'info',
-                            message: 'Transaction submitted with Flow ID',
-                            flow_transaction_id: txId,
-                            timestamp: new Date().toISOString()
-                        }
-                    ]
-                });
-            }
-            console.log('Waiting for transaction to be sealed...');
+            await this._updateTransactionStatus(transaction, 'submitted', 'Transaction submitted with Flow ID', { flow_transaction_id: txId });
             const sealed = await fcl.tx(txId).onceSealed();
             const executionTime = Date.now() - startTime;
-            console.log(`Transaction sealed successfully!`);
-            console.log(`Sealed transaction data: ${JSON.stringify(sealed, null, 2)}`);
-            console.log('=== TRANSACTION EXECUTION COMPLETED ===');
-            // Update transaction with final results
-            if (transaction) {
-                // Extract blockchain data from sealed transaction and events
-                let blockHeight = null;
-                let blockTimestamp = null;
-                let gasUsed = null;
-                let gasLimit = null;
-                // Try to get block height from blockId using Flow API
-                try {
-                    if (sealed.blockId) {
-                        const block = await fcl.send([fcl.getBlock(), fcl.atBlockId(sealed.blockId)]);
-                        const blockData = await fcl.decode(block);
-                        blockHeight = blockData.height;
-                        blockTimestamp = blockData.timestamp;
-                        console.log(`Block details: height=${blockHeight}, timestamp=${blockTimestamp}`);
-                    }
-                }
-                catch (blockError) {
-                    console.log('Could not fetch block details:', blockError);
-                }
-                // Extract gas information from events
-                const feesEvent = sealed.events?.find((event) => event.type === 'A.f919ee77447b7497.FlowFees.FeesDeducted');
-                if (feesEvent) {
-                    // Convert gas cost from FLOW to smallest unit and round to integer
-                    gasUsed = Math.round(parseFloat(feesEvent.data.amount) * 100000000); // Convert to smallest unit and round
-                    console.log(`Gas used: ${gasUsed} (from fees event)`);
-                }
-                // Log the extracted data
-                console.log('=== EXTRACTED BLOCKCHAIN DATA ===');
-                console.log('blockHeight:', blockHeight);
-                console.log('blockTimestamp:', blockTimestamp);
-                console.log('gasUsed:', gasUsed);
-                console.log('gasLimit:', gasLimit);
-                console.log('=================================');
-                await supabase_1.transactionLogger.updateTransaction(transaction.id, {
-                    status: 'sealed',
-                    block_height: blockHeight,
-                    block_timestamp: blockTimestamp ? new Date(blockTimestamp).toISOString() : null,
-                    gas_used: gasUsed,
-                    gas_limit: gasLimit,
-                    result_data: sealed,
-                    execution_time_ms: executionTime,
-                    logs: [
-                        ...(transaction.logs || []),
-                        {
-                            level: 'info',
-                            message: 'Transaction sealed successfully',
-                            block_height: blockHeight,
-                            block_timestamp: blockTimestamp,
-                            gas_used: gasUsed,
-                            gas_limit: gasLimit,
-                            execution_time_ms: executionTime,
-                            timestamp: new Date().toISOString(),
-                            block_id: sealed.blockId,
-                            fees_event: feesEvent?.data
-                        }
-                    ]
-                });
-            }
-            return { success: true, transactionId: txId, data: sealed, dbTransactionId: transaction?.id };
+            console.log(`✅ Transaction sealed (${executionTime}ms): ${txId}`);
+            const { blockHeight, blockTimestamp, gasUsed } = await this._extractBlockchainData(sealed);
+            await this._updateTransactionSealed(transaction, sealed, executionTime, blockHeight, blockTimestamp, gasUsed);
+            return new FlowResult({
+                success: true,
+                data: sealed,
+                transactionId: txId,
+                executionTime,
+                blockHeight,
+                blockTimestamp,
+                gasUsed
+            });
         }
         catch (error) {
             const executionTime = Date.now() - startTime;
-            console.error(`Transaction Execution Error: ${error.message}`);
-            console.error(`Error Stack: ${error.stack}`);
-            console.log('=== TRANSACTION EXECUTION FAILED ===');
-            // Update transaction with failure
-            if (transaction) {
-                await supabase_1.transactionLogger.updateTransaction(transaction.id, {
-                    status: 'failed',
-                    error_message: error.message,
-                    execution_time_ms: executionTime,
-                    logs: [
-                        ...(transaction.logs || []),
-                        {
-                            level: 'error',
-                            message: 'Transaction execution failed',
-                            error: error.message,
-                            stack: error.stack,
-                            execution_time_ms: executionTime,
-                            timestamp: new Date().toISOString()
-                        }
-                    ]
-                });
-            }
-            return { success: false, errorMessage: error.message, transactionId: null, data: null, dbTransactionId: transaction?.id };
+            console.log(`❌ Transaction failed (${executionTime}ms): ${error.message}`);
+            await this._updateTransactionFailure(transaction, error, executionTime);
+            return new FlowResult({
+                success: false,
+                errorMessage: error.message,
+                transactionId: null,
+                executionTime
+            });
         }
+    }
+    _buildFclArgs(args) {
+        return args.map(arg => {
+            if (typeof arg === 'string') {
+                if (arg.startsWith('0x') || /^[0-9a-fA-F]{16}$/.test(arg) || /^[0-9a-fA-F-]{36}$/.test(arg)) {
+                    return fcl.arg(arg, fcl.t.Address);
+                }
+                else if (arg.includes('.')) {
+                    return fcl.arg(arg, fcl.t.UFix64);
+                }
+                else {
+                    return fcl.arg(arg, fcl.t.String);
+                }
+            }
+            else if (typeof arg === 'number') {
+                const numStr = arg.toString();
+                const hasDecimal = numStr.includes('.');
+                const formattedNum = hasDecimal ? numStr : `${numStr}.0`;
+                return fcl.arg(formattedNum, fcl.t.UFix64);
+            }
+            else {
+                return fcl.arg(String(arg), fcl.t.String);
+            }
+        });
+    }
+    _isValidWalletId(id) {
+        if (!id)
+            return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(id);
+    }
+    async _createTransactionRecord(type, path, args, proposerWalletId, payerWalletId, authorizerWalletIds) {
+        const transactionData = {
+            transaction_type: type,
+            status: 'pending',
+            proposer_wallet_id: this._isValidWalletId(proposerWalletId) ? proposerWalletId : undefined,
+            payer_wallet_id: this._isValidWalletId(payerWalletId) ? payerWalletId : undefined,
+            authorizer_wallet_ids: authorizerWalletIds?.filter(this._isValidWalletId),
+            script_path: type === 'script' ? path : undefined,
+            transaction_path: type === 'transaction' ? path : undefined,
+            arguments: args,
+            network: this.config.network,
+            logs: [{
+                    level: 'info',
+                    message: `${type === 'script' ? 'Script' : 'Transaction'} execution started`,
+                    timestamp: new Date().toISOString()
+                }]
+        };
+        try {
+            return await supabase_1.transactionLogger.createTransaction(transactionData);
+        }
+        catch (error) {
+            // If there's a foreign key constraint error, skip transaction logging
+            if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {
+                console.warn(`Skipping transaction logging due to foreign key constraint: ${error.message}`);
+                return null;
+            }
+            throw error;
+        }
+    }
+    async _updateTransactionSuccess(transaction, data, executionTime) {
+        if (transaction) {
+            await supabase_1.transactionLogger.updateTransaction(transaction.id, {
+                status: 'executed',
+                result_data: data,
+                execution_time_ms: executionTime,
+                logs: [
+                    ...(transaction.logs || []),
+                    {
+                        level: 'info',
+                        message: 'Execution completed successfully',
+                        timestamp: new Date().toISOString(),
+                        execution_time_ms: executionTime
+                    }
+                ]
+            });
+        }
+    }
+    async _updateTransactionFailure(transaction, error, executionTime) {
+        if (transaction) {
+            await supabase_1.transactionLogger.updateTransaction(transaction.id, {
+                status: 'failed',
+                error_message: error.message,
+                execution_time_ms: executionTime,
+                logs: [
+                    ...(transaction.logs || []),
+                    {
+                        level: 'error',
+                        message: 'Execution failed',
+                        error: error.message,
+                        stack: error.stack,
+                        timestamp: new Date().toISOString(),
+                        execution_time_ms: executionTime
+                    }
+                ]
+            });
+        }
+    }
+    async _updateTransactionStatus(transaction, status, message, additionalData) {
+        if (transaction) {
+            await supabase_1.transactionLogger.updateTransaction(transaction.id, {
+                status: status,
+                ...additionalData,
+                logs: [
+                    ...(transaction.logs || []),
+                    {
+                        level: 'info',
+                        message,
+                        timestamp: new Date().toISOString()
+                    }
+                ]
+            });
+        }
+    }
+    async _updateTransactionSealed(transaction, sealed, executionTime, blockHeight, blockTimestamp, gasUsed) {
+        if (transaction) {
+            await supabase_1.transactionLogger.updateTransaction(transaction.id, {
+                status: 'sealed',
+                block_height: blockHeight,
+                block_timestamp: blockTimestamp,
+                gas_used: gasUsed,
+                result_data: sealed,
+                execution_time_ms: executionTime,
+                logs: [
+                    ...(transaction.logs || []),
+                    {
+                        level: 'info',
+                        message: 'Transaction sealed successfully',
+                        block_height: blockHeight,
+                        block_timestamp: blockTimestamp,
+                        gas_used: gasUsed,
+                        execution_time_ms: executionTime,
+                        timestamp: new Date().toISOString(),
+                        block_id: sealed.blockId
+                    }
+                ]
+            });
+        }
+    }
+    async _extractBlockchainData(sealed) {
+        let blockHeight = null;
+        let blockTimestamp = null;
+        let gasUsed = null;
+        try {
+            if (sealed.blockId) {
+                const block = await fcl.send([fcl.getBlock(), fcl.atBlockId(sealed.blockId)]);
+                const blockData = await fcl.decode(block);
+                blockHeight = blockData.height;
+                blockTimestamp = blockData.timestamp ? new Date(blockData.timestamp).toISOString() : null;
+            }
+        }
+        catch (blockError) {
+            // Silent fail for block details
+        }
+        const feesEvent = sealed.events?.find((event) => event.type === 'A.f919ee77447b7497.FlowFees.FeesDeducted');
+        if (feesEvent) {
+            gasUsed = Math.round(parseFloat(feesEvent.data.amount) * 100000000);
+        }
+        return { blockHeight, blockTimestamp, gasUsed };
+    }
+    _setupTransactionRoles(roles, privateKeys) {
+        const normalizeAuth = (val) => {
+            if (!val) {
+                throw new Error('No authorization value provided');
+            }
+            if (typeof val === 'function')
+                return val;
+            if (typeof val === 'string') {
+                if (privateKeys && privateKeys[val]) {
+                    if (val.startsWith('0x')) {
+                        return this.authzFactory(val, 0, privateKeys[val], 'ECDSA_P256', 'SHA3_256');
+                    }
+                }
+                const account = this.loadAccountByName(val, this.config.flowDir);
+                return this.authzFactory(account.address, account.keyId || 0, account.key, account.signatureAlgorithm, account.hashAlgorithm);
+            }
+            throw new Error(`Invalid authorization value: ${val}`);
+        };
+        let authorizations = [];
+        if (roles && roles.authorizer) {
+            if (Array.isArray(roles.authorizer)) {
+                authorizations = roles.authorizer.map(a => normalizeAuth(a));
+            }
+            else {
+                authorizations = [normalizeAuth(roles.authorizer)];
+            }
+        }
+        else {
+            authorizations = [this.authz];
+        }
+        const proposer = roles && roles.proposer ? normalizeAuth(roles.proposer) : this.authz;
+        const payer = roles && roles.payer ? normalizeAuth(roles.payer) : this.authz;
+        return { proposer, payer, authorizations };
     }
     async getAccount(address) {
         try {
@@ -684,34 +606,46 @@ class FlowWrapper {
         }
     }
     async getTransaction(transactionId) {
+        const startTime = Date.now();
         try {
             const tx = await fcl.tx(transactionId).onceSealed();
+            const executionTime = Date.now() - startTime;
             return new FlowResult({
                 success: true,
-                data: tx
+                data: tx,
+                transactionId,
+                executionTime
             });
         }
         catch (error) {
+            const executionTime = Date.now() - startTime;
             return new FlowResult({
                 success: false,
-                errorMessage: error.message
+                errorMessage: error.message,
+                transactionId,
+                executionTime
             });
         }
     }
     async waitForTransactionSeal(transactionId, timeout = 300) {
+        const startTime = Date.now();
         try {
             const sealed = await fcl.tx(transactionId).onceSealed();
+            const executionTime = Date.now() - startTime;
             return new FlowResult({
                 success: true,
                 data: sealed,
-                transactionId
+                transactionId,
+                executionTime
             });
         }
         catch (error) {
+            const executionTime = Date.now() - startTime;
             return new FlowResult({
                 success: false,
                 errorMessage: error.message,
-                transactionId
+                transactionId,
+                executionTime
             });
         }
     }

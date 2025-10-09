@@ -14,4 +14,8 @@ export interface FlowResultOptions {
     data?: any;
     errorMessage?: string;
     transactionId?: string | null;
+    executionTime?: number;
+    blockHeight?: number | null;
+    blockTimestamp?: string | null;
+    gasUsed?: number | null;
 }

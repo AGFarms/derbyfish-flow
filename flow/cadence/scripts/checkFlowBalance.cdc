@@ -1,19 +1,20 @@
 import FlowToken from 0x1654653399040a61
+import FungibleToken from 0xf233dcee88fe0abe
 
 access(all) fun main(address: Address): UFix64 {
     let account = getAccount(address)
     
-    // Try to get the vault capability using the FungibleToken.Balance interface
-    let vaultCapability = account.capabilities.get<&{FlowToken.Vault}>(/public/flowTokenVault)
+    // Try to get the balance capability using the FungibleToken.Balance interface
+    let balanceCapability = account.capabilities.get<&{FungibleToken.Balance}>(/public/flowTokenBalance)
     
-    if vaultCapability == nil {
-        return 0.0
+    if balanceCapability == nil {
+        panic("FlowToken balance capability not found")
     }
     
-    let vaultRef = vaultCapability!.borrow()
-    if vaultRef == nil {
-        return 0.0
+    let balanceRef = balanceCapability!.borrow()
+    if balanceRef == nil {
+        panic("Could not borrow FlowToken balance reference")
     }
     
-    return vaultRef!.balance
+    return balanceRef!.balance
 }

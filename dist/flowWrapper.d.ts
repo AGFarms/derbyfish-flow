@@ -5,12 +5,20 @@ export declare class FlowResult {
     data: any;
     errorMessage: string;
     transactionId: string | null;
+    executionTime: number;
+    blockHeight: number | null;
+    blockTimestamp: string | null;
+    gasUsed: number | null;
     constructor(options?: FlowResultOptions);
     toDict(): {
         success: boolean;
         data: any;
         errorMessage: string;
         transactionId: string;
+        executionTime: number;
+        blockHeight: number;
+        blockTimestamp: string;
+        gasUsed: number;
     };
 }
 export declare class FlowConfig {
@@ -26,6 +34,8 @@ export declare class FlowWrapper {
         keyId: number;
     };
     authz: any;
+    private transactionLock;
+    private transactionQueue;
     constructor(config?: Partial<FlowConfig>);
     getAccessNode(network: FlowNetwork): "https://rest-mainnet.onflow.org" | "https://rest-testnet.onflow.org" | "http://127.0.0.1:8888";
     loadFlowConfig(): void;
@@ -44,40 +54,23 @@ export declare class FlowWrapper {
         hashAlgorithm: string;
     };
     authzFactory(address: string, keyId: number, privateKey: string, signatureAlgorithm?: string, hashAlgorithm?: string): (account: any) => Promise<any>;
-    executeScript(scriptPath: string, args?: any[], proposerWalletId?: string): Promise<{
-        success: boolean;
-        data: any;
-        transactionId: string;
-        errorMessage?: undefined;
-    } | {
-        success: boolean;
-        errorMessage: any;
-        data: any;
-        transactionId: string;
-    }>;
+    executeScript(scriptPath: string, args?: any[], proposerWalletId?: string): Promise<FlowResult>;
     sendTransaction(transactionPath: string, args?: any[], roles?: {
         proposer?: any;
         payer?: any;
         authorizer?: any | any[];
-    }, privateKeys?: any, proposerWalletId?: string, payerWalletId?: string, authorizerWalletIds?: string[]): Promise<{
-        success: boolean;
-        errorMessage: string;
-        transactionId?: undefined;
-        data?: undefined;
-        dbTransactionId?: undefined;
-    } | {
-        success: boolean;
-        transactionId: any;
-        data: any;
-        dbTransactionId: string;
-        errorMessage?: undefined;
-    } | {
-        success: boolean;
-        errorMessage: any;
-        transactionId: any;
-        data: any;
-        dbTransactionId: string;
-    }>;
+    }, privateKeys?: any, proposerWalletId?: string, payerWalletId?: string, authorizerWalletIds?: string[]): Promise<unknown>;
+    private _processTransactionQueue;
+    private _executeTransaction;
+    private _buildFclArgs;
+    private _isValidWalletId;
+    private _createTransactionRecord;
+    private _updateTransactionSuccess;
+    private _updateTransactionFailure;
+    private _updateTransactionStatus;
+    private _updateTransactionSealed;
+    private _extractBlockchainData;
+    private _setupTransactionRoles;
     getAccount(address: string): Promise<FlowResult>;
     getTransaction(transactionId: string): Promise<FlowResult>;
     waitForTransactionSeal(transactionId: string, timeout?: number): Promise<FlowResult>;
@@ -89,37 +82,9 @@ export declare class FlowWrapper {
     updateTransactionStatus(transactionId: string, status: Transaction['status'], additionalData?: Partial<Transaction>): Promise<Transaction>;
 }
 export declare function createFlowWrapper(network?: FlowNetwork | string, options?: Partial<FlowConfig>): FlowWrapper;
-export declare function executeScript(scriptPath: string, args?: any[], network?: FlowNetwork | string, options?: Partial<FlowConfig>): Promise<{
-    success: boolean;
-    data: any;
-    transactionId: string;
-    errorMessage?: undefined;
-} | {
-    success: boolean;
-    errorMessage: any;
-    data: any;
-    transactionId: string;
-}>;
+export declare function executeScript(scriptPath: string, args?: any[], network?: FlowNetwork | string, options?: Partial<FlowConfig>): Promise<FlowResult>;
 export declare function sendTransaction(transactionPath: string, args?: any[], roles?: {
     proposer?: any;
     payer?: any;
     authorizer?: any | any[];
-}, network?: FlowNetwork | string, options?: Partial<FlowConfig>): Promise<{
-    success: boolean;
-    errorMessage: string;
-    transactionId?: undefined;
-    data?: undefined;
-    dbTransactionId?: undefined;
-} | {
-    success: boolean;
-    transactionId: any;
-    data: any;
-    dbTransactionId: string;
-    errorMessage?: undefined;
-} | {
-    success: boolean;
-    errorMessage: any;
-    transactionId: any;
-    data: any;
-    dbTransactionId: string;
-}>;
+}, network?: FlowNetwork | string, options?: Partial<FlowConfig>): Promise<unknown>;

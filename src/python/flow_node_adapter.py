@@ -12,21 +12,11 @@ class FlowNodeAdapter:
         self.flow_dir = os.path.join(self.repo_root, 'flow')
 
     def _run(self, command: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        print(f"=== PYTHON FLOW NODE ADAPTER ===")
-        print(f"Command: {command}")
-        print(f"Payload: {json.dumps(payload, indent=2)}")
-        print(f"TypeScript CLI Path: {self.ts_cli}")
-        print(f"Flow Directory: {self.flow_dir}")
-        print(f"Repository Root: {self.repo_root}")
-        
         if not os.path.exists(self.ts_cli):
             raise RuntimeError('TypeScript CLI not built. Run: npm run build')
         
         payload.setdefault('flowDir', self.flow_dir)
         encoded = base64.b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8')
-        
-        print(f"Encoded Payload Length: {len(encoded)} characters")
-        print(f"Full Command: node {self.ts_cli} {command} --payload={encoded[:100]}...")
         
         started = time.time()
         proc = subprocess.run(
@@ -41,22 +31,6 @@ class FlowNodeAdapter:
         stdout = (proc.stdout or '').strip()
         stderr = (proc.stderr or '').strip()
         
-        print(f"=== TYPESCRIPT EXECUTION RESULTS ===")
-        print(f"Return Code: {proc.returncode}")
-        print(f"Execution Time: {elapsed:.3f} seconds")
-        print(f"STDOUT Length: {len(stdout)} characters")
-        print(f"STDERR Length: {len(stderr)} characters")
-        
-        if stdout:
-            print(f"STDOUT Content: {stdout}")
-        else:
-            print("STDOUT: (empty)")
-            
-        if stderr:
-            print(f"STDERR Content: {stderr}")
-        else:
-            print("STDERR: (empty)")
-        
         if not stdout:
             result = {
                 'success': False,
@@ -65,20 +39,28 @@ class FlowNodeAdapter:
                 'returncode': proc.returncode,
                 'execution_time': elapsed
             }
-            print(f"=== ADAPTER RESULT (NO STDOUT) ===")
-            print(f"Result: {json.dumps(result, indent=2)}")
             return result
             
-        try:
-            data = json.loads(stdout)
-            print(f"Parsed JSON Data: {json.dumps(data, indent=2)}")
-        except Exception as e:
-            print(f"JSON Parse Error: {e}")
-            data = {'raw': stdout}
-            print(f"Using raw data: {data}")
+        # Extract JSON from stdout (it might be mixed with other logs)
+        lines = stdout.strip().split('\n')
+        json_line = None
+        for line in reversed(lines):  # Look for JSON in the last few lines
+            line = line.strip()
+            if line.startswith('{') and line.endswith('}'):
+                try:
+                    json.loads(line)  # Test if it's valid JSON
+                    json_line = line
+                    break
+                except json.JSONDecodeError:
+                    continue
+        
+        if not json_line:
+            raise RuntimeError(f"No valid JSON found in stdout: {stdout}")
+        
+        data = json.loads(json_line)
             
         result = {
-            'success': bool(data.get('success', proc.returncode == 0)),
+            'success': data.get('success', False),
             'stdout': stdout,
             'stderr': stderr,
             'returncode': proc.returncode,
@@ -88,10 +70,6 @@ class FlowNodeAdapter:
             'execution_time': elapsed,
             'command': f'node {self.ts_cli} {command}'
         }
-        
-        print(f"=== ADAPTER FINAL RESULT ===")
-        print(f"Result: {json.dumps(result, indent=2)}")
-        print("=====================================")
         
         return result
 
@@ -118,12 +96,6 @@ class FlowNodeAdapter:
         if authorizer_wallet_ids:
             payload['authorizerWalletIds'] = authorizer_wallet_ids
         
-        print(f"=== PYTHON ADAPTER PAYLOAD WITH WALLET IDS ===")
-        print(f"Proposer wallet ID: {proposer_wallet_id}")
-        print(f"Payer wallet ID: {payer_wallet_id}")
-        print(f"Authorizer wallet IDs: {authorizer_wallet_ids}")
-        print(f"Final payload: {json.dumps(payload, indent=2)}")
-        print("=============================================")
             
         return self._run('send-transaction', payload)
     
