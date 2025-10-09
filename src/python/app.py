@@ -909,11 +909,13 @@ def send_bait():
         
         print(f"✓ BaitCoin balance check passed: {user_balance} >= {amount_float}")
     
-    print(f"User ID (account name): {user_id}")
+    print(f"User ID (auth_id): {user_id}")
+    print(f"User Flow Address: {user_flow_address}")
     print(f"To address: {to_address}")
     print(f"Amount: {amount_float}")
     print(f"Network: {network}")
     print(f"Wallet Details: {request.wallet_details}")
+    print(f"Has Private Key: {bool(user_private_key)}")
     print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
     print(f"Transaction Path: cadence/transactions/sendBait.cdc")
     print(f"Transaction Args: [{to_address}, {amount_float}]")
@@ -924,13 +926,19 @@ def send_bait():
     recipient_wallet_id = get_wallet_id_by_address(to_address)
     admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet for payer
     
-    # Use Node adapter for transaction execution with wallet IDs
-    # Use auth_id as proposer and authorizer, mainnet-agfarms as payer
+    # Get the user's private key from wallet details
+    user_private_key = request.wallet_details.get('flow_private_key') if request.wallet_details else None
+    if not user_private_key:
+        return jsonify({'error': 'No private key found for authenticated user'}), 400
+    
+    # Use Node adapter for transaction execution with private keys
+    # Use auth_id as proposer and authorizer (account name in flow-production.json), mainnet-agfarms as payer
     # Pass amount as decimal (float) to match Flow CLI behavior
-    result = node_adapter.send_transaction(
+    result = node_adapter.send_transaction_with_private_key(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount_float],  # Use amount_float instead of amount string
         roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
+        private_keys={user_id: user_private_key},  # Pass the private key for the user's auth_id
         proposer_wallet_id=sender_wallet_id,
         payer_wallet_id=admin_wallet_id,
         authorizer_wallet_ids=[sender_wallet_id] if sender_wallet_id else None
