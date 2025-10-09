@@ -882,6 +882,11 @@ def send_bait():
     if not user_flow_address:
         return jsonify({'error': 'No Flow address found for authenticated user'}), 400
     
+    # Get the user's private key from wallet details
+    user_private_key = request.wallet_details.get('flow_private_key') if request.wallet_details else None
+    if not user_private_key:
+        return jsonify({'error': 'No private key found for authenticated user'}), 400
+    
     # Check user's BaitCoin balance before attempting transaction
     print(f"Checking BaitCoin balance for user {user_flow_address}...")
     user_balance = check_bait_balance(user_flow_address)
@@ -926,11 +931,6 @@ def send_bait():
     recipient_wallet_id = get_wallet_id_by_address(to_address)
     admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet for payer
     
-    # Get the user's private key from wallet details
-    user_private_key = request.wallet_details.get('flow_private_key') if request.wallet_details else None
-    if not user_private_key:
-        return jsonify({'error': 'No private key found for authenticated user'}), 400
-    
     # Use Node adapter for transaction execution with private keys
     # Use auth_id as proposer and authorizer (account name in flow-production.json), mainnet-agfarms as payer
     # Pass amount as decimal (float) to match Flow CLI behavior
@@ -939,9 +939,9 @@ def send_bait():
         args=[to_address, amount_float],  # Use amount_float instead of amount string
         roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
         private_keys={user_id: user_private_key},  # Pass the private key for the user's auth_id
-        proposer_wallet_id=sender_wallet_id,
+        proposer_wallet_id=user_id,  # Use auth_id instead of wallet_id
         payer_wallet_id=admin_wallet_id,
-        authorizer_wallet_ids=[sender_wallet_id] if sender_wallet_id else None
+        authorizer_wallet_ids=[user_id] if user_id else None  # Use auth_id instead of wallet_id
     )
     
     print(f"=== PYTHON APP SEND BAIT RESULT ===")
