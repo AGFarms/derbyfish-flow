@@ -94,11 +94,22 @@ class FlowWrapper {
             .put('contracts.BaitCoin', baitAddr)
             .put('contracts.FungibleToken', ftAddr);
         this.loadFlowConfig();
+        console.error('=== FLOW WRAPPER CONSTRUCTOR DEBUG ===');
+        console.error('Loading service account from:', this.config.flowDir);
         const svc = this.loadServiceAccount(this.config.flowDir);
         this.service = svc;
+        console.error('Service account loaded:', {
+            address: svc.address,
+            hasKey: !!svc.key,
+            keyId: svc.keyId,
+            signatureAlgorithm: svc.signatureAlgorithm,
+            hashAlgorithm: svc.hashAlgorithm
+        });
         // Clean service account setup log
         console.log(`🔑 Service: ${svc.address} (key: ${svc.key ? '✓' : '✗'})`);
         this.authz = svc.address && svc.key ? this.authzFactory(svc.address, svc.keyId || 0, svc.key, svc.signatureAlgorithm, svc.hashAlgorithm) : null;
+        console.error('Authorization created:', !!this.authz);
+        console.error('=== END FLOW WRAPPER CONSTRUCTOR DEBUG ===');
     }
     getAccessNode(network) {
         if (network === types_1.FlowNetwork.MAINNET)
@@ -350,11 +361,12 @@ class FlowWrapper {
         console.log(`💸 Transaction: ${path_1.default.basename(transactionPath)} (${args.length} args)`);
         const fclArgs = this._buildFclArgs(args);
         const transaction = await this._createTransactionRecord('transaction', transactionPath, args, proposerWalletId, payerWalletId, authorizerWalletIds);
-        // Build roles from wallet IDs if provided
+        // Use the provided roles for Flow transaction execution
+        // Wallet IDs are only used for database logging, not for Flow account resolution
         const transactionRoles = {
-            proposer: proposerWalletId || roles.proposer,
-            payer: payerWalletId || roles.payer,
-            authorizer: authorizerWalletIds || roles.authorizer
+            proposer: roles.proposer,
+            payer: roles.payer,
+            authorizer: roles.authorizer
         };
         const { proposer, payer, authorizations } = this._setupTransactionRoles(transactionRoles, privateKeys);
         const transactionConfig = {

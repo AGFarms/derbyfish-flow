@@ -12,11 +12,22 @@ class FlowNodeAdapter:
         self.flow_dir = os.path.join(self.repo_root, 'flow')
 
     def _run(self, command: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        print(f"=== FLOW NODE ADAPTER _RUN ===")
+        print(f"Command: {command}")
+        print(f"Payload: {payload}")
+        print(f"TS CLI path: {self.ts_cli}")
+        print(f"TS CLI exists: {os.path.exists(self.ts_cli)}")
+        print(f"Repo root: {self.repo_root}")
+        print(f"Flow dir: {self.flow_dir}")
+        
         if not os.path.exists(self.ts_cli):
             raise RuntimeError('TypeScript CLI not built. Run: npm run build')
         
         payload.setdefault('flowDir', self.flow_dir)
         encoded = base64.b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8')
+        
+        print(f"Encoded payload length: {len(encoded)}")
+        print(f"Full command: node {self.ts_cli} {command} --payload={encoded[:100]}...")
         
         started = time.time()
         proc = subprocess.run(
@@ -27,6 +38,13 @@ class FlowNodeAdapter:
             timeout=300
         )
         elapsed = time.time() - started
+        
+        print(f"Subprocess completed:")
+        print(f"  Return code: {proc.returncode}")
+        print(f"  Stdout: {proc.stdout}")
+        print(f"  Stderr: {proc.stderr}")
+        print(f"  Elapsed: {elapsed}s")
+        print("=============================")
         
         stdout = (proc.stdout or '').strip()
         stderr = (proc.stderr or '').strip()

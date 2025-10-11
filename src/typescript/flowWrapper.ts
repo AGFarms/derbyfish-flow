@@ -73,13 +73,27 @@ export class FlowWrapper {
             .put('contracts.FungibleToken', ftAddr);
         this.loadFlowConfig();
 
+        console.error('=== FLOW WRAPPER CONSTRUCTOR DEBUG ===');
+        console.error('Loading service account from:', this.config.flowDir);
+        
         const svc = this.loadServiceAccount(this.config.flowDir);
         this.service = svc;
+        
+        console.error('Service account loaded:', {
+            address: svc.address,
+            hasKey: !!svc.key,
+            keyId: svc.keyId,
+            signatureAlgorithm: svc.signatureAlgorithm,
+            hashAlgorithm: svc.hashAlgorithm
+        });
         
         // Clean service account setup log
         console.log(`🔑 Service: ${svc.address} (key: ${svc.key ? '✓' : '✗'})`);
         
         this.authz = svc.address && svc.key ? this.authzFactory(svc.address, svc.keyId || 0, svc.key, svc.signatureAlgorithm, svc.hashAlgorithm) : null;
+        
+        console.error('Authorization created:', !!this.authz);
+        console.error('=== END FLOW WRAPPER CONSTRUCTOR DEBUG ===');
     }
 
     getAccessNode(network: FlowNetwork) {

@@ -732,6 +732,13 @@ def admin_mint_bait():
     print("==========================================")
     
     # Use Node adapter for transaction execution with wallet IDs for logging only
+    print(f"=== CALLING NODE ADAPTER SEND TRANSACTION ===")
+    print(f"Transaction path: cadence/transactions/adminMintBait.cdc")
+    print(f"Args: [{to_address}, {amount}]")
+    print(f"Roles: {roles}")
+    print(f"Admin wallet ID: {admin_wallet_id}")
+    print("=============================================")
+    
     result = node_adapter.send_transaction(
         transaction_path='cadence/transactions/adminMintBait.cdc',
         args=[to_address, amount],
@@ -740,6 +747,17 @@ def admin_mint_bait():
         payer_wallet_id=admin_wallet_id,     # Database wallet ID for logging only
         authorizer_wallet_ids=[admin_wallet_id] if admin_wallet_id else None  # Database wallet ID for logging only
     )
+    
+    print(f"=== NODE ADAPTER RESULT ===")
+    print(f"Result: {result}")
+    print(f"Success: {result.get('success')}")
+    print(f"Transaction ID: {result.get('transaction_id')}")
+    print(f"Error Message: {result.get('error_message')}")
+    print(f"Stdout: {result.get('stdout')}")
+    print(f"Stderr: {result.get('stderr')}")
+    print(f"Return Code: {result.get('returncode')}")
+    print(f"Execution Time: {result.get('execution_time')}")
+    print("===========================")
     
     # Check if the transaction actually succeeded
     if not result.get('success'):
