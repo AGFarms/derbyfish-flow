@@ -371,11 +371,12 @@ export class FlowWrapper {
         const fclArgs = this._buildFclArgs(args);
         const transaction = await this._createTransactionRecord('transaction', transactionPath, args, proposerWalletId, payerWalletId, authorizerWalletIds);
         
-        // Build roles from wallet IDs if provided
+        // Use the provided roles for Flow transaction execution
+        // Wallet IDs are only used for database logging, not for Flow account resolution
         const transactionRoles = {
-            proposer: proposerWalletId || roles.proposer,
-            payer: payerWalletId || roles.payer,
-            authorizer: authorizerWalletIds || roles.authorizer
+            proposer: roles.proposer,
+            payer: roles.payer,
+            authorizer: roles.authorizer
         };
         
         const { proposer, payer, authorizations } = this._setupTransactionRoles(transactionRoles, privateKeys);
