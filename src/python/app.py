@@ -921,7 +921,7 @@ def send_bait():
     print(f"Network: {network}")
     print(f"Wallet Details: {request.wallet_details}")
     print(f"Has Private Key: {bool(user_private_key)}")
-    print(f"Roles: proposer={user_flow_address}, authorizer=[{user_flow_address}], payer=mainnet-agfarms")
+    print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
     print(f"Transaction Path: cadence/transactions/sendBait.cdc")
     print(f"Transaction Args: [{to_address}, {amount_float}]")
     print("=====================================")
@@ -932,12 +932,12 @@ def send_bait():
     admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet for payer
     
     # Use Node adapter for transaction execution with private keys
-    # Use Flow address as proposer and authorizer, mainnet-agfarms as payer
+    # Use auth_id as proposer and authorizer (account name), mainnet-agfarms as payer
     # Pass amount as decimal (float) to match Flow CLI behavior
     result = node_adapter.send_transaction_with_private_key(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount_float],  # Use amount_float instead of amount string
-        roles={'proposer': user_flow_address, 'authorizer': [user_flow_address], 'payer': 'mainnet-agfarms'},
+        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
         private_keys={user_flow_address: user_private_key},  # Pass the private key for the user's Flow address
         proposer_wallet_id=user_id,  # Use auth_id for database logging
         payer_wallet_id=admin_wallet_id,
