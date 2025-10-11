@@ -292,7 +292,10 @@ export class FlowWrapper {
         console.log(`📜 Script: ${path.basename(scriptPath)} (${args.length} args)`);
         
         const fclArgs = this._buildFclArgs(args);
-        const transaction = await this._createTransactionRecord('script', scriptPath, args, proposerWalletId);
+        
+        // Skip database logging for balance check scripts
+        const shouldLogToDatabase = !this._isBalanceCheckScript(scriptPath);
+        const transaction = shouldLogToDatabase ? await this._createTransactionRecord('script', scriptPath, args, proposerWalletId) : null;
         
         try {
             const data = await fcl.query({
@@ -303,7 +306,9 @@ export class FlowWrapper {
             const executionTime = Date.now() - startTime;
             console.log(`✅ Script completed (${executionTime}ms)`);
             
-            await this._updateTransactionSuccess(transaction, data, executionTime);
+            if (shouldLogToDatabase && transaction) {
+                await this._updateTransactionSuccess(transaction, data, executionTime);
+            }
             
             return new FlowResult({
                 success: true,
@@ -315,7 +320,9 @@ export class FlowWrapper {
             const executionTime = Date.now() - startTime;
             console.log(`❌ Script failed (${executionTime}ms): ${error.message}`);
             
-            await this._updateTransactionFailure(transaction, error, executionTime);
+            if (shouldLogToDatabase && transaction) {
+                await this._updateTransactionFailure(transaction, error, executionTime);
+            }
             
             return new FlowResult({
                 success: false,
@@ -469,6 +476,13 @@ export class FlowWrapper {
         if (!id) return false;
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         return uuidRegex.test(id);
+    }
+
+    private _isBalanceCheckScript(scriptPath: string): boolean {
+        const scriptName = path.basename(scriptPath).toLowerCase();
+        return scriptName.includes('checkbaitbalance') || 
+               scriptName.includes('checkflowbalance') ||
+               scriptName.includes('checkbalance');
     }
 
     private async _createTransactionRecord(type: 'script' | 'transaction', path: string, args: any[], proposerWalletId?: string, payerWalletId?: string, authorizerWalletIds?: string[]) {
