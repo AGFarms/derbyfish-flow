@@ -50,6 +50,11 @@ node_adapter = FlowNodeAdapter(repo_root=os.path.abspath(os.path.join(os.path.di
 def verify_admin_secret(auth_header):
     """Verify admin secret key from Authorization header"""
     try:
+        print(f"=== VERIFY ADMIN SECRET DEBUG ===")
+        print(f"ADMIN_SECRET_KEY configured: {bool(ADMIN_SECRET_KEY)}")
+        print(f"ADMIN_SECRET_KEY length: {len(ADMIN_SECRET_KEY) if ADMIN_SECRET_KEY else 0}")
+        print(f"Auth header: {auth_header}")
+        
         if not ADMIN_SECRET_KEY:
             print("WARNING: ADMIN_SECRET_KEY not configured")
             return False
@@ -70,21 +75,30 @@ def verify_admin_secret(auth_header):
             return False
             
         token = token_parts[1]
+        print(f"Extracted token: {token}")
+        print(f"Token length: {len(token)}")
         
         if not token or token.strip() == '':
             print("Authentication failed: Empty token")
             return False
         
         # Simple string comparison for admin secret
+        print(f"Comparing token with ADMIN_SECRET_KEY...")
+        print(f"Token == ADMIN_SECRET_KEY: {token == ADMIN_SECRET_KEY}")
+        
         if token == ADMIN_SECRET_KEY:
             print("Admin authentication successful")
             return True
         else:
             print("Authentication failed: Invalid admin secret")
+            print(f"Expected: {ADMIN_SECRET_KEY}")
+            print(f"Received: {token}")
             return False
             
     except Exception as e:
         print(f"Admin authentication error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def verify_supabase_jwt(token):
@@ -258,17 +272,30 @@ def require_admin_auth(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         try:
+            print(f"=== ADMIN AUTH DEBUG ===")
+            print(f"Request method: {request.method}")
+            print(f"Request path: {request.path}")
+            print(f"Request headers: {dict(request.headers)}")
+            
             # Get Authorization header
             auth_header = request.headers.get('Authorization')
+            print(f"Authorization header: {auth_header}")
             
             # Verify the admin secret
-            if not verify_admin_secret(auth_header):
+            auth_result = verify_admin_secret(auth_header)
+            print(f"Authentication result: {auth_result}")
+            
+            if not auth_result:
+                print("Authentication failed - returning 401")
                 return jsonify({'error': 'Invalid or missing admin secret'}), 401
             
+            print("Authentication successful - calling function")
             return f(*args, **kwargs)
             
         except Exception as e:
             print(f"Admin authentication error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({'error': 'Authentication failed due to server error'}), 500
     
     return decorated_function
