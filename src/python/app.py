@@ -762,7 +762,7 @@ def admin_mint_bait():
     print(f"=== CALLING NODE ADAPTER SEND TRANSACTION ===")
     print(f"Transaction path: cadence/transactions/adminMintBait.cdc")
     print(f"Args: [{to_address}, {amount}]")
-    print(f"Roles: {roles}")
+    print(f"Roles: {{'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}}")
     print(f"Admin wallet ID: {admin_wallet_id}")
     print("=============================================")
     
