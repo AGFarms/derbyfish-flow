@@ -466,6 +466,10 @@ def index():
                 'sell_bait': 'POST /scripts/sell-bait',
                 'test_bait_coin_admin': 'POST /scripts/test-bait-coin-admin'
             },
+            'bhrv': {
+                'verification_cost': 'GET /bhrv/verification-cost?file_size_mb=<size>',
+                'verification_rates': 'GET /bhrv/verification-rates'
+            },
             'transactions': {
                 'admin_burn_bait': 'POST /transactions/admin-burn-bait (amount, from_wallet?) - Burn from admin wallet or transfer from custodial wallet then burn',
                 'admin_mint_bait': 'POST /transactions/admin-mint-bait (to_address, amount)',
@@ -1137,6 +1141,63 @@ def list_tasks():
         'count': len(background_tasks)
     })
 
+
+# BHRV Verification endpoints
+@app.route('/bhrv/verification-rates')
+def get_verification_rates():
+    """Get BHRV verification rates and pricing information"""
+    return jsonify({
+        'cost_per_100mb': 0.50,  # 50 cents per 100MB
+        'currency': 'BAIT',
+        'description': 'BHRV verification cost per 100MB of submission data',
+        'minimum_cost': 0.50,  # Minimum cost for any verification
+        'maximum_file_size_mb': 1000,  # Maximum file size supported
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/bhrv/verification-cost')
+@require_auth
+def calculate_verification_cost():
+    """Calculate BHRV verification cost based on file size"""
+    try:
+        file_size_mb = request.args.get('file_size_mb')
+        
+        if not file_size_mb:
+            return jsonify({'error': 'file_size_mb parameter is required'}), 400
+        
+        # Convert to float and validate
+        try:
+            file_size = float(file_size_mb)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid file_size_mb format. Must be a number.'}), 400
+        
+        if file_size < 0:
+            return jsonify({'error': 'File size cannot be negative'}), 400
+        
+        if file_size > 1000:  # Maximum 1GB
+            return jsonify({'error': 'File size exceeds maximum limit of 1000MB'}), 400
+        
+        # Calculate cost: 50 cents per 100MB, rounded up
+        cost_per_100mb = 0.50
+        cost = max(cost_per_100mb, (file_size / 100) * cost_per_100mb)
+        
+        # Round up to nearest cent
+        import math
+        cost = math.ceil(cost * 100) / 100
+        
+        return jsonify({
+            'file_size_mb': file_size,
+            'cost_bait': cost,
+            'cost_per_100mb': cost_per_100mb,
+            'currency': 'BAIT',
+            'description': f'Verification cost for {file_size}MB of data',
+            'calculation': f'Max(0.50, ({file_size}/100) * 0.50) = {cost} BAIT',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error calculating verification cost: {e}")
+        return jsonify({'error': 'Internal server error calculating verification cost'}), 500
 
 # Health check endpoint
 @app.route('/health')
