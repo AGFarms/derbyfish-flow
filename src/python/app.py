@@ -1177,13 +1177,12 @@ def calculate_verification_cost():
         if file_size > 1000:  # Maximum 1GB
             return jsonify({'error': 'File size exceeds maximum limit of 1000MB'}), 400
         
-        # Calculate cost: 50 cents per 100MB, rounded up
+        # Calculate cost: 0.5 BAIT per 100MB
         cost_per_100mb = 0.50
-        cost = max(cost_per_100mb, (file_size / 100) * cost_per_100mb)
+        cost = (file_size / 100) * cost_per_100mb
         
-        # Round up to nearest cent
-        import math
-        cost = math.ceil(cost * 100) / 100
+        # Round to 2 decimal places
+        cost = round(cost, 2)
         
         return jsonify({
             'file_size_mb': file_size,
@@ -1191,7 +1190,7 @@ def calculate_verification_cost():
             'cost_per_100mb': cost_per_100mb,
             'currency': 'BAIT',
             'description': f'Verification cost for {file_size}MB of data',
-            'calculation': f'Max(0.50, ({file_size}/100) * 0.50) = {cost} BAIT',
+            'calculation': f'({file_size}/100) * 0.50 = {cost} BAIT',
             'timestamp': datetime.now().isoformat()
         })
         
