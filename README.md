@@ -2,6 +2,19 @@
 
 **Public-facing REST API infrastructure for minting verified Fish Cards on the Flow blockchain**
 
+## Ecosystem Role
+
+`derbyfish-flow` is the blockchain infrastructure layer of the DerbyFish ecosystem. After catches are verified through `derbyfish-ai` and stored in Supabase, this API mints permanent Fish Card NFTs on the Flow blockchain. `derbyfish-native` and `derbyfish-web` display these NFTs to users, while `derbyfish-helm` provides admin-level wallet and token management. The BAIT token economy — balance checks, transfers, and swaps — also runs through this service.
+
+### Related Repositories
+
+- **[derbyfish-ai](../derbyfish-ai)** — Real-time session engine that produces the verified catches minted here
+- **[derbyfish-native](../derbyfish-native)** — Mobile app where users view their Fish Cards and BAIT balance
+- **[derbyfish-web](../derbyfish-web)** — Public platform that displays Fish Card NFTs
+- **[derbyfish-helm](../derbyfish-helm)** — Admin console for wallet management and token operations
+- **[derbyfish-sheriff](../derbyfish-sheriff)** — Badge validator that may trigger minting workflows
+- **[derbyfish-docs](../derbyfish-docs)** — Platform documentation and business materials
+
 ---
 
 ## 🎯 Vision
