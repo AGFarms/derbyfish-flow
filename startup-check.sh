@@ -38,16 +38,8 @@ else
     echo "✗ flow-production.json missing"
 fi
 
-# Check Node.js version
-echo "Node.js version: $(node --version)"
-echo "NPM version: $(npm --version)"
-
-# Check if TypeScript CLI is built
-if [ -f "/app/dist/cli.js" ]; then
-    echo "✓ TypeScript CLI built successfully"
-else
-    echo "✗ TypeScript CLI not found"
-fi
+# Check Python version
+echo "Python version: $(python --version)"
 
 echo "=== STARTUP CHECK COMPLETE ==="
 echo ""

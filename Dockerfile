@@ -7,22 +7,8 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
-    build-essential \
     jq \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js (required for the TypeScript CLI)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
-
-# Copy package.json and install Node.js dependencies
-COPY package.json ./
-RUN npm install
-
-# Copy TypeScript source and build
-COPY src/typescript/ ./src/typescript/
-COPY tsconfig.json ./
-RUN npm run build
 
 # Copy Python requirements and install
 COPY requirements.txt ./

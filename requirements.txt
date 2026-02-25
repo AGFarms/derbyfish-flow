@@ -5,3 +5,10 @@ gotrue==2.8.1
 python-dotenv==1.0.0
 websockets>=13.0
 PyJWT==2.8.0
+flow-py-sdk>=1.0.0
+cryptography>=41.0.0
+click>=8.0.0
+rich>=13.0.0
+requests>=2.28.0
+pytest>=7.0.0
+pytest-cov>=4.0.0

@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flow_node_adapter import FlowNodeAdapter
+from flow_py_adapter import FlowPyAdapter
 from supabase import create_client, Client
 
 load_dotenv()
@@ -36,7 +36,7 @@ class WalletSyncService:
         self.pkeys_dir = self.accounts_dir / "pkeys"
         self.production_file = self.accounts_dir / "flow-production.json"
         
-        self.flow_adapter = FlowNodeAdapter()
+        self.flow_adapter = FlowPyAdapter()
         self.supabase = None
         
         # Statistics
@@ -286,9 +286,6 @@ class WalletSyncService:
         
         balance_data = result.get('data')
         print(f"🔍 DEBUG: Balance data for {address}: {balance_data}")
-        
-        if not isinstance(balance_data, str):
-            raise RuntimeError(f"Expected string balance data, got: {type(balance_data)}")
         
         try:
             return float(balance_data)

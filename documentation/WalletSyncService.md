@@ -59,7 +59,7 @@ USER_FETCH → WALLET_VALIDATION → BLOCKCHAIN_STATE_CHECK → VAULT_MANAGEMENT
 **Purpose**: Initialize the WalletSyncService with all required components and state
 **Flow**: 
 - Sets up file system paths (flow_dir, accounts_dir, pkeys_dir, production_file)
-- Initializes FlowNodeAdapter for blockchain operations
+- Initializes FlowPyAdapter for blockchain operations
 - Creates statistics tracking dictionary with thread-safe locks
 - Configures thread management for single service account
 - Sets up rate limiting parameters (0.2s scripts, 0.02s transactions)
@@ -214,7 +214,7 @@ USER_FETCH → WALLET_VALIDATION → BLOCKCHAIN_STATE_CHECK → VAULT_MANAGEMENT
 **Purpose**: Check FLOW token balance for given address
 **Flow**: 
 - Ensures address has 0x prefix
-- Executes checkFlowBalance.cdc script via FlowNodeAdapter
+- Executes checkFlowBalance.cdc script via FlowPyAdapter
 - Parses balance from script result
 - Returns balance as float
 **Parameters**: 
@@ -228,7 +228,7 @@ USER_FETCH → WALLET_VALIDATION → BLOCKCHAIN_STATE_CHECK → VAULT_MANAGEMENT
 **Flow**: 
 - Gets thread account for funding
 - Ensures address has 0x prefix
-- Sends fundWallet.cdc transaction via FlowNodeAdapter
+- Sends fundWallet.cdc transaction via FlowPyAdapter
 - Returns success status
 **Parameters**: 
 - `flow_address`: Flow address to fund

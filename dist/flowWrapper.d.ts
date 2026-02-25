@@ -64,6 +64,7 @@ export declare class FlowWrapper {
     private _executeTransaction;
     private _buildFclArgs;
     private _isValidWalletId;
+    private _isBalanceCheckScript;
     private _createTransactionRecord;
     private _updateTransactionSuccess;
     private _updateTransactionFailure;

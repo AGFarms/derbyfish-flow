@@ -1,0 +1,2 @@
+[console_scripts]
+derbyfish-flow-cli = cli:main

@@ -9,7 +9,8 @@ import jwt
 import functools
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from flow_node_adapter import FlowNodeAdapter
+from flow_py_adapter import FlowPyAdapter
+from wallet_crypto import encrypt_private_key, get_plain_private_key
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,7 @@ SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')
 
 # Admin configuration
 ADMIN_SECRET_KEY = os.getenv('ADMIN_SECRET_KEY')
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET') or ADMIN_SECRET_KEY
 
 # Validate required environment variables
 if not SUPABASE_URL:
@@ -44,8 +46,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE
 # Global storage for background tasks
 background_tasks = {}
 
-# Initialize Node-based Flow adapter
-node_adapter = FlowNodeAdapter(repo_root=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+flow_adapter = FlowPyAdapter(repo_root=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 def verify_admin_secret(auth_header):
     """Verify admin secret key from Authorization header"""
@@ -360,70 +361,78 @@ def require_auth(f):
     return decorated_function
 
 
+def verify_webhook_secret(auth_header):
+    if not WEBHOOK_SECRET:
+        return False
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return False
+    token = auth_header.split(' ', 1)[1]
+    return token and token == WEBHOOK_SECRET
+
+
+def _filter_cadence_args(args):
+    filtered = []
+    skip_next = False
+    for i, a in enumerate(args):
+        if skip_next:
+            skip_next = False
+            continue
+        if a in ('--proposer', '--authorizer') and i + 1 < len(args):
+            skip_next = True
+            continue
+        if a not in ('--proposer', '--authorizer'):
+            filtered.append(a)
+    return filtered
+
+def _get_authorizer_from_args(args):
+    for i, arg in enumerate(args):
+        if arg == '--authorizer' and i + 1 < len(args):
+            return args[i + 1]
+    return None
 
 def run_background_task(task_id, command, args=None, network="mainnet", task_type="script"):
     """Run a Flow command in the background and store the result"""
     start_time = datetime.now()
-    
+    args = args or []
+    tx_args = _filter_cadence_args(args)
     try:
-        # Update network if different
-        if network != flow_wrapper.config.network.value:
-            flow_wrapper.update_config(network=FlowNetwork(network))
-        
-        # Parse command to determine operation type
         if command.startswith('script execute'):
             script_path = command.replace('script execute ', '').replace('scripts execute ', '')
-            result = flow_wrapper.execute_script(script_path, args)
+            result = flow_adapter.execute_script(script_path, tx_args, network)
         elif command.startswith('transactions send'):
             transaction_path = command.replace('transactions send ', '').replace('transaction send ', '')
-            # For background tasks, we need to determine the roles based on the task type
             if 'admin' in transaction_path.lower():
-                # Admin operations use mainnet-agfarms for all roles
                 proposer = 'mainnet-agfarms'
                 authorizer = 'mainnet-agfarms'
                 payer = 'mainnet-agfarms'
-            else:
-                # User operations - hardcode proposer to mainnet-agfarms
-                proposer = 'mainnet-agfarms'  # Hardcoded to mainnet-agfarms
-                authorizers = ['mainnet-agfarms']  # Always include mainnet-agfarms
-                payer = 'mainnet-agfarms'
-                
-                # Try to find user ID in args for additional authorizer
-                for i, arg in enumerate(args):
-                    if arg == '--authorizer' and i + 1 < len(args):
-                        authorizers.append(args[i + 1])
-                        break
-            
-            if 'admin' in transaction_path.lower():
-                result = flow_wrapper.send_transaction(
-                    transaction_path, 
-                    args, 
-                    proposer=proposer,
-                    authorizer=authorizer,
-                    payer=payer
+                result = flow_adapter.send_transaction(
+                    transaction_path, tx_args,
+                    roles={'proposer': proposer, 'authorizer': authorizer, 'payer': payer},
+                    network=network
                 )
             else:
-                result = flow_wrapper.send_transaction(
-                    transaction_path, 
-                    args, 
-                    proposer=proposer,
-                    authorizers=authorizers,
-                    payer=payer
+                proposer = 'mainnet-agfarms'
+                payer = 'mainnet-agfarms'
+                authorizers = ['mainnet-agfarms']
+                user_authorizer = _get_authorizer_from_args(args)
+                if user_authorizer:
+                    authorizers.append(user_authorizer)
+                result = flow_adapter.send_transaction(
+                    transaction_path, tx_args,
+                    roles={'proposer': proposer, 'authorizer': authorizers, 'payer': payer},
+                    network=network
                 )
         else:
-            # For other commands, use the wrapper's internal command execution
-            result = flow_wrapper._execute_command(flow_wrapper._build_base_command(command, args))
-        
-        # Convert FlowResult to legacy format for compatibility
+            raise ValueError(f'Unsupported command: {command}')
         result = {
-            'success': result.success,
-            'stdout': result.raw_output,
-            'stderr': result.error_message,
-            'returncode': 0 if result.success else 1,
-            'command': result.command,
-            'execution_time': result.execution_time,
-            'network': result.network,
-            'transaction_id': result.transaction_id
+            'success': result.get('success'),
+            'stdout': result.get('stdout', ''),
+            'stderr': result.get('stderr') or result.get('error_message', ''),
+            'returncode': 0 if result.get('success') else 1,
+            'command': result.get('command', command),
+            'execution_time': result.get('execution_time', 0),
+            'network': result.get('network', network),
+            'transaction_id': result.get('transaction_id')
         }
     except Exception as e:
         result = {
@@ -485,6 +494,9 @@ def index():
                 'withdraw_contract_usdf': 'POST /transactions/withdraw-contract-usdf (amount)',
                 'deposit_flow': 'POST /transactions/deposit-flow (to_address, amount)'
             },
+            'internal': {
+                'create_wallet': 'POST /internal/create-wallet (webhook, requires WEBHOOK_SECRET)'
+            },
             'background': {
                 'run_script': 'POST /background/run-script',
                 'run_transaction': 'POST /background/run-transaction',
@@ -507,6 +519,65 @@ def auth_status():
         'admin_secret_key_configured': bool(ADMIN_SECRET_KEY),
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/internal/create-wallet', methods=['POST'])
+def internal_create_wallet():
+    if not verify_webhook_secret(request.headers.get('Authorization')):
+        return jsonify({'error': 'Invalid or missing webhook secret'}), 401
+    data = request.get_json() or {}
+    record = data.get('record') or data.get('payload', {}).get('record') or data
+    if isinstance(record, list):
+        record = record[0] if record else {}
+    auth_id = record.get('auth_id') or record.get('new', {}).get('auth_id')
+    if not auth_id:
+        return jsonify({'error': 'auth_id required'}), 400
+    if record.get('flow_address'):
+        return jsonify({'created': False, 'message': 'Wallet already has address'}), 200
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+    try:
+        result = flow_adapter.create_account(auth_id, network='mainnet')
+        if not result.get('success'):
+            return jsonify({'error': result.get('error_message', 'create_account failed')}), 500
+        address = result['address']
+        private_key_hex = result['private_key_hex']
+        public_key_hex = result['public_key_hex']
+        encrypted_pk = encrypt_private_key(private_key_hex)
+        flow_dir = flow_adapter.flow_dir
+        pkeys_dir = os.path.join(flow_dir, 'accounts', 'pkeys')
+        os.makedirs(pkeys_dir, exist_ok=True)
+        pkey_path = os.path.join(pkeys_dir, f'{auth_id}.pkey')
+        with open(pkey_path, 'w') as f:
+            f.write(private_key_hex)
+        flow_prod_path = os.path.join(flow_dir, 'accounts', 'flow-production.json')
+        addr_clean = address.replace('0x', '') if address.startswith('0x') else address
+        if os.path.exists(flow_prod_path):
+            with open(flow_prod_path) as f:
+                cfg = json.load(f)
+        else:
+            cfg = {'accounts': {}}
+        cfg.setdefault('accounts', {})[auth_id] = {
+            'address': addr_clean,
+            'key': {
+                'type': 'file',
+                'location': f'accounts/pkeys/{auth_id}.pkey',
+                'signatureAlgorithm': 'ECDSA_P256',
+                'hashAlgorithm': 'SHA3_256'
+            }
+        }
+        with open(flow_prod_path, 'w') as f:
+            json.dump(cfg, f, indent=4)
+        supabase.table('wallet').update({
+            'flow_address': addr_clean,
+            'flow_private_key': encrypted_pk,
+            'flow_public_key': public_key_hex
+        }).eq('auth_id', auth_id).execute()
+        return jsonify({'created': True, 'address': address}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/auth/test')
 @require_auth
@@ -549,7 +620,7 @@ def check_bait_balance():
     print(f"User ID: {request.user_payload.get('sub')}")
     print(f"Wallet Details: {request.wallet_details}")
     
-    result = node_adapter.execute_script(
+    result = flow_adapter.execute_script(
         script_path='cadence/scripts/checkBaitBalance.cdc',
         args=[address]
     )
@@ -605,7 +676,7 @@ def admin_burn_bait():
                 }), 404
             
             wallet_data = wallet_response.data[0]
-            private_key = wallet_data.get('flow_private_key')
+            private_key = get_plain_private_key(wallet_data)
             flow_address = wallet_data.get('flow_address')
             auth_id = wallet_data.get('auth_id')
             
@@ -649,7 +720,7 @@ def admin_burn_bait():
         admin_wallet_address = "0xed2202de80195438"  # Admin wallet address
         
         # Use the new method with private keys
-        transfer_result = node_adapter.send_transaction_with_private_key(
+        transfer_result = flow_adapter.send_transaction_with_private_key(
             transaction_path='cadence/transactions/sendBait.cdc',
             args=[admin_wallet_address, amount],  # Send TO admin wallet FROM custodial wallet
             roles={'proposer': flow_address, 'authorizer': [flow_address], 'payer': 'mainnet-agfarms'},
@@ -669,7 +740,7 @@ def admin_burn_bait():
         print("=====================================")
         
         # Step 3: Burn the bait from admin wallet
-        burn_result = node_adapter.send_transaction(
+        burn_result = flow_adapter.send_transaction(
             transaction_path='cadence/transactions/adminBurnBait.cdc',
             args=[amount],
             roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
@@ -705,7 +776,7 @@ def admin_burn_bait():
         print("=====================================")
         
         # Use Node adapter for transaction execution from admin's own wallet
-        result = node_adapter.send_transaction(
+        result = flow_adapter.send_transaction(
             transaction_path='cadence/transactions/adminBurnBait.cdc',
             args=[amount],
             roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
@@ -770,7 +841,7 @@ def admin_mint_bait():
     print(f"Admin wallet ID: {admin_wallet_id}")
     print("=============================================")
     
-    result = node_adapter.send_transaction(
+    result = flow_adapter.send_transaction(
         transaction_path='cadence/transactions/adminMintBait.cdc',
         args=[to_address, amount],
         roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'},
@@ -812,6 +883,72 @@ def admin_mint_bait():
         'execution_time': result.get('execution_time')
     })
 
+@app.route('/transactions/admin-mint-fusd', methods=['POST'])
+@require_admin_auth
+def admin_mint_fusd():
+    """Admin mint FUSD tokens"""
+    data = request.get_json() or {}
+    amount = data.get('amount')
+    to_address = data.get('to_address')
+    network = data.get('network', 'mainnet')
+    if not amount:
+        return jsonify({'error': 'Amount parameter is required'}), 400
+    if not to_address:
+        return jsonify({'error': 'to_address parameter is required'}), 400
+    if not to_address.startswith('0x') and len(to_address) == 16:
+        to_address = f'0x{to_address}'
+    result = flow_adapter.send_transaction(
+        transaction_path='cadence/transactions/adminMintFusd.cdc',
+        args=[to_address, float(amount)],
+        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'},
+        network=network
+    )
+    if not result.get('success'):
+        return jsonify({
+            'success': False,
+            'error': result.get('stderr') or result.get('error_message') or 'Transaction failed',
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time')
+        }), 400
+    return jsonify({
+        'success': True,
+        'transaction_id': result.get('transaction_id'),
+        'execution_time': result.get('execution_time')
+    })
+
+@app.route('/transactions/deposit-flow', methods=['POST'])
+@require_admin_auth
+def deposit_flow():
+    """Admin deposit FLOW tokens to a wallet"""
+    data = request.get_json() or {}
+    amount = data.get('amount')
+    to_address = data.get('to_address')
+    network = data.get('network', 'mainnet')
+    if not amount:
+        return jsonify({'error': 'Amount parameter is required'}), 400
+    if not to_address:
+        return jsonify({'error': 'to_address parameter is required'}), 400
+    if not to_address.startswith('0x') and len(to_address) == 16:
+        to_address = f'0x{to_address}'
+    result = flow_adapter.send_transaction(
+        transaction_path='cadence/transactions/fundWallet.cdc',
+        args=[to_address, float(amount)],
+        roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'},
+        network=network
+    )
+    if not result.get('success'):
+        return jsonify({
+            'success': False,
+            'error': result.get('stderr') or result.get('error_message') or 'Transaction failed',
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time')
+        }), 400
+    return jsonify({
+        'success': True,
+        'transaction_id': result.get('transaction_id'),
+        'execution_time': result.get('execution_time')
+    })
+
 @app.route('/transactions/check-contract-usdf-balance')
 @require_auth
 def check_contract_usdf_balance():
@@ -819,7 +956,7 @@ def check_contract_usdf_balance():
     network = request.args.get('network', 'mainnet')
     
     # Use Node adapter for transaction execution
-    result = node_adapter.send_transaction(
+    result = flow_adapter.send_transaction(
         transaction_path='cadence/transactions/checkContractUsdfBalance.cdc',
         args=[],
         roles={'proposer': 'mainnet-agfarms', 'authorizer': 'mainnet-agfarms', 'payer': 'mainnet-agfarms'}
@@ -855,7 +992,7 @@ def check_bait_balance(flow_address):
             flow_address = '0x' + flow_address
         
         # Use Node adapter to execute script
-        result = node_adapter.execute_script(
+        result = flow_adapter.execute_script(
             script_path="cadence/scripts/checkBaitBalance.cdc",
             args=[flow_address],
             network="mainnet"
@@ -931,8 +1068,7 @@ def send_bait():
     if not user_flow_address:
         return jsonify({'error': 'No Flow address found for authenticated user'}), 400
     
-    # Get the user's private key from wallet details
-    user_private_key = request.wallet_details.get('flow_private_key') if request.wallet_details else None
+    user_private_key = get_plain_private_key(request.wallet_details) if request.wallet_details else None
     if not user_private_key:
         return jsonify({'error': 'No private key found for authenticated user'}), 400
     
@@ -983,7 +1119,7 @@ def send_bait():
     # Use Node adapter for transaction execution with private keys
     # Use auth_id as proposer and authorizer (account name), mainnet-agfarms as payer
     # Pass amount as decimal (float) to match Flow CLI behavior
-    result = node_adapter.send_transaction_with_private_key(
+    result = flow_adapter.send_transaction_with_private_key(
         transaction_path='cadence/transactions/sendBait.cdc',
         args=[to_address, amount_float],  # Use amount_float instead of amount string
         roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
@@ -1214,7 +1350,7 @@ def health_check():
 def get_metrics():
     """Get Flow wrapper metrics"""
     return jsonify({
-        'flow_metrics': flow_wrapper.get_metrics(),
+        'flow_metrics': {},
         'timestamp': datetime.now().isoformat()
     })
 
@@ -1223,7 +1359,6 @@ def get_metrics():
 @require_auth
 def reset_metrics():
     """Reset Flow wrapper metrics"""
-    flow_wrapper.reset_metrics()
     return jsonify({
         'message': 'Metrics reset successfully',
         'timestamp': datetime.now().isoformat()

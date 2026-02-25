@@ -1,0 +1,35 @@
+{
+    "contracts": {
+        "BaitCoin": {
+            "source": "cadence/contracts/BaitCoin.cdc",
+            "aliases": {
+                "mainnet": "ed2202de80195438",
+                "emulator": "ee82856bf20e2aa6"
+            }
+        },
+        "FungibleToken": {
+            "source": "mainnet://f233dcee88fe0abe.FungibleToken",
+            "aliases": {
+                "emulator": "ee82856bf20e2aa6",
+                "mainnet": "f233dcee88fe0abe"
+            }
+        }
+    },
+    "networks": {
+        "emulator": "127.0.0.1:3569",
+        "mainnet": "access.mainnet.nodes.onflow.org:9000",
+        "testnet": "access.devnet.nodes.onflow.org:9000"
+    },
+    "accounts": {
+        "mainnet-agfarms": {
+            "address": "ed2202de80195438",
+            "key": {
+                "type": "file",
+                "location": "mainnet-agfarms.pkey",
+                "index": 0,
+                "signatureAlgorithm": "ECDSA_secp256k1",
+                "hashAlgorithm": "SHA2_256"
+            }
+        }
+    }
+}

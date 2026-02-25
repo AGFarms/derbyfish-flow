@@ -1,15 +1,14 @@
-# Flow FCL Wrapper
+# Flow Python Adapter
 
-A production-ready TypeScript/JavaScript wrapper for Flow blockchain operations using FCL (Flow Client Library) with comprehensive error handling and type safety.
+A production-ready Python adapter for Flow blockchain operations using flow-py-sdk with comprehensive error handling.
 
 ## Architecture Overview
 
-The FlowWrapper system implements a multi-layered architecture for executing Flow blockchain transactions through HTTP endpoints:
+The FlowPyAdapter implements a two-layer architecture for executing Flow blockchain transactions through HTTP endpoints:
 
 1. **HTTP Layer** (`app.py`) - Flask REST API with JWT/admin authentication
-2. **Adapter Layer** (`flow_node_adapter.py`) - Python to TypeScript bridge via subprocess
-3. **TypeScript Layer** (`cli.ts` + `flowWrapper.ts`) - FCL-based Flow operations
-4. **Blockchain Layer** - Flow network execution via FCL
+2. **Adapter Layer** (`flow_py_adapter.py`) - Python Flow SDK integration using flow-py-sdk
+3. **Blockchain Layer** - Flow network execution via gRPC access nodes
 
 ### Authentication System
 
@@ -127,15 +126,13 @@ authzFactory(address: string, keyId: number, privateKey: string, signatureAlgori
 }
 ```
 
-### Python Adapter Bridge
+### Python Adapter
 ```python
-# flow_node_adapter.py - Subprocess execution
-def _run(self, command: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    encoded = base64.b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8')
-    proc = subprocess.run(['node', self.ts_cli, command, f'--payload={encoded}'], 
-                         cwd=self.repo_root, capture_output=True, text=True, timeout=300)
-    return {'success': bool(data.get('success', proc.returncode == 0)), 
-            'data': data.get('data'), 'transaction_id': data.get('transactionId')}
+# flow_py_adapter.py - flow-py-sdk integration
+async def _execute_script_async(self, script_path: str, args: List[Any], network: str) -> Dict[str, Any]:
+    async with flow_client(host=host, port=port) as client:
+        result = await client.execute_script(script=script)
+    return {'success': True, 'data': result, ...}
 ```
 
 ## Security & Error Handling

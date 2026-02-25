@@ -68,10 +68,20 @@ cp env.example .env
 
 3. **Start the API server:**
 ```bash
-python src/python/app.py
+PYTHONPATH=src/python python src/python/app.py
 ```
 
 The server will start on `http://localhost:5000`
+
+### Testing
+
+**Python (FlowPyAdapter, Flask API):**
+```bash
+pip install -r requirements.txt
+pytest tests -v
+```
+
+Tests cover FlowPyAdapter, Cadence argument encoding, and Flask API endpoints. CI runs on push/PR via `.github/workflows/test.yaml`.
 
 ### Your First Fish Card
 
@@ -81,6 +91,23 @@ Check the balance endpoint to verify your wallet connection:
 curl -X GET "http://localhost:5000/scripts/check-bait-balance?address=0x179b6b1cb6755e31" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
+
+### CLI Tool
+
+Install the CLI and run mission control, balances, and transactions:
+
+```bash
+pip install -e .
+derbyfish-flow-cli --help
+derbyfish-flow-cli mission
+derbyfish-flow-cli balance 0xed2202de80195438 --all
+derbyfish-flow-cli --admin admin mint-bait --to 0x... --amount 100
+derbyfish-flow-cli tx send-bait --from <auth_id> --to <address> --amount 10
+```
+
+Use `--api http://localhost:5000` for API mode. Use `--admin` or `--jwt <token>` for auth.
+
+See [CLI Documentation](./documentation/CLI.md) for full reference. For automated wallet creation (webhook, encryption), see [Wallet Creation Pipeline](./documentation/WALLET_CREATION_PIPELINE.md).
 
 ---
 
@@ -261,13 +288,13 @@ All endpoints return JSON responses with consistent structure:
 ### Components
 
 - **Flask API Server** (`src/python/app.py`) - Main HTTP server
-- **Flow Node Adapter** (`src/python/flow_node_adapter.py`) - Flow blockchain integration
+- **Flow Python Adapter** (`src/python/flow_py_adapter.py`) - Flow blockchain integration
 - **Supabase Integration** - User authentication and wallet management
 - **FishCardV1 Contract** (`flow/cadence/contracts/FishCardV1.cdc`) - NFT contract on Flow
 
 ### Flow Integration
 
-The API uses Flow's JavaScript SDK (via Node.js) to interact with the blockchain:
+The API uses the flow-py-sdk (Python Flow SDK) to interact with the blockchain:
 - Script execution for read operations
 - Transaction signing and submission for write operations
 - Multi-role transaction support (proposer, authorizer, payer)
@@ -310,7 +337,7 @@ All wallet operations are custodialized—users never manage private keys direct
 pip install -r requirements.txt
 
 # Start development server
-python src/python/app.py
+PYTHONPATH=src/python python src/python/app.py
 ```
 
 The server runs in debug mode by default on `http://0.0.0.0:5000`

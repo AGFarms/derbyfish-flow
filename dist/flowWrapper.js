@@ -283,7 +283,9 @@ class FlowWrapper {
         const code = await promises_1.default.readFile(fullPath, 'utf8');
         console.log(`📜 Script: ${path_1.default.basename(scriptPath)} (${args.length} args)`);
         const fclArgs = this._buildFclArgs(args);
-        const transaction = await this._createTransactionRecord('script', scriptPath, args, proposerWalletId);
+        // Skip database logging for balance check scripts
+        const shouldLogToDatabase = !this._isBalanceCheckScript(scriptPath);
+        const transaction = shouldLogToDatabase ? await this._createTransactionRecord('script', scriptPath, args, proposerWalletId) : null;
         try {
             const data = await fcl.query({
                 cadence: code,
@@ -291,7 +293,9 @@ class FlowWrapper {
             });
             const executionTime = Date.now() - startTime;
             console.log(`✅ Script completed (${executionTime}ms)`);
-            await this._updateTransactionSuccess(transaction, data, executionTime);
+            if (shouldLogToDatabase && transaction) {
+                await this._updateTransactionSuccess(transaction, data, executionTime);
+            }
             return new FlowResult({
                 success: true,
                 data,
@@ -302,7 +306,9 @@ class FlowWrapper {
         catch (error) {
             const executionTime = Date.now() - startTime;
             console.log(`❌ Script failed (${executionTime}ms): ${error.message}`);
-            await this._updateTransactionFailure(transaction, error, executionTime);
+            if (shouldLogToDatabase && transaction) {
+                await this._updateTransactionFailure(transaction, error, executionTime);
+            }
             return new FlowResult({
                 success: false,
                 errorMessage: error.message,
@@ -437,6 +443,12 @@ class FlowWrapper {
             return false;
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         return uuidRegex.test(id);
+    }
+    _isBalanceCheckScript(scriptPath) {
+        const scriptName = path_1.default.basename(scriptPath).toLowerCase();
+        return scriptName.includes('checkbaitbalance') ||
+            scriptName.includes('checkflowbalance') ||
+            scriptName.includes('checkbalance');
     }
     async _createTransactionRecord(type, path, args, proposerWalletId, payerWalletId, authorizerWalletIds) {
         const transactionData = {
