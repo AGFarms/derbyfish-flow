@@ -1,4 +1,5 @@
 .env
+*.pkey
 flow/*.pkey
 flow/imports/*
 venv/
