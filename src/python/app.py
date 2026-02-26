@@ -196,6 +196,24 @@ def get_wallet_address(wallet_details):
     # Try both possible address fields from the wallet table
     return wallet_details.get('address') or wallet_details.get('flow_address')
 
+def get_profile_id_by_wallet_id(wallet_id):
+    if not supabase or not wallet_id:
+        return None
+    try:
+        wallet_resp = supabase.table('wallet').select('auth_id').eq('id', wallet_id).execute()
+        if not wallet_resp.data or len(wallet_resp.data) == 0:
+            return None
+        auth_id = wallet_resp.data[0].get('auth_id')
+        if not auth_id:
+            return None
+        profile_resp = supabase.table('profile').select('id').eq('auth_id', auth_id).execute()
+        if profile_resp.data and len(profile_resp.data) > 0:
+            return profile_resp.data[0]['id']
+        return None
+    except Exception as e:
+        print(f"Error getting profile_id from wallet_id: {e}")
+        return None
+
 def get_wallet_id_by_address(address):
     """Get wallet ID by Flow address from Supabase"""
     if not supabase:
@@ -1208,6 +1226,38 @@ def _send_bait_impl():
                 print(f"Logged transaction to DB: {tx_row['id']}")
         except Exception as log_err:
             print(f"Failed to log transaction to DB: {log_err}", file=sys.stderr)
+
+    if supabase and flow_tx_id and recipient_wallet_id and _is_valid_wallet_id(sender_wallet_id):
+        try:
+            sender_profile_id = get_profile_id_by_wallet_id(sender_wallet_id)
+            recipient_profile_id = get_profile_id_by_wallet_id(recipient_wallet_id)
+            if sender_profile_id and recipient_profile_id:
+                debit_row = {
+                    'wallet_id': sender_wallet_id,
+                    'profile_id': sender_profile_id,
+                    'amount': amount_float,
+                    'direction': 'debit',
+                    'category': 'transfer',
+                    'flow_transaction_id': flow_tx_id,
+                    'status': 'completed',
+                    'metadata': {'to_address': to_address}
+                }
+                credit_row = {
+                    'wallet_id': recipient_wallet_id,
+                    'profile_id': recipient_profile_id,
+                    'amount': amount_float,
+                    'direction': 'credit',
+                    'category': 'transfer',
+                    'flow_transaction_id': flow_tx_id,
+                    'status': 'completed',
+                    'metadata': {'from_address': user_flow_address}
+                }
+                supabase.table('bait_transaction').insert([debit_row, credit_row]).execute()
+                print(f"Inserted bait_transaction debit+credit for flow_tx {flow_tx_id}")
+            else:
+                print(f"Skipped bait_transaction: sender_profile={sender_profile_id}, recipient_profile={recipient_profile_id}")
+        except Exception as bait_err:
+            print(f"Failed to insert bait_transaction: {bait_err}", file=sys.stderr)
 
     return jsonify({
         'success': True,

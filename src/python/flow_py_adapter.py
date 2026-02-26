@@ -307,9 +307,12 @@ class FlowPyAdapter:
                 seen = set()
                 for auth_addr, auth_key_id, auth_signer in authorizers:
                     key = (auth_addr.hex(), auth_key_id)
-                    if key not in seen and (auth_addr != payer_addr or auth_key_id != payer_key_id):
+                    if key not in seen:
                         seen.add(key)
-                        tx = tx.with_envelope_signature(auth_addr, auth_key_id, auth_signer)
+                        if auth_addr == payer_addr and auth_key_id == payer_key_id:
+                            tx = tx.with_envelope_signature(auth_addr, auth_key_id, auth_signer)
+                        else:
+                            tx = tx.with_payload_signature(auth_addr, auth_key_id, auth_signer)
                 payer_key = (payer_addr.hex(), payer_key_id)
                 if payer_key not in seen:
                     tx = tx.with_envelope_signature(payer_addr, payer_key_id, payer_signer)

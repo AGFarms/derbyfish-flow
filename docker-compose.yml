@@ -12,7 +12,8 @@ services:
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       
       # Admin Configuration
-      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}  
+      - WALLET_ENCRYPTION_KEY=${WALLET_ENCRYPTION_KEY}
       
       # Flask Configuration
       - FLASK_ENV=production
