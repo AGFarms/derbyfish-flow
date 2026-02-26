@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import json
 import os
+import re
 import sys
 import traceback
 import threading
@@ -13,6 +14,12 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from flow_py_adapter import FlowPyAdapter
 from wallet_crypto import encrypt_private_key, get_plain_private_key
+from transaction_logger import TransactionLogger
+
+def _is_valid_wallet_id(wallet_id):
+    if not wallet_id:
+        return False
+    return bool(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', str(wallet_id), re.I))
 
 # Load environment variables
 load_dotenv()
@@ -49,6 +56,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE
 background_tasks = {}
 
 flow_adapter = FlowPyAdapter(repo_root=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+transaction_logger = TransactionLogger(supabase)
 
 def verify_admin_secret(auth_header):
     """Verify admin secret key from Authorization header"""
@@ -1005,17 +1013,14 @@ def check_bait_balance(flow_address):
             print(f"Error checking BaitCoin balance for {flow_address}: {error_msg}")
             return None
         
-        # Parse the balance from the result
         try:
-            balance_data = result.get('data', {})
-            if "value" in balance_data:
-                balance_str = balance_data["value"]
-                balance = float(balance_str)
-                return balance
-            else:
-                print(f"Unexpected response format for {flow_address}: {balance_data}")
-                return None
-                
+            balance_data = result.get('data')
+            if isinstance(balance_data, (int, float)):
+                return float(balance_data)
+            if isinstance(balance_data, dict) and "value" in balance_data:
+                return float(balance_data["value"])
+            print(f"Unexpected response format for {flow_address}: {balance_data}")
+            return None
         except (ValueError, KeyError, TypeError) as e:
             print(f"Error parsing BaitCoin balance result for {flow_address}: {e}")
             return None
@@ -1053,10 +1058,7 @@ def _send_bait_impl():
     if not to_address:
         return jsonify({'error': 'to_address parameter is required'}), 400
     
-    # Check if to_address is a user ID (UUID format) and convert to Flow address
-    import re
-    uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-    if re.match(uuid_pattern, to_address):
+    if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', to_address):
         print(f"to_address appears to be a user ID: {to_address}")
         flow_address = get_flow_address_by_user_id(to_address)
         if flow_address:
@@ -1147,13 +1149,10 @@ def _send_bait_impl():
     print(f"Result: {result}")
     print("=====================================")
     
-    # Check if the transaction actually succeeded
     if not result.get('success'):
         error_msg = result.get('stderr') or result.get('error_message') or 'Transaction failed'
         print(f"Transaction failed: {error_msg}")
-        
-        # Check for specific insufficient balance error
-        if "Cannot withdraw tokens" in error_msg and "greater than the balance" in error_msg:
+        if "Cannot withdraw tokens" in str(error_msg) and "greater than the balance" in str(error_msg):
             return jsonify({
                 'success': False,
                 'error': 'Insufficient BaitCoin balance. The transaction failed because you do not have enough BaitCoin tokens.',
@@ -1164,7 +1163,6 @@ def _send_bait_impl():
                 'transaction_id': result.get('transaction_id'),
                 'execution_time': result.get('execution_time')
             }), 400
-        
         return jsonify({
             'success': False,
             'error': error_msg,
@@ -1174,13 +1172,49 @@ def _send_bait_impl():
             'transaction_id': result.get('transaction_id'),
             'execution_time': result.get('execution_time')
         }), 400
-    
+
+    tx_status = result.get('data', {}).get('status') if isinstance(result.get('data'), dict) else result.get('data')
+    if tx_status != 4:
+        print(f"Transaction not sealed: status={tx_status}")
+        return jsonify({
+            'success': False,
+            'error': f'Transaction not sealed (status={tx_status})',
+            'transaction_id': result.get('transaction_id'),
+            'execution_time': result.get('execution_time')
+        }), 400
+
+    flow_tx_id = result.get('transaction_id')
+    exec_time = result.get('execution_time') or 0
+    exec_time_ms = int(exec_time * 1000) if isinstance(exec_time, (int, float)) else 0
+
+    if supabase and flow_tx_id and _is_valid_wallet_id(sender_wallet_id):
+        try:
+            tx_row = transaction_logger.create_transaction(
+                transaction_type='transfer',
+                transaction_path='cadence/transactions/sendBait.cdc',
+                args=[to_address, amount_float],
+                proposer_wallet_id=sender_wallet_id,
+                payer_wallet_id=admin_wallet_id,
+                authorizer_wallet_ids=[sender_wallet_id],
+                network=network
+            )
+            if tx_row and tx_row.get('id'):
+                transaction_logger.update_transaction_sealed(
+                    tx_row['id'],
+                    result_data={'flow_transaction_id': flow_tx_id, 'to_address': to_address, 'amount': amount_float},
+                    execution_time_ms=exec_time_ms
+                )
+                transaction_logger.update_transaction(tx_row['id'], {'flow_transaction_id': flow_tx_id})
+                print(f"Logged transaction to DB: {tx_row['id']}")
+        except Exception as log_err:
+            print(f"Failed to log transaction to DB: {log_err}", file=sys.stderr)
+
     return jsonify({
         'success': True,
         'stdout': result.get('stdout'),
         'stderr': result.get('stderr'),
         'returncode': result.get('returncode'),
-        'transaction_id': result.get('transaction_id'),
+        'transaction_id': flow_tx_id,
         'execution_time': result.get('execution_time')
     })
 

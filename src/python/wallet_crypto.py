@@ -3,6 +3,7 @@ import base64
 import secrets
 from typing import Optional
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
@@ -60,7 +61,13 @@ def decrypt_private_key(encrypted_b64: str) -> str:
     ciphertext = raw[SALT_LEN + NONCE_LEN:]
     key = _derive_key(master, salt)
     aes = AESGCM(key)
-    plaintext = aes.decrypt(nonce, ciphertext, None)
+    try:
+        plaintext = aes.decrypt(nonce, ciphertext, None)
+    except InvalidTag:
+        raise RuntimeError(
+            'Wallet decryption failed: WALLET_ENCRYPTION_KEY does not match the key used to encrypt this wallet. '
+            'Ensure WALLET_ENCRYPTION_KEY in .env matches the key used when the wallet was created.'
+        ) from None
     return plaintext.hex()
 
 
