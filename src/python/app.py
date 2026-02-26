@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import json
 import os
+import sys
+import traceback
 import threading
 import time
 from datetime import datetime
@@ -1026,6 +1028,20 @@ def check_bait_balance(flow_address):
 @require_auth
 def send_bait():
     """Send BAIT tokens"""
+    try:
+        return _send_bait_impl()
+    except Exception as e:
+        print(f"=== SEND BAIT 500 ERROR ===", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("===========================", file=sys.stderr)
+        return jsonify({
+            'error': str(e),
+            'error_type': type(e).__name__
+        }), 500
+
+def _send_bait_impl():
+    """Send BAIT tokens implementation"""
     data = request.get_json() or {}
     to_address = data.get('to_address')
     amount = data.get('amount')
@@ -1106,7 +1122,7 @@ def send_bait():
     print(f"Network: {network}")
     print(f"Wallet Details: {request.wallet_details}")
     print(f"Has Private Key: {bool(user_private_key)}")
-    print(f"Roles: proposer={user_id}, authorizer=[{user_id}], payer=mainnet-agfarms")
+    print(f"Roles: proposer={user_flow_address}, authorizer=[{user_flow_address}], payer=mainnet-agfarms")
     print(f"Transaction Path: cadence/transactions/sendBait.cdc")
     print(f"Transaction Args: [{to_address}, {amount_float}]")
     print("=====================================")
@@ -1116,17 +1132,15 @@ def send_bait():
     recipient_wallet_id = get_wallet_id_by_address(to_address)
     admin_wallet_id = get_or_create_admin_wallet()  # Admin wallet for payer
     
-    # Use Node adapter for transaction execution with private keys
-    # Use auth_id as proposer and authorizer (account name), mainnet-agfarms as payer
-    # Pass amount as decimal (float) to match Flow CLI behavior
+    user_flow_address_with_prefix = user_flow_address if user_flow_address.startswith('0x') else f'0x{user_flow_address}'
     result = flow_adapter.send_transaction_with_private_key(
         transaction_path='cadence/transactions/sendBait.cdc',
-        args=[to_address, amount_float],  # Use amount_float instead of amount string
-        roles={'proposer': user_id, 'authorizer': [user_id], 'payer': 'mainnet-agfarms'},
-        private_keys={user_flow_address: user_private_key},  # Pass the private key for the user's Flow address
-        proposer_wallet_id=user_id,  # Use auth_id for database logging
+        args=[to_address, amount_float],
+        roles={'proposer': user_flow_address_with_prefix, 'authorizer': [user_flow_address_with_prefix], 'payer': 'mainnet-agfarms'},
+        private_keys={user_flow_address_with_prefix: user_private_key},
+        proposer_wallet_id=user_id,
         payer_wallet_id=admin_wallet_id,
-        authorizer_wallet_ids=[user_id] if user_id else None  # Use auth_id for database logging
+        authorizer_wallet_ids=[user_id] if user_id else None
     )
     
     print(f"=== PYTHON APP SEND BAIT RESULT ===")
@@ -1135,7 +1149,7 @@ def send_bait():
     
     # Check if the transaction actually succeeded
     if not result.get('success'):
-        error_msg = result.get('stderr') or result.get('errorMessage') or 'Transaction failed'
+        error_msg = result.get('stderr') or result.get('error_message') or 'Transaction failed'
         print(f"Transaction failed: {error_msg}")
         
         # Check for specific insufficient balance error
