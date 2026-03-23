@@ -1,10 +1,15 @@
-name: Build and Deploy to Staging - derbyfish-flow
+name: Deploy to Production - derbyfish-flow
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy-production" to confirm production deployment'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
 
 env:
   DOCKER_IMAGE: farmera/derbyfish-flow
@@ -12,7 +17,19 @@ env:
   REGISTRY: docker.io
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Validate deployment confirmation
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        if [ "${{ github.event.inputs.confirm }}" != "deploy-production" ]; then
+          echo "::error::Confirmation input must be 'deploy-production'. Got: '${{ github.event.inputs.confirm }}'"
+          exit 1
+        fi
+
   build-and-push-api:
+    needs: validate
     runs-on: ubuntu-latest
 
     steps:
@@ -40,6 +57,7 @@ jobs:
           MAINNET_AGFARMS_PRIVATE_KEY=${{ secrets.MAINNET_AGFARMS_PRIVATE_KEY }}
 
   build-and-push-sync:
+    needs: validate
     runs-on: ubuntu-latest
 
     steps:
@@ -65,12 +83,25 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-  deploy-staging:
+  deploy-production:
     needs: [build-and-push-api, build-and-push-sync]
     runs-on: ubuntu-latest
 
     steps:
-    - name: Deploy to staging
+    - name: Confirm production deployment
+      run: |
+        echo "============================================"
+        echo ""
+        echo "  DEPLOYING TO PRODUCTION"
+        echo ""
+        echo "  Service: derbyfish-flow"
+        echo "  API:     ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+        echo "  Sync:    ${{ env.SYNC_IMAGE }}:${{ github.sha }}"
+        echo "  Trigger: ${{ github.event_name }}"
+        echo ""
+        echo "============================================"
+
+    - name: Deploy to production server
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -78,25 +109,25 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SERVER_PORT }}
         script: |
-          cd /home/mattricks/derbyfish-flow-staging
+          cd /home/mattricks/derbyfish-flow
           git fetch origin
           git reset --hard origin/main
 
           export API_IMAGE_TAG=${{ github.sha }}
           export SYNC_IMAGE_TAG=${{ github.sha }}
-          echo "Deploying to STAGING - API image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
-          echo "Deploying to STAGING - Sync image: ${{ env.SYNC_IMAGE }}:${{ github.sha }}"
+          echo "Deploying API image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+          echo "Deploying Sync image: ${{ env.SYNC_IMAGE }}:${{ github.sha }}"
 
-          sed -i "s|image: .*derbyfish-flow:.*|image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}|g" docker-compose.staging.yml
-          sed -i "s|image: .*derbyfish-flow-sync:.*|image: ${{ env.SYNC_IMAGE }}:${{ github.sha }}|g" docker-compose.staging.yml
-          echo "Updated docker-compose.staging.yml with image tags: ${{ github.sha }}"
+          sed -i "s|image: .*derbyfish-flow:.*|image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}|g" docker-compose.yml
+          sed -i "s|image: .*derbyfish-flow-sync:.*|image: ${{ env.SYNC_IMAGE }}:${{ github.sha }}|g" docker-compose.yml
+          echo "Updated docker-compose.yml with image tags: ${{ github.sha }}"
 
           docker pull ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
           docker pull ${{ env.SYNC_IMAGE }}:${{ github.sha }}
 
-          docker-compose -f docker-compose.staging.yml down
-          docker-compose -f docker-compose.staging.yml up -d --remove-orphans
+          docker-compose -f docker-compose.yml down
+          docker-compose -f docker-compose.yml up -d --remove-orphans
 
           docker system prune -f
 
-          docker-compose -f docker-compose.staging.yml ps
+          docker-compose -f docker-compose.yml ps
