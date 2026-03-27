@@ -1,0 +1,42 @@
+name: PR Safety Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-production-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for production URLs and keys in diff
+        run: |
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD)
+
+          FORBIDDEN_PATTERNS=(
+            "tdecpfvclvqcqjfyxgnn.supabase.co"
+            "sk_live_"
+            "pk_live_"
+          )
+
+          FOUND=0
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            MATCHES=$(echo "$DIFF" | grep -n "^+" | grep "$pattern" || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error::FORBIDDEN: Production pattern '$pattern' found in PR diff:"
+              echo "$MATCHES"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+
+          if [ $FOUND -gt 0 ]; then
+            echo ""
+            echo "::error::$FOUND production pattern(s) found in this PR."
+            echo "::error::All development must use db.derby.fish (dev Supabase) and Stripe test keys."
+            exit 1
+          fi
+
+          echo "No production URLs or keys found in diff."
