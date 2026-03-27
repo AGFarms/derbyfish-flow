@@ -1,4 +1,8 @@
+# Environment files — NEVER commit
 .env
+.env.*
+!.env.example
+
 *.pkey
 flow/*.pkey
 flow/imports/*
