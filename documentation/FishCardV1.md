@@ -20,7 +20,7 @@ FishCardV1 is a Non-Fungible Token (NFT) contract built on the Flow blockchain t
 
 #### Submission Standards
 The contract supports three verification methods through the `SubmissionStandard` enum:
-- **BHRV**: Bump, Hero, Release - Traditional catch documentation
+- **BHRV**: Bump, Hero, Release, Verify - Traditional catch documentation
 - **FISHSCAN**: Livestream with 3D gyro scan - Advanced verification with 3x3 grid photography
 - **BANANNASCAN**: Test verification method for development
 

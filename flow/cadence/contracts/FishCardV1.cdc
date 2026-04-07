@@ -30,7 +30,7 @@ access(all) contract FishCardV1: NonFungibleToken, ViewResolver.Resolver {
 
     // Submission standards
     access(all) enum SubmissionStandard: UInt8 {
-        access(all) case BHRV  // Bump, Hero, Release
+        access(all) case BHRV  // Bump, Hero, Release, Verify
         access(all) case FISHSCAN  // Livestream with 3D gyro scan
         access(all) case BANANNASCAN  // a form of test scan we have with bananna
     }
