@@ -1,5 +1,14 @@
 # CLAUDE.md - derbyfish-flow
 
+> ## 🐟 BRAND — The product is KALA (founder directive 2026-07-07)
+>
+> **The app/product is KALA. "Kala is verified fishing."** DerbyFish is legacy naming that persists
+> in repo names, code identifiers, the app-store listing, and infra until the rename is sequenced —
+> do **NOT** mass-rename code. **DO** use KALA in all new user-facing copy, marketing, video, design,
+> and docs. Brand canon: **`../derbyfish-native/KALA-BRAND.md`** + **https://verifiedonkala.com/brand**.
+> Hard rules: **Teal `#40BFAF` = action only / Magenta `#FF00CC` = proof only (never interactive) /
+> BAIT stays strictly two-tone (black/white)**.
+
 ## Overview
 
 Flow blockchain API service for DerbyFish. Handles custodial wallet creation, Fish Card NFT minting (FishCardV1), BaitCoin fungible token operations, and all on-chain interactions. Provides both a Flask REST API and a CLI tool.
